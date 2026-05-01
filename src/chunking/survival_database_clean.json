@@ -1,0 +1,62 @@
+{
+  "parents": {
+    "page_7": "- Empat elemen kunci untuk hasil positif dalam situasi survival adalah pengetahuan, kemampuan, kemauan bertahan hidup, dan keberuntungan.\n- Siapa pun yang memasuki alam liar—baik untuk camping singkat maupun ekspedisi panjang—harus memahami prinsip dasar survival.\n- Pengetahuan memungkinkan Anda melakukan persiapan yang benar sebelumnya, memilih peralatan yang tepat, dan mempelajari cara menggunakannya.\n- Jangan hanya mengandalkan alat standar (seperti korek api); latih kemampuan improvisasi jika alat gagal berfungsi.\n- Keterampilan survival harus dipelajari dan dilatih dalam kondisi realistis, bukan hanya pada kondisi ideal seperti cuaca cerah dengan bahan kering.\n- Pahami alasan mengapa sesuatu tidak berhasil (misalnya api tidak menyala) dan cari solusi untuk masalah tersebut.\n- Selalu terapkan prinsip menggunakan energi minimum untuk mendapatkan hasil maksimum.",
+    "page_8": "1. Pahami sepenuhnya lingkungan yang akan Anda tuju sebelum memulai perjalanan.\n2. Lakukan riset tidak hanya tentang apa yang ditawarkan lingkungan sebagai tujuan wisata, tetapi juga apa yang ditawarkannya sebagai tantangan bertahan hidup.\n3. Sadari bahwa terdapat garis tipis antara kagum pada keindahan alam dan menjadi korban di dalamnya.\n4. Semakin Anda memahami daya tarik dan bahaya lingkungan, semakin baik Anda dalam memilih peralatan yang tepat dan menggunakannya saat dibutuhkan.\n5. Jangan pernah meremehkan kekuatan alam, meskipun peralatan atau pengetahuan Anda sangat baik.\n6. Jika rencana tidak berjalan sesuai, berhentilah untuk menilai ulang situasi dan prioritas Anda.\n7. Jangan ragu untuk berbalik arah dan mencoba lagi nanti jika diperlukan; tantangan akan selalu ada besok.\n8. Metode paling efektif menghadapi situasi bertahan hidup adalah dengan menghindarinya sejak awal."
+  },
+  "children": [
+    {
+      "id": "page_7_chunk_0",
+      "parent_id": "page_7",
+      "page_number": 7,
+      "search_text": "- Empat elemen kunci untuk hasil positif dalam situasi survival adalah pengetahuan, kemampuan, kemauan bertahan hidup, dan keberuntungan.\n- Siapa pun yang memasuki alam liar—baik untuk camping singkat maupun ekspedisi panjang—harus memahami prinsip dasar survival.\n- Pengetahuan memungkinkan Anda melakukan persiapan yang benar sebelumnya, memilih peralatan yang tepat, dan mempelajari cara menggunakannya.\n- Jangan hanya mengandalkan alat standar (seperti korek api); latih kemampuan improvisasi jika alat gagal berfungsi.\n- Keterampilan survival harus dipelajari dan dilatih dalam kondisi realistis, bukan hanya pada kondisi ideal seperti cuaca cerah dengan bahan kering.\n- Pahami alasan mengapa sesuatu tidak berhasil (misalnya api tidak menyala) dan cari solusi untuk masalah tersebut.\n- Selalu terapkan prinsip menggunakan energi minimum untuk mendapatkan hasil maksimum.."
+    },
+    {
+      "id": "page_8_chunk_1",
+      "parent_id": "page_8",
+      "page_number": 8,
+      "search_text": "Pahami sepenuhnya lingkungan yang akan Anda tuju sebelum memulai perjalanan.\n2."
+    },
+    {
+      "id": "page_8_chunk_2",
+      "parent_id": "page_8",
+      "page_number": 8,
+      "search_text": "Lakukan riset tidak hanya tentang apa yang ditawarkan lingkungan sebagai tujuan wisata, tetapi juga apa yang ditawarkannya sebagai tantangan bertahan hidup.\n3."
+    },
+    {
+      "id": "page_8_chunk_3",
+      "parent_id": "page_8",
+      "page_number": 8,
+      "search_text": "Sadari bahwa terdapat garis tipis antara kagum pada keindahan alam dan menjadi korban di dalamnya.\n4."
+    },
+    {
+      "id": "page_8_chunk_4",
+      "parent_id": "page_8",
+      "page_number": 8,
+      "search_text": "Semakin Anda memahami daya tarik dan bahaya lingkungan, semakin baik Anda dalam memilih peralatan yang tepat dan menggunakannya saat dibutuhkan.\n5."
+    },
+    {
+      "id": "page_8_chunk_5",
+      "parent_id": "page_8",
+      "page_number": 8,
+      "search_text": "Jangan pernah meremehkan kekuatan alam, meskipun peralatan atau pengetahuan Anda sangat baik.\n6."
+    },
+    {
+      "id": "page_8_chunk_6",
+      "parent_id": "page_8",
+      "page_number": 8,
+      "search_text": "Jika rencana tidak berjalan sesuai, berhentilah untuk menilai ulang situasi dan prioritas Anda.\n7."
+    },
+    {
+      "id": "page_8_chunk_7",
+      "parent_id": "page_8",
+      "page_number": 8,
+      "search_text": "Jangan ragu untuk berbalik arah dan mencoba lagi nanti jika diperlukan; tantangan akan selalu ada besok.\n8."
+    },
+    {
+      "id": "page_8_chunk_8",
+      "parent_id": "page_8",
+      "page_number": 8,
+      "search_text": "Metode paling efektif menghadapi situasi bertahan hidup adalah dengan menghindarinya sejak awal.."
+    }
+  ]
+}
