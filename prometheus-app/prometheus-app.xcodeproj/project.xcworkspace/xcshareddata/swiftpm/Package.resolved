@@ -1,0 +1,15 @@
+{
+  "originHash" : "3c3151aaa21f6fa0608c957a246bccd7a5457b212150c774f53679aa49d4bf14",
+  "pins" : [
+    {
+      "identity" : "litertlm-swift-sdk",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/Luxshan2000/LiteRTLM-Swift-SDK.git",
+      "state" : {
+        "branch" : "main",
+        "revision" : "76d138b4a5d21094bed61e22921531eb5dcf839a"
+      }
+    }
+  ],
+  "version" : 3
+}
