@@ -1,0 +1,412 @@
+{
+  "queries_total": 15,
+  "queries_with_hit": 15,
+  "hit_rate": 1.0,
+  "samples": [
+    {
+      "query": "What are the first priorities in a survival emergency?",
+      "top_score": 0.75,
+      "top_results": [
+        {
+          "score": 0.75,
+          "chunk_id": "essential_survival_skills_database_p8_c0_e31343185733",
+          "book_id": "essential_survival_skills_database",
+          "page_number": 8,
+          "text_preview": "Research the environment you are preparing for to understand both its attractions and its dangers, as there is a thin line between awe and being at nature's mercy. Fully understanding an environment allows you to select "
+        },
+        {
+          "score": 0.75,
+          "chunk_id": "essential_survival_skills_database_p27_c0_b26d1bc88ee4",
+          "book_id": "essential_survival_skills_database",
+          "page_number": 27,
+          "text_preview": "Surviving at sea requires relying on your supplies since natural resources in the open ocean are virtually nonexistent. Improvising shelter or location aids is limited to what you carry. Seasickness, particularly in a sm"
+        },
+        {
+          "score": 0.75,
+          "chunk_id": "essential_survival_skills_database_p155_c2_30ebb2aa09e4",
+          "book_id": "essential_survival_skills_database",
+          "page_number": 155,
+          "text_preview": "the approximate time you can live without water and three weeks is the approximate time you can live without food The four priorities of survival are protection, location, water, and food, with the specific priority depe"
+        }
+      ]
+    },
+    {
+      "query": "How do I prevent hypothermia at night outdoors?",
+      "top_score": 0.42857142857142855,
+      "top_results": [
+        {
+          "score": 0.42857142857142855,
+          "chunk_id": "essential_survival_skills_database_p7_c1_e0fc7ad78cc8",
+          "book_id": "essential_survival_skills_database",
+          "page_number": 7,
+          "text_preview": "principles to carry out correct beforehand preparation choose the right equipment learn how to use it and practice necessary skills Knowing how to survive in a particular situation allows you to assess your situation, pr"
+        },
+        {
+          "score": 0.42857142857142855,
+          "chunk_id": "essential_survival_skills_database_p8_c0_e31343185733",
+          "book_id": "essential_survival_skills_database",
+          "page_number": 8,
+          "text_preview": "Research the environment you are preparing for to understand both its attractions and its dangers, as there is a thin line between awe and being at nature's mercy. Fully understanding an environment allows you to select "
+        },
+        {
+          "score": 0.42857142857142855,
+          "chunk_id": "essential_survival_skills_database_p23_c0_fa42f15c9437",
+          "book_id": "essential_survival_skills_database",
+          "page_number": 23,
+          "text_preview": "Surviving in temperate areas is generally favorable due to mild climates and abundant natural resources, though rivers, lakes, and swampy wetlands are common where drainage is poor. The greatest threat in these regions i"
+        }
+      ]
+    },
+    {
+      "query": "How should I purify unsafe water in the wild?",
+      "top_score": 0.625,
+      "top_results": [
+        {
+          "score": 0.625,
+          "chunk_id": "essential_survival_skills_database_p22_c0_fc68097b5143",
+          "book_id": "essential_survival_skills_database",
+          "page_number": 22,
+          "text_preview": "The four basic principles of survival are protection, location, water, and food, which should generally be prioritized in that order. Water is critical; while you can survive a few days without it, your mental and physic"
+        },
+        {
+          "score": 0.625,
+          "chunk_id": "essential_survival_skills_database_p34_c0_390e359cbe64",
+          "book_id": "essential_survival_skills_database",
+          "page_number": 34,
+          "text_preview": "Do not leave food at your campsite as it attracts predators. Avoid sheltering too deeply in the woods; your location must remain visible for rescue. Do not eat unidentified food to prevent illness, especially since food "
+        },
+        {
+          "score": 0.625,
+          "chunk_id": "essential_survival_skills_database_p75_c1_7bf921e062dc",
+          "book_id": "essential_survival_skills_database",
+          "page_number": 75,
+          "text_preview": "tools and equipment prevents loss of vital items and reduces the risk of injury to you or your team members Fire is an integral component of any campsite, serving multiple critical functions including warmth, water purif"
+        }
+      ]
+    },
+    {
+      "query": "What should I carry in a basic survival kit?",
+      "top_score": 0.7142857142857143,
+      "top_results": [
+        {
+          "score": 0.7142857142857143,
+          "chunk_id": "essential_survival_skills_database_p7_c0_6bbb0f19298d",
+          "book_id": "essential_survival_skills_database",
+          "page_number": 7,
+          "text_preview": "Four essential elements must be present for a survival situation to have a chance of a positive outcome: knowledge, ability, the will to survive, and luck. While knowledge and ability can be learned, the will to survive "
+        },
+        {
+          "score": 0.7142857142857143,
+          "chunk_id": "essential_survival_skills_database_p11_c1_70b50802cacb",
+          "book_id": "essential_survival_skills_database",
+          "page_number": 11,
+          "text_preview": "the specific environment the more likely you will be able to cope physically and mentally if confronted with survival situation It is equally important to choose the correct equipment and clothing. When selecting gear, c"
+        },
+        {
+          "score": 0.5714285714285714,
+          "chunk_id": "essential_survival_skills_database_p7_c2_15544696cfc3",
+          "book_id": "essential_survival_skills_database",
+          "page_number": 7,
+          "text_preview": "can spend comfortable night inside one-man bivi shelter but you must know what to do if you lose your pack Survival knowledge and skills must be learned and practiced under realistic conditions because starting a fire wi"
+        }
+      ]
+    },
+    {
+      "query": "When should I stay put versus move for rescue?",
+      "top_score": 0.625,
+      "top_results": [
+        {
+          "score": 0.625,
+          "chunk_id": "essential_survival_skills_database_p22_c0_fc68097b5143",
+          "book_id": "essential_survival_skills_database",
+          "page_number": 22,
+          "text_preview": "The four basic principles of survival are protection, location, water, and food, which should generally be prioritized in that order. Water is critical; while you can survive a few days without it, your mental and physic"
+        },
+        {
+          "score": 0.625,
+          "chunk_id": "essential_survival_skills_database_p39_c1_bef6be887905",
+          "book_id": "essential_survival_skills_database",
+          "page_number": 39,
+          "text_preview": "proficiency with map and compass eliminates worry about getting lost or straying off-track freeing you to enjoy your outdoor experience In a survival situation, effective navigation—whether using a map and compass or nat"
+        },
+        {
+          "score": 0.5,
+          "chunk_id": "essential_survival_skills_database_p19_c0_cfeaec6d0508",
+          "book_id": "essential_survival_skills_database",
+          "page_number": 19,
+          "text_preview": "Even meticulously planned trips can encounter unexpected difficulties such as strong winds or injuries, so it is essential to prepare an emergency plan of action. Rescue services operate more effectively when they posses"
+        }
+      ]
+    },
+    {
+      "query": "How can I signal my location to rescuers?",
+      "top_score": 0.8571428571428571,
+      "top_results": [
+        {
+          "score": 0.8571428571428571,
+          "chunk_id": "essential_survival_skills_database_p159_c0_995d8854c487",
+          "book_id": "essential_survival_skills_database",
+          "page_number": 159,
+          "text_preview": "There are three principles for attracting attention: attract, hold, and direct. To attract, pick a place that maximizes your chances of being seen, such as open or high ground. To hold, maintain the signal until rescuers"
+        },
+        {
+          "score": 0.5714285714285714,
+          "chunk_id": "essential_survival_skills_database_p22_c0_fc68097b5143",
+          "book_id": "essential_survival_skills_database",
+          "page_number": 22,
+          "text_preview": "The four basic principles of survival are protection, location, water, and food, which should generally be prioritized in that order. Water is critical; while you can survive a few days without it, your mental and physic"
+        },
+        {
+          "score": 0.5714285714285714,
+          "chunk_id": "essential_survival_skills_database_p22_c1_53e88d447a3d",
+          "book_id": "essential_survival_skills_database",
+          "page_number": 22,
+          "text_preview": "rescuers if staying is unsafe due to imminent danger move to location that offers better survival odds or rescue opportunities Choose a spot that maximizes your ability to attract attention. Food becomes crucial as the d"
+        }
+      ]
+    },
+    {
+      "query": "What are safe ways to cross a river?",
+      "top_score": 0.5714285714285714,
+      "top_results": [
+        {
+          "score": 0.5714285714285714,
+          "chunk_id": "essential_survival_skills_database_p48_c1_0c70c691eb71",
+          "book_id": "essential_survival_skills_database",
+          "page_number": 48,
+          "text_preview": "features on the ground that are at least mile km apart and separated by an angle of at least degrees Take compass bearings to these features, convert them into back bearings, and draw lines from the corresponding points "
+        },
+        {
+          "score": 0.5714285714285714,
+          "chunk_id": "essential_survival_skills_database_p155_c2_30ebb2aa09e4",
+          "book_id": "essential_survival_skills_database",
+          "page_number": 155,
+          "text_preview": "the approximate time you can live without water and three weeks is the approximate time you can live without food The four priorities of survival are protection, location, water, and food, with the specific priority depe"
+        },
+        {
+          "score": 0.5714285714285714,
+          "chunk_id": "essential_survival_skills_database_p157_c0_25e1e0cf6324",
+          "book_id": "essential_survival_skills_database",
+          "page_number": 157,
+          "text_preview": "Assess the particulars of your surroundings, physical condition, and equipment. If you are in a group, share tasks and responsibilities. The true skill of a survivor is to understand what is required and improvise soluti"
+        }
+      ]
+    },
+    {
+      "query": "How can I use a map and compass to navigate?",
+      "top_score": 0.875,
+      "top_results": [
+        {
+          "score": 0.875,
+          "chunk_id": "essential_survival_skills_database_p39_c0_bdedc3549a54",
+          "book_id": "essential_survival_skills_database",
+          "page_number": 39,
+          "text_preview": "Before setting off on an expedition, ensure you have a basic understanding of how to read a map and use a compass. Assessing a map of your intended area allows you to make informed decisions while preparing for your trip"
+        },
+        {
+          "score": 0.875,
+          "chunk_id": "essential_survival_skills_database_p45_c0_5130a2d7ce89",
+          "book_id": "essential_survival_skills_database",
+          "page_number": 45,
+          "text_preview": "Always give your full attention to any compass work, as rushing can lead to navigational errors that may cause you to get lost. To navigate using a map and compass, lay your map on a flat surface and ensure nothing nearb"
+        },
+        {
+          "score": 0.75,
+          "chunk_id": "essential_survival_skills_database_p43_c0_e5404ccabf81",
+          "book_id": "essential_survival_skills_database",
+          "page_number": 43,
+          "text_preview": "To navigate effectively, you must be able to orient your map to the land using a compass. A compass works by using a magnetized needle that rotates freely to align with the North and South magnetic poles. The four cardin"
+        }
+      ]
+    },
+    {
+      "query": "How do I avoid panic and maintain will to survive?",
+      "top_score": 0.6666666666666666,
+      "top_results": [
+        {
+          "score": 0.6666666666666666,
+          "chunk_id": "essential_survival_skills_database_p8_c0_e31343185733",
+          "book_id": "essential_survival_skills_database",
+          "page_number": 8,
+          "text_preview": "Research the environment you are preparing for to understand both its attractions and its dangers, as there is a thin line between awe and being at nature's mercy. Fully understanding an environment allows you to select "
+        },
+        {
+          "score": 0.5555555555555556,
+          "chunk_id": "essential_survival_skills_database_p7_c0_6bbb0f19298d",
+          "book_id": "essential_survival_skills_database",
+          "page_number": 7,
+          "text_preview": "Four essential elements must be present for a survival situation to have a chance of a positive outcome: knowledge, ability, the will to survive, and luck. While knowledge and ability can be learned, the will to survive "
+        },
+        {
+          "score": 0.5555555555555556,
+          "chunk_id": "essential_survival_skills_database_p7_c1_e0fc7ad78cc8",
+          "book_id": "essential_survival_skills_database",
+          "page_number": 7,
+          "text_preview": "principles to carry out correct beforehand preparation choose the right equipment learn how to use it and practice necessary skills Knowing how to survive in a particular situation allows you to assess your situation, pr"
+        }
+      ]
+    },
+    {
+      "query": "What clothing system is best for changing weather?",
+      "top_score": 0.5,
+      "top_results": [
+        {
+          "score": 0.5,
+          "chunk_id": "essential_survival_skills_database_p18_c1_d840a61bf189",
+          "book_id": "essential_survival_skills_database",
+          "page_number": 18,
+          "text_preview": "replicate your intended trip conditions during training by duplicating the environment distance weight load and language barriers you will face Gradually increase the weight you carry until it matches what you plan to ta"
+        },
+        {
+          "score": 0.5,
+          "chunk_id": "essential_survival_skills_database_p31_c0_e146d91d0d25",
+          "book_id": "essential_survival_skills_database",
+          "page_number": 31,
+          "text_preview": "Do not be tempted to overdress, as sweat can soak you just like rain and sudden temperature changes can cause hypothermia. Instead, wear layers to control your body temperature. Modern outdoor clothing is lightweight, ha"
+        },
+        {
+          "score": 0.5,
+          "chunk_id": "essential_survival_skills_database_p39_c1_bef6be887905",
+          "book_id": "essential_survival_skills_database",
+          "page_number": 39,
+          "text_preview": "proficiency with map and compass eliminates worry about getting lost or straying off-track freeing you to enjoy your outdoor experience In a survival situation, effective navigation—whether using a map and compass or nat"
+        }
+      ]
+    },
+    {
+      "query": "How should I ration food and water during survival?",
+      "top_score": 0.625,
+      "top_results": [
+        {
+          "score": 0.625,
+          "chunk_id": "essential_survival_skills_database_p21_c0_864bb618c0b5",
+          "book_id": "essential_survival_skills_database",
+          "page_number": 21,
+          "text_preview": "Before heading into the wilderness, fully prepare by researching how native inhabitants dress, work, and eat to understand their adaptations. This knowledge helps you select the best gear, adopt effective techniques, and"
+        },
+        {
+          "score": 0.625,
+          "chunk_id": "essential_survival_skills_database_p22_c0_fc68097b5143",
+          "book_id": "essential_survival_skills_database",
+          "page_number": 22,
+          "text_preview": "The four basic principles of survival are protection, location, water, and food, which should generally be prioritized in that order. Water is critical; while you can survive a few days without it, your mental and physic"
+        },
+        {
+          "score": 0.625,
+          "chunk_id": "essential_survival_skills_database_p24_c0_78a5a86302fd",
+          "book_id": "essential_survival_skills_database",
+          "page_number": 24,
+          "text_preview": "Climate and terrain can vary widely, so prepare for a range of eventualities. Weather can change quickly, so check the local forecast before you set off and carry an AM/FM radio to listen to local weather reports. Plan a"
+        }
+      ]
+    },
+    {
+      "query": "What dangers should I expect in desert environments?",
+      "top_score": 0.42857142857142855,
+      "top_results": [
+        {
+          "score": 0.42857142857142855,
+          "chunk_id": "essential_survival_skills_database_p7_c2_15544696cfc3",
+          "book_id": "essential_survival_skills_database",
+          "page_number": 7,
+          "text_preview": "can spend comfortable night inside one-man bivi shelter but you must know what to do if you lose your pack Survival knowledge and skills must be learned and practiced under realistic conditions because starting a fire wi"
+        },
+        {
+          "score": 0.42857142857142855,
+          "chunk_id": "essential_survival_skills_database_p25_c0_4c10c7ac65ad",
+          "book_id": "essential_survival_skills_database",
+          "page_number": 25,
+          "text_preview": "In cold environments, natural resources are often scarce, making survival dependent on your equipment and supplies. While shelters can be dug from snow, fire essentials are limited in polar and tundra areas. The greatest"
+        },
+        {
+          "score": 0.42857142857142855,
+          "chunk_id": "essential_survival_skills_database_p25_c3_fe393b19c5c9",
+          "book_id": "essential_survival_skills_database",
+          "page_number": 25,
+          "text_preview": "procuring more water if your vehicle breaks down leave it only if staying there is no longer safe or feasible When venturing into remote areas, augment your map and compass with a GPS, and consider taking a Personal Loca"
+        }
+      ]
+    },
+    {
+      "query": "How can I travel safely in snow conditions?",
+      "top_score": 0.7142857142857143,
+      "top_results": [
+        {
+          "score": 0.7142857142857143,
+          "chunk_id": "essential_survival_skills_database_p63_c0_2bc427a8ffdc",
+          "book_id": "essential_survival_skills_database",
+          "page_number": 63,
+          "text_preview": "When hiking over frozen terrain, physical fitness is essential because the conditions result in slow and exhausting progress. You must have the right equipment and know how to use it effectively. Wearing snow shoes or sk"
+        },
+        {
+          "score": 0.5714285714285714,
+          "chunk_id": "essential_survival_skills_database_p7_c0_6bbb0f19298d",
+          "book_id": "essential_survival_skills_database",
+          "page_number": 7,
+          "text_preview": "Four essential elements must be present for a survival situation to have a chance of a positive outcome: knowledge, ability, the will to survive, and luck. While knowledge and ability can be learned, the will to survive "
+        },
+        {
+          "score": 0.5714285714285714,
+          "chunk_id": "essential_survival_skills_database_p63_c1_1f785f9bec23",
+          "book_id": "essential_survival_skills_database",
+          "page_number": 63,
+          "text_preview": "improves maneuverability wear backpack to keep both arms free for balance and movement ski mask protects your eyes from glare Snow shoes and skis work by spreading your body weight over a larger surface area, allowing yo"
+        }
+      ]
+    },
+    {
+      "query": "What are key preparations before going into wilderness?",
+      "top_score": 0.5,
+      "top_results": [
+        {
+          "score": 0.5,
+          "chunk_id": "essential_survival_skills_database_p158_c3_5d918fd42fbc",
+          "book_id": "essential_survival_skills_database",
+          "page_number": 158,
+          "text_preview": "win if the will to live is not there then just having the knowledge and equipment may not be enough If uncontrolled, fear and panic can destroy your ability to make rational decisions, causing you to react to your feelin"
+        },
+        {
+          "score": 0.375,
+          "chunk_id": "essential_survival_skills_database_p7_c0_6bbb0f19298d",
+          "book_id": "essential_survival_skills_database",
+          "page_number": 7,
+          "text_preview": "Four essential elements must be present for a survival situation to have a chance of a positive outcome: knowledge, ability, the will to survive, and luck. While knowledge and ability can be learned, the will to survive "
+        },
+        {
+          "score": 0.375,
+          "chunk_id": "essential_survival_skills_database_p21_c0_864bb618c0b5",
+          "book_id": "essential_survival_skills_database",
+          "page_number": 21,
+          "text_preview": "Before heading into the wilderness, fully prepare by researching how native inhabitants dress, work, and eat to understand their adaptations. This knowledge helps you select the best gear, adopt effective techniques, and"
+        }
+      ]
+    },
+    {
+      "query": "How do I reduce risk when driving off-road?",
+      "top_score": 0.42857142857142855,
+      "top_results": [
+        {
+          "score": 0.42857142857142855,
+          "chunk_id": "essential_survival_skills_database_p8_c0_e31343185733",
+          "book_id": "essential_survival_skills_database",
+          "page_number": 8,
+          "text_preview": "Research the environment you are preparing for to understand both its attractions and its dangers, as there is a thin line between awe and being at nature's mercy. Fully understanding an environment allows you to select "
+        },
+        {
+          "score": 0.42857142857142855,
+          "chunk_id": "essential_survival_skills_database_p34_c1_a53542889d68",
+          "book_id": "essential_survival_skills_database",
+          "page_number": 34,
+          "text_preview": "bags or spare clothing with dry foliage to use as an insulated mattress or pillow against cold or damp ground If in a group, assign tasks to everyone to keep them occupied and reduce worry. Do not ignore your fire; inste"
+        },
+        {
+          "score": 0.42857142857142855,
+          "chunk_id": "essential_survival_skills_database_p34_c2_1488d8a76931",
+          "book_id": "essential_survival_skills_database",
+          "page_number": 34,
+          "text_preview": "moving and hypothermia when stationary use or improvise walking stick to reduce trips and falls improvise shelter when not moving Plan your route around potential or known water sources and filter or purify all water whe"
+        }
+      ]
+    }
+  ]
+}

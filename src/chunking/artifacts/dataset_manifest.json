@@ -1,0 +1,39 @@
+{
+  "ingestion_version": "2026-05-05",
+  "generated_at": "2026-05-05T08:43:57.241279+00:00",
+  "books": [
+    {
+      "book_id": "essential_survival_skills_database",
+      "book_title": "Essential Survival Skills",
+      "source_file": "book/Essential-Survival-Skills_database.json",
+      "pages_processed": 158,
+      "chunks_produced": 404
+    },
+    {
+      "book_id": "the_ultimate_guide_to_rebuilding_database",
+      "book_title": "The Ultimate Guide to Rebuilding",
+      "source_file": "book/The-Ultimate-Guide-to-Rebuilding_database.json",
+      "pages_processed": 170,
+      "chunks_produced": 775
+    }
+  ],
+  "quality": {
+    "input_chunks": 1179,
+    "kept_chunks": 1169,
+    "dropped_chunks": 10,
+    "drop_reasons": {
+      "noise_pattern": 10
+    }
+  },
+  "post_quality_book_stats": {
+    "essential_survival_skills_database": {
+      "chunks": 399,
+      "pages": 177
+    },
+    "the_ultimate_guide_to_rebuilding_database": {
+      "chunks": 770,
+      "pages": 205
+    }
+  },
+  "dataset_schema_version": "1.0.0"
+}
