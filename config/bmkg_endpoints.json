@@ -5,22 +5,124 @@
     {
       "id": "autogempa",
       "description": "Single latest earthquake report",
-      "url": "https://data.bmkg.go.id/DataMKG/TEWS/autogempa.json"
+      "url": "https://data.bmkg.go.id/DataMKG/TEWS/autogempa.json",
+      "response_shape": {
+        "root_key": "Infogempa",
+        "data_key": "gempa",
+        "type": "single_object",
+        "fields_present": ["Tanggal", "Jam", "DateTime", "Coordinates", "Lintang", "Bujur", "Magnitude", "Kedalaman", "Wilayah", "Potensi", "Dirasakan", "Shakemap"]
+      }
     },
     {
       "id": "gempaterkini",
-      "description": "List of recent significant earthquakes (BMKG definition)",
-      "url": "https://data.bmkg.go.id/DataMKG/TEWS/gempaterkini.json"
+      "description": "List of recent significant earthquakes (BMKG definition, typically M 5.0+)",
+      "url": "https://data.bmkg.go.id/DataMKG/TEWS/gempaterkini.json",
+      "response_shape": {
+        "root_key": "Infogempa",
+        "data_key": "gempa",
+        "type": "array",
+        "fields_present": ["Tanggal", "Jam", "DateTime", "Coordinates", "Lintang", "Bujur", "Magnitude", "Kedalaman", "Wilayah", "Potensi"],
+        "notes": "Does NOT include Dirasakan (felt reports) or Shakemap"
+      }
     },
     {
       "id": "gempadirasakan",
       "description": "List of recent felt earthquakes",
-      "url": "https://data.bmkg.go.id/DataMKG/TEWS/gempadirasakan.json"
+      "url": "https://data.bmkg.go.id/DataMKG/TEWS/gempadirasakan.json",
+      "response_shape": {
+        "root_key": "Infogempa",
+        "data_key": "gempa",
+        "type": "array",
+        "fields_present": ["Tanggal", "Jam", "DateTime", "Coordinates", "Lintang", "Bujur", "Magnitude", "Kedalaman", "Wilayah", "Potensi", "Dirasakan"],
+        "notes": "Includes Dirasakan (felt/MMI reports) but NOT Shakemap"
+      }
     }
   ],
   "danger_classification": {
-    "status": "TODO",
+    "status": "DRAFT_v1",
     "owner": "Andi",
-    "notes": "Define thresholds using magnitude, depth, Potensi tsunami, Dirasakan/MMI, and distance from user if GPS is available."
+    "last_updated": "2026-05-12",
+    "overview": "These rules determine when a BMKG earthquake event should trigger the emergency alarm + TTS briefing in the Prometheus app. Any event matching at least one CRITICAL or HIGH rule is classified as dangerous.",
+    "data_source_notes": {
+      "autogempa": "Use this feed for real-time monitoring (poll every 60s). It provides the most complete data including Dirasakan and Shakemap.",
+      "gempaterkini": "Use for historical context. No Dirasakan field available.",
+      "gempadirasakan": "Use for felt-intensity cross-check. All events here have Dirasakan data."
+    },
+    "rules": [
+      {
+        "id": "tsunami_potential",
+        "severity": "CRITICAL",
+        "condition": "Potensi field contains any of ['tsunami', 'berpotensi tsunami', 'berpotensi'] AND does NOT start with or contain 'tidak'",
+        "rationale": "Any confirmed tsunami potential from BMKG is immediately dangerous regardless of magnitude",
+        "example_matches": ["Berpotensi tsunami", "Berpotensi tsunami tinggi"],
+        "example_non_matches": ["Tidak berpotensi tsunami", "Gempa ini dirasakan untuk diteruskan pada masyarakat"]
+      },
+      {
+        "id": "high_magnitude",
+        "severity": "HIGH",
+        "condition": "Magnitude (parsed as float) >= 6.0",
+        "rationale": "Earthquakes M 6.0+ can cause damage even at moderate depth",
+        "example": "6.0"
+      },
+      {
+        "id": "moderate_magnitude_shallow",
+        "severity": "HIGH",
+        "condition": "Magnitude (parsed as float) >= 5.0 AND depth_km (parsed as integer) < 70",
+        "rationale": "M 5.0+ at shallow depth (< 70 km) is strongly felt and can cause damage near the epicenter",
+        "example": "5.2 at 10 km"
+      },
+      {
+        "id": "felt_intensity_damage",
+        "severity": "HIGH",
+        "condition": "Dirasakan field contains any MMI value >= V (Roman numeral), i.e. matches regex pattern of Roman numeral >= V or Arabic numeral >= 5 combined with recognized location names",
+        "rationale": "MMI V+ indicates moderate to strong shaking that can cause damage to vulnerable structures",
+        "example_matches": ["V Kolaka", "VI Makassar", "V-VI Mamuju"],
+        "example_non_matches": ["III Kolaka Timur, II-III Kolaka"],
+        "mmi_reference": {
+          "I-II": "Not felt to weakly felt",
+          "III": "Weak, noticed indoors",
+          "IV": "Light shaking, felt by many",
+          "V": "Moderate, some damage possible",
+          "VI": "Strong, light damage in weak buildings",
+          "VII": "Very strong, damage in well-built buildings",
+          "VIII+": "Severe to violent, widespread damage"
+        }
+      },
+      {
+        "id": "moderate_magnitude_deep",
+        "severity": "LOW",
+        "condition": "Magnitude (parsed as float) >= 5.0 AND depth_km >= 70",
+        "rationale": "M 5.0+ at depth >= 70 km is felt but rarely causes damage. Informational only — does NOT trigger alarm.",
+        "action": "log_only"
+      },
+      {
+        "id": "small_event",
+        "severity": "INFO",
+        "condition": "Magnitude (parsed as float) < 5.0",
+        "rationale": "Small events. No action needed.",
+        "action": "ignore"
+      }
+    ],
+    "classification_logic": {
+      "trigger_alarm": "ANY rule with severity CRITICAL or HIGH matches",
+      "log_only": "Only LOW or INFO rules match — no alarm, but may be logged for user reference",
+      "update_cadence": "Poll autogempa feed every 60 seconds while app is in foreground. On each new event different from previous (by DateTime), re-evaluate."
+    },
+    "implementation_notes": [
+      "Magnitude arrives as a string like '2.9' or '6.0'. Parse as Float before comparison.",
+      "Kedalaman arrives as a string like '10 km'. Parse integer depth by extracting digits before ' km'.",
+      "Dirasakan uses Roman numerals (I through XII) followed by location names, e.g. 'III Kolaka Timur, II-III Kolaka'. Extract the max Roman numeral value.",
+      "The autogempa feed has the most complete data (includes Dirasakan and Shakemap). Use it as the primary feed.",
+      "When comparing new vs previous events, use the DateTime field (ISO 8601) as the unique identifier.",
+      "Coordinates arrive as '-4.08,121.79' format (latitude,longitude). Both use negative for South/West.",
+      "Lintang (latitude) suffix: 'LS' = South, 'LU' = North.",
+      "Bujur (longitude) suffix: 'BT' = East, 'BB' = West (though Indonesia is entirely East)."
+    ],
+    "todo_next": [
+      "Test rules against historical BMKG data to validate thresholds",
+      "Adjust magnitude threshold or depth cutoff based on real-world testing",
+      "Define how to handle multiple dangerous events in quick succession (debounce period?)",
+      "Define user GPS proximity rule (optional) — only alert if epicenter is within X km of user"
+    ]
   }
 }
