@@ -1,0 +1,26 @@
+{
+  "provider": "BMKG (Badan Meteorologi, Klimatologi, dan Geofisika)",
+  "attribution_note": "Credit BMKG as the data source in the app and any published materials.",
+  "feeds": [
+    {
+      "id": "autogempa",
+      "description": "Single latest earthquake report",
+      "url": "https://data.bmkg.go.id/DataMKG/TEWS/autogempa.json"
+    },
+    {
+      "id": "gempaterkini",
+      "description": "List of recent significant earthquakes (BMKG definition)",
+      "url": "https://data.bmkg.go.id/DataMKG/TEWS/gempaterkini.json"
+    },
+    {
+      "id": "gempadirasakan",
+      "description": "List of recent felt earthquakes",
+      "url": "https://data.bmkg.go.id/DataMKG/TEWS/gempadirasakan.json"
+    }
+  ],
+  "danger_classification": {
+    "status": "TODO",
+    "owner": "Andi",
+    "notes": "Define thresholds using magnitude, depth, Potensi tsunami, Dirasakan/MMI, and distance from user if GPS is available."
+  }
+}
