@@ -1,2 +1,25 @@
-log.md
+# Python
 __pycache__/
+*.pyc
+*.pyo
+venv/
+.venv/
+env/
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+*.swp
+*.swo
+*~
+
+# Secrets
+.env
+.env.*
+
+# Logs
+*.log
+log.md

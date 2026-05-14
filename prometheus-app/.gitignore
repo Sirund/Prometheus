@@ -1,0 +1,23 @@
+# Xcode user-specific state
+*.xcuserdata
+xcuserdata/
+*.xcuserstate
+
+# Build
+DerivedData/
+*.build/
+build/
+
+# CocoaPods
+Pods/
+
+# Archives
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Xcode header maps
+*.hmap
+
+# Xcode schemes (user-specific)
+xcschemes/
