@@ -1,0 +1,18 @@
+{
+  "Infogempa": {
+    "gempa": {
+      "Tanggal": "12 Mei 2026",
+      "Jam": "04:06:20 WIB",
+      "DateTime": "2026-05-11T21:06:20+00:00",
+      "Coordinates": "-4.08,121.79",
+      "Lintang": "4.08 LS",
+      "Bujur": "121.79 BT",
+      "Magnitude": "2.9",
+      "Kedalaman": "10 km",
+      "Wilayah": "Pusat gempa berada di darat 12 km barat daya Kolaka Timur",
+      "Potensi": "Gempa ini dirasakan untuk diteruskan pada masyarakat",
+      "Dirasakan": "III Kolaka Timur, II-III Kolaka",
+      "Shakemap": "20260512040620.mmi.jpg"
+    }
+  }
+}

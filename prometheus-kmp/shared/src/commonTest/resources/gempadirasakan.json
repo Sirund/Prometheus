@@ -1,0 +1,186 @@
+{
+  "Infogempa": {
+    "gempa": [
+      {
+        "Tanggal": "12 Mei 2026",
+        "Jam": "04:06:20 WIB",
+        "DateTime": "2026-05-11T21:06:20+00:00",
+        "Coordinates": "-4.08,121.79",
+        "Lintang": "4.08 LS",
+        "Bujur": "121.79 BT",
+        "Magnitude": "2.9",
+        "Kedalaman": "10 km",
+        "Wilayah": "Pusat gempa berada di darat 12 km barat daya Kolaka Timur",
+        "Dirasakan": "III Kolaka Timur, II-III Kolaka"
+      },
+      {
+        "Tanggal": "11 Mei 2026",
+        "Jam": "20:40:41 WIB",
+        "DateTime": "2026-05-11T13:40:41+00:00",
+        "Coordinates": "-4.06,121.87",
+        "Lintang": "4.06 LS",
+        "Bujur": "121.87 BT",
+        "Magnitude": "2.4",
+        "Kedalaman": "9 km",
+        "Wilayah": "Pusat gempa berada di darat 6 km Selatan KOLAKATIMUR",
+        "Dirasakan": "II-III Kolaka Timur, II-III Kolaka"
+      },
+      {
+        "Tanggal": "10 Mei 2026",
+        "Jam": "19:24:33 WIB",
+        "DateTime": "2026-05-10T12:24:33+00:00",
+        "Coordinates": "1.20,120.33",
+        "Lintang": "1.20 LU",
+        "Bujur": "120.33 BT",
+        "Magnitude": "4.8",
+        "Kedalaman": "8 km",
+        "Wilayah": "Pusat gempa berada di laut 60 km barat laut Toli-Toli",
+        "Dirasakan": "II-III Tolitoli, II-III Buol"
+      },
+      {
+        "Tanggal": "10 Mei 2026",
+        "Jam": "13:24:55 WIB",
+        "DateTime": "2026-05-10T06:24:55+00:00",
+        "Coordinates": "3.57,98.74",
+        "Lintang": "3.57 LU",
+        "Bujur": "98.74 BT",
+        "Magnitude": "3.0",
+        "Kedalaman": "8 km",
+        "Wilayah": "Pusat gempa berada di darat 15 km barat Deli Serdang",
+        "Dirasakan": "II Medan"
+      },
+      {
+        "Tanggal": "09 Mei 2026",
+        "Jam": "07:10:29 WIB",
+        "DateTime": "2026-05-09T00:10:29+00:00",
+        "Coordinates": "-1.89,139.19",
+        "Lintang": "1.89 LS",
+        "Bujur": "139.19 BT",
+        "Magnitude": "4.6",
+        "Kedalaman": "10 km",
+        "Wilayah": "Pusat gempa berada di laut 48 km tenggara Sarmi",
+        "Dirasakan": "II Sarmi"
+      },
+      {
+        "Tanggal": "07 Mei 2026",
+        "Jam": "13:17:45 WIB",
+        "DateTime": "2026-05-07T06:17:45+00:00",
+        "Coordinates": "-4.80,122.65",
+        "Lintang": "4.80 LS",
+        "Bujur": "122.65 BT",
+        "Magnitude": "2.9",
+        "Kedalaman": "2 km",
+        "Wilayah": "Pusat gempa berada di darat 7 km barat Muna",
+        "Dirasakan": "II-III Muna Barat"
+      },
+      {
+        "Tanggal": "05 Mei 2026",
+        "Jam": "20:17:30 WIB",
+        "DateTime": "2026-05-05T13:17:30+00:00",
+        "Coordinates": "-5.44,104.65",
+        "Lintang": "5.44 LS",
+        "Bujur": "104.65 BT",
+        "Magnitude": "2.0",
+        "Kedalaman": "10 km",
+        "Wilayah": "Pusat gempa berada di darat 6 km barat laut Tanggamus",
+        "Dirasakan": "II Gisting"
+      },
+      {
+        "Tanggal": "05 Mei 2026",
+        "Jam": "13:44:50 WIB",
+        "DateTime": "2026-05-05T06:44:50+00:00",
+        "Coordinates": "-10.11,119.30",
+        "Lintang": "10.11 LS",
+        "Bujur": "119.30 BT",
+        "Magnitude": "6.0",
+        "Kedalaman": "10 km",
+        "Wilayah": "Pusat gempa berada di laut 37 km Barat Daya Wanokaka",
+        "Dirasakan": "IV Waingapu, IV Karuni, IV Tambolaka, IV Waibakul, IV Waikabubak, III Kab. Bima , III Kota Bima, III Kab. Sumbawa Barat, III Kab. Sumbawa, II Denpasar"
+      },
+      {
+        "Tanggal": "05 Mei 2026",
+        "Jam": "05:14:39 WIB",
+        "DateTime": "2026-05-04T22:14:39+00:00",
+        "Coordinates": "-8.08,107.92",
+        "Lintang": "8.08 LS",
+        "Bujur": "107.92 BT",
+        "Magnitude": "4.2",
+        "Kedalaman": "14 km",
+        "Wilayah": "Pusat gempa berada di laut 76 km barat daya Kabupaten Pangandaran",
+        "Dirasakan": "III Cipatujah, III Langkaplancar, II-III Kota Tasikmalaya, II-III Cikoneng, Ciamis, III Pangandaran, II-III Puspahiang, II-III Kota Banjar"
+      },
+      {
+        "Tanggal": "04 Mei 2026",
+        "Jam": "12:56:11 WIB",
+        "DateTime": "2026-05-04T05:56:11+00:00",
+        "Coordinates": "4.74,96.77",
+        "Lintang": "4.74 LU",
+        "Bujur": "96.77 BT",
+        "Magnitude": "3.2",
+        "Kedalaman": "10 km",
+        "Wilayah": "Pusat gempa berada di darat 10 km Barat Bener Meriah",
+        "Dirasakan": "III Bener Meriah"
+      },
+      {
+        "Tanggal": "04 Mei 2026",
+        "Jam": "12:09:03 WIB",
+        "DateTime": "2026-05-04T05:09:03+00:00",
+        "Coordinates": "4.74,96.72",
+        "Lintang": "4.74 LU",
+        "Bujur": "96.72 BT",
+        "Magnitude": "2.5",
+        "Kedalaman": "5 km",
+        "Wilayah": "Pusat gempa berada di darat 16 km barat Bener Meriah",
+        "Dirasakan": "II-III Bener Meriah"
+      },
+      {
+        "Tanggal": "04 Mei 2026",
+        "Jam": "10:37:09 WIB",
+        "DateTime": "2026-05-04T03:37:09+00:00",
+        "Coordinates": "3.13,126.54",
+        "Lintang": "3.13 LU",
+        "Bujur": "126.54 BT",
+        "Magnitude": "4.4",
+        "Kedalaman": "67 km",
+        "Wilayah": "Pusat gempa berada di laut 98 km selatan Melonguane",
+        "Dirasakan": "II-III Naha"
+      },
+      {
+        "Tanggal": "04 Mei 2026",
+        "Jam": "07:56:54 WIB",
+        "DateTime": "2026-05-04T00:56:54+00:00",
+        "Coordinates": "-7.17,107.83",
+        "Lintang": "7.17 LS",
+        "Bujur": "107.83 BT",
+        "Magnitude": "2.8",
+        "Kedalaman": "4 km",
+        "Wilayah": "Pusat gempa berada di darat 9 km barat laut Kab. Garut",
+        "Dirasakan": "II-III Kamojang, II-III Leles, II-III Tarogong, II-III Bayongbong, II-III Banyuresmi, II-III Samarang, II-III Kadungora, II-III Sukaresmi, II-III Nagrek"
+      },
+      {
+        "Tanggal": "04 Mei 2026",
+        "Jam": "02:06:13 WIB",
+        "DateTime": "2026-05-03T19:06:13+00:00",
+        "Coordinates": "-8.25,108.27",
+        "Lintang": "8.25 LS",
+        "Bujur": "108.27 BT",
+        "Magnitude": "4.0",
+        "Kedalaman": "29 km",
+        "Wilayah": "Pusat gempa berada di laut 66 km selatan Kab. Pangandaran",
+        "Dirasakan": "II-III Banjarwangi, II-III Manonjaya, II-III Singaparna, II-III Cikatomas, II-III Sukaramet, II-III Cimaragas, II-III Banjaranyar, II-III Banjarsari, II-III Pangandaran"
+      },
+      {
+        "Tanggal": "03 Mei 2026",
+        "Jam": "23:51:56 WIB",
+        "DateTime": "2026-05-03T16:51:56+00:00",
+        "Coordinates": "1.15,126.81",
+        "Lintang": "1.15 LU",
+        "Bujur": "126.81 BT",
+        "Magnitude": "4.6",
+        "Kedalaman": "39 km",
+        "Wilayah": "Pusat gempa berada di laut 74 km barat Jailolo",
+        "Dirasakan": "II-III Kota Ternate"
+      }
+    ]
+  }
+}
