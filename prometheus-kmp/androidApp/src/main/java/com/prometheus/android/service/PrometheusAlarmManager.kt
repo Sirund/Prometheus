@@ -74,8 +74,8 @@ class PrometheusAlarmManager(private val context: Context) {
         NotificationManagerCompat.from(context).notify(ID_STATUS, n)
     }
 
-    fun triggerAlert(event: EarthquakeEvent) {
-        val briefing = EmergencyBriefingFormatter.buildBriefingText(event)
+    fun triggerAlert(event: EarthquakeEvent, gemmaBriefing: String? = null) {
+        val briefing = gemmaBriefing ?: EmergencyBriefingFormatter.buildBriefingText(event)
         val mag = event.magnitudeValue?.let { "%.1f".format(it) } ?: "?"
         val loc = event._wilayah?.take(50) ?: "Unknown location"
 

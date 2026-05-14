@@ -2,30 +2,30 @@ package com.prometheus.android.navigation
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.ChatBubble
+import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.icons.filled.Radio
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.prometheus.android.ui.assistant.AssistantScreen
-import com.prometheus.android.ui.dashboard.DashboardScreen
-import com.prometheus.android.ui.library.LibraryScreen
+import com.prometheus.android.ui.map.MapScreen
+import com.prometheus.android.ui.monitor.MonitorScreen
 import com.prometheus.android.ui.theme.PrometheusColors
 import com.prometheus.android.ui.vision.VisionScreen
 
 enum class Screen(val label: String, val icon: ImageVector) {
-    Dashboard("DASHBOARD", Icons.Filled.Home),
-    Assistant("ASSISTANT", Icons.AutoMirrored.Filled.Send),
-    Vision("VISION", Icons.Filled.PhotoCamera),
-    Library("LIBRARY", Icons.AutoMirrored.Filled.List)
+    Monitor("MONITOR", Icons.Filled.Radio),
+    Evacuate("EVACUATE", Icons.Filled.Map),
+    Survival("SURVIVAL", Icons.Filled.ChatBubble),
+    Vision("VISION", Icons.Filled.CameraAlt)
 }
 
 @Composable
 fun PrometheusApp() {
-    var selectedScreen by remember { mutableStateOf(Screen.Dashboard) }
+    var selectedScreen by remember { mutableStateOf(Screen.Monitor) }
 
     Scaffold(
         bottomBar = {
@@ -50,10 +50,10 @@ fun PrometheusApp() {
         containerColor = PrometheusColors.darkBackground
     ) { padding ->
         when (selectedScreen) {
-            Screen.Dashboard -> DashboardScreen()
-            Screen.Assistant -> AssistantScreen()
+            Screen.Monitor -> MonitorScreen()
+            Screen.Evacuate -> MapScreen()
+            Screen.Survival -> AssistantScreen()
             Screen.Vision -> VisionScreen()
-            Screen.Library -> LibraryScreen()
         }
     }
 }

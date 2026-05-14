@@ -18,6 +18,10 @@ android {
 
     buildFeatures { compose = true }
 
+    aaptOptions {
+        noCompress += ".litertlm"
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -36,5 +40,6 @@ dependencies {
     implementation(libs.activity.compose)
     implementation(libs.navigation.compose)
     implementation(libs.core.ktx)
+    implementation(libs.litertlm.android)
     debugImplementation(libs.compose.ui.tooling)
 }

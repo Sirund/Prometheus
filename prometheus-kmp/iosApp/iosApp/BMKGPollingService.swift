@@ -11,7 +11,9 @@ class BMKGPollingService {
 
     var isMonitoring = false
     var latestEvent: String?
+    var latestEarthquakeEvent: EarthquakeEvent?
     var lastChecked: String?
+    var dangerLevel: Int = 0
 
     func start() {
         isMonitoring = true
@@ -27,7 +29,7 @@ class BMKGPollingService {
         timer = nil
     }
 
-    private func checkNow() {
+    func checkNow() {
         let formatter = DateFormatter()
         formatter.dateFormat = "HH:mm:ss"
         lastChecked = formatter.string(from: Date())
@@ -52,10 +54,17 @@ class BMKGPollingService {
         guard let eventId = event.dateTime, eventId != lastEventId else { return }
         lastEventId = eventId
 
+        latestEarthquakeEvent = event
         latestEvent = "M \(event.magnitudeValue) — \(event.wilayah_)"
 
-        if event.isDangerous {
+        let matches = event.matchedDangerRules
+        if matches.contains(where: { $0.severity == .critical || $0.severity == .high }) {
+            dangerLevel = 2
             triggerAlarm(event: event)
+        } else if matches.isNotEmpty() {
+            dangerLevel = 1
+        } else {
+            dangerLevel = 0
         }
     }
 

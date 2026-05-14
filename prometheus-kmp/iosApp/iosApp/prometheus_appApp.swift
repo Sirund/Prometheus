@@ -8,6 +8,8 @@ struct prometheus_appApp: App {
         WindowGroup {
             ContentView()
                 .environment(delegate.pollingService)
+                .tint(.prometheusBlue)
+                .preferredColorScheme(.dark)
         }
     }
 }

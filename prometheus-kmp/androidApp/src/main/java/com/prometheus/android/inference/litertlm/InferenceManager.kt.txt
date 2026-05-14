@@ -1,0 +1,79 @@
+package com.prometheus.android.inference
+
+import android.content.Context
+import com.google.ai.edge.litertlm.EngineConfiguration
+import com.google.ai.edge.litertlm.LMConversation
+import com.google.ai.edge.litertlm.LMEngine
+import com.google.ai.edge.litertlm.ModelDownloader
+import com.google.ai.edge.litertlm.ModelRegistry
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
+class InferenceManager(private val context: Context) {
+
+    private var engine: LMEngine? = null
+    private var conversation: LMConversation? = null
+
+    var isModelLoaded = false
+    var statusMessage = "Initializing..."
+
+    suspend fun setupGemma() {
+        withContext(Dispatchers.IO) {
+            try {
+                val downloader = ModelDownloader(context)
+                statusMessage = "Checking model..."
+                isModelLoaded = false
+
+                if (downloader.modelPath(ModelRegistry.gemma4E2B) == null) {
+                    statusMessage = "Downloading Gemma 4 (2.4GB)..."
+                    downloader.download(ModelRegistry.gemma4E2B)
+                }
+
+                statusMessage = "Loading to GPU..."
+                val config = EngineConfiguration.builder()
+                    .setModelPath(downloader.modelPath(ModelRegistry.gemma4E2B)!!)
+                    .setBackend(EngineConfiguration.Backend.GPU)
+                    .setVisionBackend(EngineConfiguration.Backend.CPU)
+                    .setAudioBackend(EngineConfiguration.Backend.CPU)
+                    .build()
+
+                val newEngine = LMEngine.create(config)
+                newEngine.load()
+
+                engine = newEngine
+                conversation = newEngine.createConversation()
+                isModelLoaded = true
+                statusMessage = "Gemma 4 Online"
+            } catch (e: Exception) {
+                statusMessage = "Error: ${e.message ?: e.javaClass.simpleName}"
+            }
+        }
+    }
+
+    suspend fun sendMessage(text: String, onToken: (String) -> Unit) {
+        val conv = conversation ?: run {
+            onToken("Model not loaded.")
+            return
+        }
+        try {
+            val builder = StringBuilder()
+            val stream = conv.sendStream(text)
+            stream.collect { token ->
+                builder.append(token)
+                onToken(builder.toString())
+            }
+        } catch (e: Exception) {
+            onToken("Inference failed: ${e.message}")
+        }
+    }
+
+    fun shutdown() {
+        engine?.close()
+        engine = null
+        conversation = null
+    }
+
+    fun createNewConversation() {
+        conversation = engine?.createConversation()
+    }
+}
