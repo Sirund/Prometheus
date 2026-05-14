@@ -71,11 +71,14 @@ class InferenceManager(private val context: Context) {
         }
         try {
             val contents = Contents.of(listOf(Content.Text(text)))
-            val response = conv.sendMessage(contents)
-            val result = response.contents.contents
-                .filterIsInstance<Content.Text>()
-                .joinToString("") { it.text }
-            onToken(result.ifEmpty { "(empty response)" })
+            val response = StringBuilder()
+            conv.sendMessageAsync(contents).collect { msg ->
+                response.append(msg.toString())
+                onToken(response.toString())
+            }
+            if (response.isEmpty()) {
+                onToken("(empty response)")
+            }
         } catch (e: Exception) {
             onToken("Inference failed: ${e.message}")
         }
