@@ -1,46 +1,90 @@
 package com.prometheus.android.inference
 
 import android.content.Context
+import com.google.ai.edge.litertlm.Backend
+import com.google.ai.edge.litertlm.Conversation
+import com.google.ai.edge.litertlm.ConversationConfig
+import com.google.ai.edge.litertlm.Content
+import com.google.ai.edge.litertlm.Engine
+import com.google.ai.edge.litertlm.EngineConfig
+import com.google.ai.edge.litertlm.Message
+import com.prometheus.prompt.SystemPrompts
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.io.File
 
 class InferenceManager(private val context: Context) {
+
+    private var engine: Engine? = null
+    private var conversation: Conversation? = null
 
     var isModelLoaded = false
     var statusMessage = "Initializing..."
 
     suspend fun setupGemma() {
-        statusMessage = "Gemma 4 Online"
-        isModelLoaded = true
+        withContext(Dispatchers.IO) {
+            try {
+                val modelPath = findModelPath()
+                if (modelPath == null) {
+                    statusMessage = "Model not found. Place a .litertlm file in app files or /sdcard."
+                    return@withContext
+                }
+
+                statusMessage = "Loading to GPU..."
+                val config = EngineConfig(
+                    modelPath = modelPath,
+                    backend = Backend.GPU
+                )
+
+                val newEngine = Engine(config)
+                newEngine.initialize()
+
+                engine = newEngine
+                createNewConversation()
+                isModelLoaded = true
+                statusMessage = "Gemma 4 Online"
+            } catch (e: Exception) {
+                statusMessage = "Error: ${e.message ?: e.javaClass.simpleName}"
+            }
+        }
     }
 
     suspend fun sendMessage(text: String, onToken: (String) -> Unit) {
-        var response = ""
-        response += when {
-            text.contains("earthquake", ignoreCase = true) ||
-            text.contains("gempa", ignoreCase = true) -> {
-                "If you feel shaking: Drop, Cover, and Hold On. Stay away from windows and heavy objects. " +
-                "If you are near the coast, move to higher ground immediately after shaking stops. " +
-                "Check for injuries and damage only when it is safe. Follow BMKG official instructions."
-            }
-            text.contains("tsunami", ignoreCase = true) -> {
-                "Move immediately to higher ground. Do not wait for official warnings. " +
-                "A tsunami can arrive within minutes. Do not return to the coast until authorities declare it safe."
-            }
-            text.contains("first aid", ignoreCase = true) ||
-            text.contains("luka", ignoreCase = true) -> {
-                "1. Ensure the area is safe before approaching. " +
-                "2. Control bleeding with direct pressure. " +
-                "3. Do not move a person with suspected spinal injury. " +
-                "4. Call emergency services (119/112/118)."
-            }
-            else -> {
-                "Stay calm and assess your situation. Priority: safety, shelter, water, food. " +
-                "Check for hazards around you. Help others if you can do so safely."
-            }
+        val conv = conversation ?: run {
+            onToken("Model not loaded.")
+            return
         }
-        onToken(response)
+        try {
+            val response = conv.sendMessage(Message.of(text))
+            val responseText = response.contents
+                .filterIsInstance<Content.Text>()
+                .joinToString("") { it.text }
+            onToken(responseText.ifEmpty { "(empty response)" })
+        } catch (e: Exception) {
+            onToken("Inference failed: ${e.message}")
+        }
     }
 
-    fun shutdown() { }
+    fun shutdown() {
+        engine?.close()
+        engine = null
+        conversation = null
+    }
 
-    fun createNewConversation() { }
+    fun createNewConversation() {
+        val systemMessage = Message.of(SystemPrompts.SURVIVAL_CHATBOT)
+        conversation = engine?.createConversation(
+            ConversationConfig(systemMessage = systemMessage)
+        )
+    }
+
+    private fun findModelPath(): String? {
+        val candidates = listOf(
+            File(context.filesDir, "gemma4.litertlm"),
+            File(context.getExternalFilesDir(null), "gemma4.litertlm"),
+            File("/data/local/tmp/gemma4.litertlm"),
+            File("/sdcard/gemma4.litertlm")
+        )
+        return candidates.firstOrNull { it.exists() }?.absolutePath
+    }
 }
