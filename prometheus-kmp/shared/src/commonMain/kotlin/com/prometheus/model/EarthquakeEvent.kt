@@ -26,14 +26,14 @@ data class EarthquakeEvent(
     @SerialName("dirasakan") val dirasakan_: String? = null,
     @SerialName("Shakemap") val Shakemap: String? = null
 ) {
-    private val _tanggal: String? get() = Tanggal ?: tanggal_
-    private val _jam: String? get() = Jam ?: jam_
-    private val _coordinates: String? get() = Coordinates ?: coordinates_
-    private val _magnitude: String? get() = Magnitude ?: magnitude_
-    private val _kedalaman: String? get() = Kedalaman ?: kedalaman_
-    private val _wilayah: String? get() = Wilayah ?: wilayah_
-    private val _potensi: String? get() = Potensi ?: potensi_
-    private val _dirasakan: String? get() = Dirasakan ?: dirasakan_
+    val _tanggal: String? get() = Tanggal ?: tanggal_
+    val _jam: String? get() = Jam ?: jam_
+    val _coordinates: String? get() = Coordinates ?: coordinates_
+    val _magnitude: String? get() = Magnitude ?: magnitude_
+    val _kedalaman: String? get() = Kedalaman ?: kedalaman_
+    val _wilayah: String? get() = Wilayah ?: wilayah_
+    val _potensi: String? get() = Potensi ?: potensi_
+    val _dirasakan: String? get() = Dirasakan ?: dirasakan_
 
     val id: String
         get() = DateTime ?: "${Tanggal ?: _tanggal}-${Jam ?: _jam}"

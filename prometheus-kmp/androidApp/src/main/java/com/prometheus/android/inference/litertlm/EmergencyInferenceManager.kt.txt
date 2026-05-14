@@ -1,0 +1,70 @@
+package com.prometheus.android.inference
+
+import android.content.Context
+import com.google.ai.edge.litertlm.EngineConfiguration
+import com.google.ai.edge.litertlm.LMEngine
+import com.google.ai.edge.litertlm.ModelDownloader
+import com.google.ai.edge.litertlm.ModelRegistry
+import com.prometheus.model.EarthquakeEvent
+import com.prometheus.monitor.EmergencyBriefingFormatter
+import com.prometheus.prompt.SystemPrompts
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
+class EmergencyInferenceManager(private val context: Context) {
+
+    private var engine: LMEngine? = null
+    private var ready = false
+
+    suspend fun ensureLoaded(): Boolean {
+        if (ready) return true
+        return withContext(Dispatchers.IO) {
+            try {
+                val downloader = ModelDownloader(context)
+                if (downloader.modelPath(ModelRegistry.gemma4E2B) == null) {
+                    downloader.download(ModelRegistry.gemma4E2B)
+                }
+                val config = EngineConfiguration.builder()
+                    .setModelPath(downloader.modelPath(ModelRegistry.gemma4E2B)!!)
+                    .setBackend(EngineConfiguration.Backend.GPU)
+                    .build()
+                val newEngine = LMEngine.create(config)
+                newEngine.load()
+                engine = newEngine
+                ready = true
+                true
+            } catch (_: Exception) {
+                false
+            }
+        }
+    }
+
+    suspend fun generateBriefing(event: EarthquakeEvent): String {
+        if (!ensureLoaded()) return EmergencyBriefingFormatter.buildBriefingText(event)
+
+        return withContext(Dispatchers.IO) {
+            try {
+                val prompt = buildEmergencyPrompt(event)
+                val conversation = engine!!.createConversation()
+                val stream = conversation.sendStream(prompt)
+                val response = StringBuilder()
+                stream.collect { token -> response.append(token) }
+                conversation.close()
+                response.toString()
+            } catch (_: Exception) {
+                EmergencyBriefingFormatter.buildBriefingText(event)
+            }
+        }
+    }
+
+    private fun buildEmergencyPrompt(event: EarthquakeEvent): String {
+        val summary = EmergencyBriefingFormatter.formatEventSummary(event)
+        return "${SystemPrompts.EMERGENCY_BRIEFING}\n\n$summary"
+    }
+
+    fun shutdown() {
+        engine?.close()
+        engine = null
+        ready = false
+    }
+}

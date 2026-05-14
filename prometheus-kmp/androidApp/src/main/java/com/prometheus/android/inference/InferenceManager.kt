@@ -1,71 +1,90 @@
 package com.prometheus.android.inference
 
-import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
+import android.content.Context
+import com.google.ai.edge.litertlm.Backend
+import com.google.ai.edge.litertlm.Conversation
+import com.google.ai.edge.litertlm.ConversationConfig
+import com.google.ai.edge.litertlm.Content
+import com.google.ai.edge.litertlm.Engine
+import com.google.ai.edge.litertlm.EngineConfig
+import com.google.ai.edge.litertlm.Message
+import com.prometheus.prompt.SystemPrompts
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.io.File
 
-class InferenceManager {
-    private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+class InferenceManager(private val context: Context) {
 
-    private val _isModelLoaded = MutableStateFlow(false)
-    val isModelLoaded: Boolean get() = _isModelLoaded.value
+    private var engine: Engine? = null
+    private var conversation: Conversation? = null
 
-    private val _statusMessage = MutableStateFlow("Initializing...")
-    val statusMessage: String get() = _statusMessage.value
-
-    private var modelLoaded = false
+    var isModelLoaded = false
+    var statusMessage = "Initializing..."
 
     suspend fun setupGemma() {
-        _statusMessage.value = "Checking model..."
-        _statusMessage.value = "Downloading Gemma 4 (2.4GB)..."
-        _statusMessage.value = "Loading to GPU..."
-        _statusMessage.value = "Gemma 4 Online"
+        withContext(Dispatchers.IO) {
+            try {
+                val modelPath = findModelPath()
+                if (modelPath == null) {
+                    statusMessage = "Model not found. Place a .litertlm file in app files or /sdcard."
+                    return@withContext
+                }
 
-        _isModelLoaded.value = true
-        modelLoaded = true
+                statusMessage = "Loading to GPU..."
+                val config = EngineConfig(
+                    modelPath = modelPath,
+                    backend = Backend.GPU
+                )
+
+                val newEngine = Engine(config)
+                newEngine.initialize()
+
+                engine = newEngine
+                createNewConversation()
+                isModelLoaded = true
+                statusMessage = "Gemma 4 Online"
+            } catch (e: Exception) {
+                statusMessage = "Error: ${e.message ?: e.javaClass.simpleName}"
+            }
+        }
     }
 
     suspend fun sendMessage(text: String, onToken: (String) -> Unit) {
-        if (!modelLoaded) {
+        val conv = conversation ?: run {
             onToken("Model not loaded.")
             return
         }
-
-        var response = ""
-        response += simulateGemmaResponse(text)
-        onToken(response)
-    }
-
-    private fun simulateGemmaResponse(query: String): String {
-        return when {
-            query.contains("earthquake", ignoreCase = true) ||
-            query.contains("gempa", ignoreCase = true) -> {
-                "If you feel shaking: Drop, Cover, and Hold On. Stay away from windows and heavy objects. " +
-                "If you are near the coast, move to higher ground immediately after shaking stops. " +
-                "Check for injuries and damage only when it is safe. Follow BMKG official instructions."
-            }
-            query.contains("tsunami", ignoreCase = true) -> {
-                "Move immediately to higher ground. Do not wait for official warnings. " +
-                "A tsunami can arrive within minutes. Do not return to the coast until authorities declare it safe. " +
-                "Tsunami waves come in multiple surges - the first is not always the largest."
-            }
-            query.contains("first aid", ignoreCase = true) ||
-            query.contains("luka", ignoreCase = true) -> {
-                "1. Ensure the area is safe before approaching. " +
-                "2. Control bleeding with direct pressure. " +
-                "3. Do not move a person with suspected spinal injury. " +
-                "4. Call emergency services (119/112/118). " +
-                "5. Keep the person warm and calm until help arrives."
-            }
-            else -> {
-                "Stay calm and assess your situation. Priority: safety, shelter, water, food. " +
-                "Check for hazards around you. Help others if you can do so safely. " +
-                "Listen for official information from BMKG and local authorities."
-            }
+        try {
+            val response = conv.sendMessage(Message.of(text))
+            val responseText = response.contents
+                .filterIsInstance<Content.Text>()
+                .joinToString("") { it.text }
+            onToken(responseText.ifEmpty { "(empty response)" })
+        } catch (e: Exception) {
+            onToken("Inference failed: ${e.message}")
         }
     }
 
-    fun close() {
-        scope.cancel()
+    fun shutdown() {
+        engine?.close()
+        engine = null
+        conversation = null
+    }
+
+    fun createNewConversation() {
+        val systemMessage = Message.of(SystemPrompts.SURVIVAL_CHATBOT)
+        conversation = engine?.createConversation(
+            ConversationConfig(systemMessage = systemMessage)
+        )
+    }
+
+    private fun findModelPath(): String? {
+        val candidates = listOf(
+            File(context.filesDir, "gemma4.litertlm"),
+            File(context.getExternalFilesDir(null), "gemma4.litertlm"),
+            File("/data/local/tmp/gemma4.litertlm"),
+            File("/sdcard/gemma4.litertlm")
+        )
+        return candidates.firstOrNull { it.exists() }?.absolutePath
     }
 }

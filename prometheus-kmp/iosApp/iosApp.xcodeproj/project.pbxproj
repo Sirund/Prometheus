@@ -9,11 +9,11 @@
 /* Begin PBXBuildFile section */
 		BLDG00000000000000000001 /* prometheus_appApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = FILE00000000000000000001 /* prometheus_appApp.swift */; };
 		BLDG00000000000000000002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FILE00000000000000000002 /* ContentView.swift */; };
-		BLDG00000000000000000003 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FILE00000000000000000003 /* DashboardView.swift */; };
+		BLDG00000000000000000003 /* MonitorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FILE00000000000000000003 /* MonitorView.swift */; };
 		BLDG00000000000000000004 /* AssistantView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FILE00000000000000000004 /* AssistantView.swift */; };
 		BLDG00000000000000000005 /* ChatModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = FILE00000000000000000005 /* ChatModels.swift */; };
 		BLDG00000000000000000006 /* VisionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FILE00000000000000000006 /* VisionView.swift */; };
-		BLDG00000000000000000007 /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FILE00000000000000000007 /* LibraryView.swift */; };
+		BLDG00000000000000000007 /* MapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FILE00000000000000000007 /* MapView.swift */; };
 		BLDG00000000000000000008 /* BackgroundView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FILE00000000000000000008 /* BackgroundView.swift */; };
 		BLDG00000000000000000009 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = FILE00000000000000000009 /* Theme.swift */; };
 		BLDG0000000000000000000A /* InferenceManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FILE0000000000000000000A /* InferenceManager.swift */; };
@@ -23,11 +23,11 @@
 /* Begin PBXFileReference section */
 		FILE00000000000000000001 /* prometheus_appApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = prometheus_appApp.swift; sourceTree = "<group>"; };
 		FILE00000000000000000002 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
-		FILE00000000000000000003 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
+		FILE00000000000000000003 /* MonitorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonitorView.swift; sourceTree = "<group>"; };
 		FILE00000000000000000004 /* AssistantView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantView.swift; sourceTree = "<group>"; };
 		FILE00000000000000000005 /* ChatModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatModels.swift; sourceTree = "<group>"; };
 		FILE00000000000000000006 /* VisionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisionView.swift; sourceTree = "<group>"; };
-		FILE00000000000000000007 /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
+		FILE00000000000000000007 /* MapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapView.swift; sourceTree = "<group>"; };
 		FILE00000000000000000008 /* BackgroundView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundView.swift; sourceTree = "<group>"; };
 		FILE00000000000000000009 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		FILE0000000000000000000A /* InferenceManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InferenceManager.swift; sourceTree = "<group>"; };
@@ -61,11 +61,11 @@
 			children = (
 				FILE00000000000000000001 /* prometheus_appApp.swift */,
 				FILE00000000000000000002 /* ContentView.swift */,
-				FILE00000000000000000003 /* DashboardView.swift */,
+				FILE00000000000000000003 /* MonitorView.swift */,
 				FILE00000000000000000004 /* AssistantView.swift */,
 				FILE00000000000000000005 /* ChatModels.swift */,
 				FILE00000000000000000006 /* VisionView.swift */,
-				FILE00000000000000000007 /* LibraryView.swift */,
+				FILE00000000000000000007 /* MapView.swift */,
 				FILE00000000000000000008 /* BackgroundView.swift */,
 				FILE00000000000000000009 /* Theme.swift */,
 				FILE0000000000000000000A /* InferenceManager.swift */,
@@ -178,11 +178,11 @@
 			files = (
 				BLDG00000000000000000001 /* prometheus_appApp.swift in Sources */,
 				BLDG00000000000000000002 /* ContentView.swift in Sources */,
-				BLDG00000000000000000003 /* DashboardView.swift in Sources */,
+				BLDG00000000000000000003 /* MonitorView.swift in Sources */,
 				BLDG00000000000000000004 /* AssistantView.swift in Sources */,
 				BLDG00000000000000000005 /* ChatModels.swift in Sources */,
 				BLDG00000000000000000006 /* VisionView.swift in Sources */,
-				BLDG00000000000000000007 /* LibraryView.swift in Sources */,
+				BLDG00000000000000000007 /* MapView.swift in Sources */,
 				BLDG00000000000000000008 /* BackgroundView.swift in Sources */,
 				BLDG00000000000000000009 /* Theme.swift in Sources */,
 				BLDG0000000000000000000A /* InferenceManager.swift in Sources */,
