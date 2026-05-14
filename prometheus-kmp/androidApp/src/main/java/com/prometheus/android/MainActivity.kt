@@ -9,6 +9,9 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import com.prometheus.android.service.BMKGPollingController
@@ -19,6 +22,7 @@ import com.prometheus.android.navigation.PrometheusApp
 class MainActivity : ComponentActivity() {
 
     private var pollingController: BMKGPollingController? = null
+    private var latestEvent by mutableStateOf<String?>(null)
 
     private val notificationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -35,7 +39,10 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = PrometheusColors.darkBackground
                 ) {
-                    PrometheusApp()
+                    PrometheusApp(
+                        onRefreshBmkg = { pollingController?.forceCheck() },
+                        latestEvent = latestEvent
+                    )
                 }
             }
         }
@@ -63,7 +70,12 @@ class MainActivity : ComponentActivity() {
 
     private fun startPolling() {
         if (pollingController == null) {
-            pollingController = BMKGPollingController(this).apply { start() }
+            pollingController = BMKGPollingController(this).apply {
+                onNewEvent = { event ->
+                    latestEvent = "M ${event.magnitudeValue} — ${event.wilayah_}"
+                }
+                start()
+            }
         }
     }
 }

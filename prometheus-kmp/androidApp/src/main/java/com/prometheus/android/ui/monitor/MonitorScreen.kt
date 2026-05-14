@@ -17,7 +17,10 @@ import com.prometheus.android.ui.theme.PrometheusColors
 private enum class DangerLevel { None, Watch, Danger }
 
 @Composable
-fun MonitorScreen() {
+fun MonitorScreen(
+    onRefresh: (() -> Unit)? = null,
+    latestEvent: String? = null
+) {
     var dangerLevel by remember { mutableStateOf(DangerLevel.None) }
     var lastRefresh by remember { mutableStateOf("Not yet refreshed") }
 
@@ -54,7 +57,7 @@ fun MonitorScreen() {
         SectionHeader(title = "RECENT EVENTS")
         Spacer(Modifier.height(4.dp))
         Text(
-            text = "No data loaded. Tap refresh to poll BMKG.",
+            text = latestEvent ?: "No data loaded. Tap refresh to poll BMKG.",
             color = Color.Gray,
             style = MaterialTheme.typography.labelSmall
         )
@@ -62,7 +65,10 @@ fun MonitorScreen() {
         Spacer(Modifier.height(16.dp))
 
         Button(
-            onClick = { /* TODO: BMKGMonitor.fetch() */ },
+            onClick = {
+                lastRefresh = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date())
+                onRefresh?.invoke()
+            },
             modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.buttonColors(
                 containerColor = PrometheusColors.blue.copy(alpha = 0.15f),
