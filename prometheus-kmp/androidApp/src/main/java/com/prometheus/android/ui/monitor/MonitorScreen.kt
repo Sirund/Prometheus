@@ -13,15 +13,24 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.prometheus.android.ui.theme.PrometheusColors
+import com.prometheus.model.EarthquakeEvent
 
 private enum class DangerLevel { None, Watch, Danger }
 
 @Composable
 fun MonitorScreen(
     onRefresh: (() -> Unit)? = null,
+    event: EarthquakeEvent? = null,
     latestEvent: String? = null
 ) {
-    var dangerLevel by remember { mutableStateOf(DangerLevel.None) }
+    val dangerLevel = when {
+        event == null -> DangerLevel.None
+        event.isDangerous -> DangerLevel.Danger
+        else -> {
+            val mag = event.magnitudeValue
+            if (mag != null && mag >= 4.0f) DangerLevel.Watch else DangerLevel.None
+        }
+    }
     var lastRefresh by remember { mutableStateOf("Not yet refreshed") }
 
     Column(
@@ -38,11 +47,11 @@ fun MonitorScreen(
         SectionHeader(title = "LATEST BMKG EVENT")
         Spacer(Modifier.height(8.dp))
         BMKGEventCard(
-            magnitude = "--",
-            location = "Waiting for data...",
-            depth = "--",
-            felt = "--",
-            potential = "--",
+            magnitude = event?._magnitude ?: "--",
+            location = event?._wilayah ?: if (event != null) "Unknown location" else "Waiting for data...",
+            depth = event?._kedalaman ?: "--",
+            felt = event?._dirasakan ?: "--",
+            potential = event?._potensi ?: "--",
             timestamp = lastRefresh
         )
 

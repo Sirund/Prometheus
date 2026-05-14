@@ -15,8 +15,12 @@ class BMKGPollingController(context: Context) {
     private val emergencyInference = EmergencyInferenceManager(context)
 
     var onNewEvent: ((EarthquakeEvent) -> Unit)? = null
+    var onPoll: ((EarthquakeEvent) -> Unit)? = null
 
     fun start() {
+        pollingManager.onPoll = { events ->
+            if (events.isNotEmpty()) onPoll?.invoke(events.first())
+        }
         pollingManager.onDangerousEvent = { event ->
             onNewEvent?.invoke(event)
             generateAndAnnounceBriefing(event)

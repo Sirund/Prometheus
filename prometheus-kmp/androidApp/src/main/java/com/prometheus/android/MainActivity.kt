@@ -18,11 +18,13 @@ import com.prometheus.android.service.BMKGPollingController
 import com.prometheus.android.ui.theme.PrometheusColors
 import com.prometheus.android.ui.theme.PrometheusTheme
 import com.prometheus.android.navigation.PrometheusApp
+import com.prometheus.model.EarthquakeEvent
 
 class MainActivity : ComponentActivity() {
 
     private var pollingController: BMKGPollingController? = null
     private var latestEvent by mutableStateOf<String?>(null)
+    private var currentEvent by mutableStateOf<EarthquakeEvent?>(null)
 
     private val notificationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -41,7 +43,8 @@ class MainActivity : ComponentActivity() {
                 ) {
                     PrometheusApp(
                         onRefreshBmkg = { pollingController?.forceCheck() },
-                        latestEvent = latestEvent
+                        latestEvent = latestEvent,
+                        currentEvent = currentEvent
                     )
                 }
             }
@@ -71,8 +74,15 @@ class MainActivity : ComponentActivity() {
     private fun startPolling() {
         if (pollingController == null) {
             pollingController = BMKGPollingController(this).apply {
+                onPoll = { event ->
+                    currentEvent = event
+                    val mag = event.magnitudeValue?.let { "M $it" } ?: "Unknown"
+                    latestEvent = "$mag — ${event._wilayah ?: "Unknown location"}"
+                }
                 onNewEvent = { event ->
-                    latestEvent = "M ${event.magnitudeValue} — ${event.wilayah_}"
+                    currentEvent = event
+                    val mag = event.magnitudeValue?.let { "M $it" } ?: "Unknown"
+                    latestEvent = "$mag — ${event._wilayah ?: "Unknown location"}"
                 }
                 start()
             }
