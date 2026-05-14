@@ -29,7 +29,9 @@ struct VisionView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .frame(height: 280)
-                    .overlay(Rectangle().stroke(Color.prometheusBlue.opacity(0.3), lineWidth: 1))
+                    .clipShape(RoundedRectangle(cornerRadius: 20))
+                    .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.prometheusBlue.opacity(0.3), lineWidth: 1))
+                    .shadow(color: .black.opacity(0.4), radius: 10, x: 0, y: 5)
                     .padding(.horizontal)
                     .padding(.top)
 
@@ -46,7 +48,8 @@ struct VisionView: View {
                     }
                     .padding(12)
                     .background(Color.cardBackground)
-                    .overlay(Rectangle().stroke(Color.prometheusBlue.opacity(0.2), lineWidth: 1))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.prometheusBlue.opacity(0.2), lineWidth: 1))
                     .padding(.horizontal)
                     .padding(.top, 12)
 
@@ -64,7 +67,8 @@ struct VisionView: View {
                     }
                     .padding()
                     .background(Color.cardBackground.opacity(0.5))
-                    .overlay(Rectangle().stroke(Color.prometheusBlue.opacity(0.15), lineWidth: 1))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.prometheusBlue.opacity(0.15), lineWidth: 1))
                     .padding(.horizontal)
 
                     Spacer()
@@ -80,7 +84,8 @@ struct VisionView: View {
                         .frame(maxWidth: .infinity)
                         .padding(28)
                         .background(Color.prometheusBlue.opacity(0.12))
-                        .overlay(Rectangle().stroke(Color.prometheusBlue.opacity(0.5), lineWidth: 2))
+                        .clipShape(RoundedRectangle(cornerRadius: 20))
+                        .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.prometheusBlue.opacity(0.5), lineWidth: 2))
                         .foregroundColor(.prometheusBlue)
                     }
                     .buttonStyle(.plain)

@@ -48,7 +48,8 @@ struct MonitorView: View {
                             .frame(maxWidth: .infinity)
                             .padding()
                             .background(Color.prometheusBlue.opacity(0.15))
-                            .overlay(Rectangle().stroke(Color.prometheusBlue.opacity(0.5), lineWidth: 1))
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.prometheusBlue.opacity(0.5), lineWidth: 1))
                             .foregroundColor(.prometheusBlue)
                         }
                         .buttonStyle(.plain)
@@ -108,7 +109,8 @@ struct DangerStatusBanner: View {
         }
         .padding(12)
         .background(color.opacity(0.15))
-        .overlay(Rectangle().stroke(color.opacity(0.6), lineWidth: 1))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(color.opacity(0.6), lineWidth: 1))
         .foregroundColor(color)
     }
 }
@@ -149,7 +151,9 @@ struct BMKGEventCard: View {
         }
         .padding()
         .background(Color.cardBackground)
-        .overlay(Rectangle().stroke(Color.prometheusBlue.opacity(0.3), lineWidth: 1))
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.prometheusBlue.opacity(0.3), lineWidth: 1))
+        .shadow(color: .black.opacity(0.35), radius: 8, x: 0, y: 4)
     }
 }
 
@@ -188,7 +192,8 @@ struct AlarmStatusCard: View {
         }
         .padding()
         .background(Color.cardBackground)
-        .overlay(Rectangle().stroke(Color.prometheusBlue.opacity(0.3), lineWidth: 1))
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.prometheusBlue.opacity(0.3), lineWidth: 1))
     }
 }
 

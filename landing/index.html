@@ -1,0 +1,1750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Prometheus — On-device Disaster Awareness for Indonesia</title>
+  <meta name="description" content="Gemma 4 runs locally on your phone. Real-time BMKG hazard data meets on-device AI — lifesaving guidance even when networks fail." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ── Reset & base ─────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:           #000000;
+      --bg-card:      #0d0d0d;
+      --bg-raised:    #131313;
+      --border:       rgba(0, 191, 255, 0.12);
+      --border-mid:   rgba(0, 191, 255, 0.28);
+      --border-hi:    rgba(0, 191, 255, 0.55);
+      --accent:       #00BFFF;
+      --accent-glow:  rgba(0, 191, 255, 0.18);
+      --accent-dim:   rgba(0, 191, 255, 0.55);
+      --text:         #ffffff;
+      --text-2:       #c0c0c0;
+      --text-3:       #6e6e6e;
+      --danger:       #ff4455;
+      --warn:         #ffaa00;
+      --ok:           #00e676;
+      --font-body:    'Inter', system-ui, sans-serif;
+      --font-mono:    'JetBrains Mono', 'Courier New', monospace;
+      --radius:       14px;
+      --radius-sm:    8px;
+      --max:          1120px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 16px;
+      line-height: 1.65;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { opacity: 0.8; }
+
+    img { display: block; max-width: 100%; }
+
+    /* ── Layout helpers ───────────────────────────────────── */
+    .container { max-width: var(--max); margin: 0 auto; padding: 0 24px; }
+
+    section { padding: 100px 0; }
+
+    .label {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent-dim);
+    }
+
+    .section-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+    .section-eyebrow::before {
+      content: '';
+      display: block;
+      width: 20px;
+      height: 1px;
+      background: var(--accent);
+    }
+
+    h2.section-title {
+      font-size: clamp(28px, 4vw, 42px);
+      font-weight: 700;
+      line-height: 1.2;
+      letter-spacing: -0.02em;
+      margin-bottom: 16px;
+    }
+
+    .section-sub {
+      font-size: 18px;
+      color: var(--text-2);
+      max-width: 600px;
+      line-height: 1.75;
+      margin-bottom: 56px;
+    }
+
+    /* ── Scroll reveal ─────────────────────────────────────── */
+    .reveal {
+      opacity: 0;
+      transform: translateY(28px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .reveal-delay-1 { transition-delay: 0.1s; }
+    .reveal-delay-2 { transition-delay: 0.2s; }
+    .reveal-delay-3 { transition-delay: 0.3s; }
+    .reveal-delay-4 { transition-delay: 0.4s; }
+    .reveal-delay-5 { transition-delay: 0.5s; }
+
+    /* ── Nav ──────────────────────────────────────────────── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      background: rgba(0,0,0,0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-inner {
+      max-width: var(--max);
+      margin: 0 auto;
+      padding: 0 24px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .nav-logo {
+      font-family: var(--font-mono);
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: 0.1em;
+    }
+    .nav-logo span { color: var(--text-2); font-weight: 400; }
+    .nav-badge {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: var(--text-3);
+      border: 1px solid var(--border-mid);
+      padding: 4px 10px;
+      border-radius: 999px;
+    }
+
+    /* ── Hero ─────────────────────────────────────────────── */
+    #hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 120px 0 80px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-grid {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0,191,255,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,191,255,0.04) 1px, transparent 1px);
+      background-size: 48px 48px;
+      mask-image: radial-gradient(ellipse 80% 80% at 50% 40%, black 40%, transparent 100%);
+    }
+    .hero-glow {
+      position: absolute;
+      top: -200px; left: 50%;
+      transform: translateX(-50%);
+      width: 700px; height: 700px;
+      background: radial-gradient(circle, rgba(0,191,255,0.08) 0%, transparent 65%);
+      pointer-events: none;
+    }
+
+    .hero-inner {
+      position: relative;
+      z-index: 1;
+      max-width: var(--max);
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    .hero-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--accent-glow);
+      border: 1px solid var(--border-hi);
+      border-radius: 999px;
+      padding: 5px 14px;
+      margin-bottom: 32px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      color: var(--accent);
+    }
+    .hero-tag .dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--ok);
+      animation: pulse-dot 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.7); }
+    }
+
+    h1 {
+      font-size: clamp(44px, 7vw, 86px);
+      font-weight: 900;
+      line-height: 1.0;
+      letter-spacing: -0.03em;
+      margin-bottom: 28px;
+    }
+    h1 .accent { color: var(--accent); }
+    h1 .block { display: block; }
+
+    .hero-sub {
+      font-size: clamp(16px, 2vw, 20px);
+      color: var(--text-2);
+      max-width: 600px;
+      line-height: 1.7;
+      margin-bottom: 44px;
+    }
+
+    .hero-cta-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 64px;
+    }
+
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--accent);
+      color: #000;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      padding: 14px 28px;
+      border-radius: var(--radius);
+      border: none;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.2s;
+      text-decoration: none;
+    }
+    .btn-primary:hover { opacity: 0.88; transform: translateY(-1px); color: #000; }
+
+    .btn-ghost {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: transparent;
+      color: var(--text-2);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      padding: 14px 24px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border-mid);
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+      text-decoration: none;
+    }
+    .btn-ghost:hover { border-color: var(--accent-dim); color: var(--accent); }
+
+    .hero-stats {
+      display: flex;
+      gap: 32px;
+      flex-wrap: wrap;
+    }
+    .hero-stat {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .hero-stat-num {
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--accent);
+      letter-spacing: -0.02em;
+      line-height: 1;
+    }
+    .hero-stat-label {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      color: var(--text-3);
+      text-transform: uppercase;
+    }
+
+    /* ── Phone mockups row ─────────────────────────────────── */
+    .mockup-row {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      align-items: flex-end;
+      flex-wrap: wrap;
+      margin-top: 72px;
+    }
+
+    .phone-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+    .phone-label {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-3);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .phone {
+      width: 160px;
+      border-radius: 22px;
+      border: 1.5px solid var(--border-mid);
+      background: var(--bg-card);
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.04);
+    }
+    .phone.featured { width: 180px; }
+    .phone-notch {
+      height: 20px;
+      background: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .phone-notch-pill {
+      width: 48px; height: 8px;
+      background: #1a1a1a;
+      border-radius: 4px;
+    }
+    .phone-screen {
+      padding: 10px 8px;
+      min-height: 280px;
+    }
+    .phone.featured .phone-screen { min-height: 320px; }
+
+    .ps-bar {
+      height: 28px;
+      background: #0d0d0d;
+      border-radius: 6px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      padding: 0 8px;
+      gap: 6px;
+    }
+    .ps-bar-title {
+      font-family: var(--font-mono);
+      font-size: 8px;
+      font-weight: 700;
+      color: var(--text-2);
+      letter-spacing: 0.06em;
+    }
+
+    .ps-banner {
+      padding: 7px 8px;
+      border-radius: 6px;
+      margin-bottom: 7px;
+      font-family: var(--font-mono);
+      font-size: 7px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+    }
+    .ps-banner.safe { background: rgba(0,191,255,0.1); color: var(--accent); border: 1px solid rgba(0,191,255,0.3); }
+    .ps-banner.danger { background: rgba(255,68,85,0.1); color: var(--danger); border: 1px solid rgba(255,68,85,0.3); animation: flash-border 1s ease infinite; }
+    .ps-banner.warn { background: rgba(255,170,0,0.1); color: var(--warn); border: 1px solid rgba(255,170,0,0.3); }
+
+    @keyframes flash-border {
+      0%, 100% { border-color: rgba(255,68,85,0.3); }
+      50% { border-color: rgba(255,68,85,0.8); }
+    }
+
+    .ps-card {
+      background: #131313;
+      border: 1px solid rgba(0,191,255,0.12);
+      border-radius: 8px;
+      padding: 8px;
+      margin-bottom: 6px;
+    }
+    .ps-mag {
+      font-family: var(--font-mono);
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--accent);
+    }
+    .ps-loc {
+      font-family: var(--font-mono);
+      font-size: 6.5px;
+      color: var(--text-2);
+      margin-top: 2px;
+    }
+    .ps-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 6px;
+    }
+    .ps-field label {
+      font-family: var(--font-mono);
+      font-size: 5.5px;
+      color: var(--text-3);
+      text-transform: uppercase;
+      display: block;
+    }
+    .ps-field span {
+      font-family: var(--font-mono);
+      font-size: 7px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .ps-map-placeholder {
+      background: #0d1117;
+      border: 1px solid rgba(0,191,255,0.15);
+      border-radius: 8px;
+      height: 110px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 6px;
+    }
+    .ps-map-placeholder svg { opacity: 0.35; }
+    .ps-map-placeholder span {
+      font-family: var(--font-mono);
+      font-size: 7px;
+      color: var(--text-3);
+    }
+
+    .ps-bubble-user {
+      background: rgba(0,191,255,0.15);
+      border: 1px solid rgba(0,191,255,0.35);
+      border-radius: 8px;
+      padding: 5px 7px;
+      font-family: var(--font-mono);
+      font-size: 6.5px;
+      color: var(--text);
+      margin-left: 16px;
+      margin-bottom: 5px;
+    }
+    .ps-bubble-ai {
+      background: #131313;
+      border: 1px solid rgba(0,191,255,0.15);
+      border-radius: 8px;
+      padding: 5px 7px;
+      font-family: var(--font-mono);
+      font-size: 6.5px;
+      color: var(--text-2);
+      margin-right: 16px;
+      margin-bottom: 5px;
+    }
+    .ps-cursor { display: inline; color: var(--accent); animation: blink 1s step-end infinite; }
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+    .ps-cam-frame {
+      background: #0a0a0a;
+      border: 1px dashed rgba(0,191,255,0.25);
+      border-radius: 8px;
+      height: 120px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 6px;
+    }
+    .ps-cam-frame svg { opacity: 0.4; }
+    .ps-cam-frame span {
+      font-family: var(--font-mono);
+      font-size: 6.5px;
+      color: var(--text-3);
+    }
+    .ps-big-btn {
+      background: rgba(0,191,255,0.1);
+      border: 1px solid rgba(0,191,255,0.35);
+      border-radius: 10px;
+      padding: 10px;
+      text-align: center;
+      font-family: var(--font-mono);
+      font-size: 7px;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: 0.04em;
+    }
+
+    .ps-tab-bar {
+      display: flex;
+      border-top: 1px solid rgba(0,191,255,0.12);
+      padding: 6px 0 2px;
+      gap: 2px;
+    }
+    .ps-tab {
+      flex: 1;
+      text-align: center;
+      font-family: var(--font-mono);
+      font-size: 5.5px;
+      color: var(--text-3);
+      letter-spacing: 0.04em;
+    }
+    .ps-tab.active { color: var(--accent); }
+
+    /* ── Problem ──────────────────────────────────────────── */
+    #problem { padding: 100px 0; }
+
+    .problem-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-top: 48px;
+    }
+
+    .problem-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 32px;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.3s;
+    }
+    .problem-card:hover { border-color: var(--border-mid); }
+    .problem-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0;
+      right: 0; height: 2px;
+    }
+    .problem-card.c-danger::before { background: linear-gradient(90deg, var(--danger), transparent); }
+    .problem-card.c-warn::before { background: linear-gradient(90deg, var(--warn), transparent); }
+    .problem-card.c-blue::before { background: linear-gradient(90deg, var(--accent), transparent); }
+
+    .problem-icon {
+      font-size: 28px;
+      margin-bottom: 14px;
+    }
+    .problem-card h3 {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 10px;
+      letter-spacing: -0.01em;
+    }
+    .problem-card p {
+      font-size: 15.5px;
+      color: var(--text-2);
+      line-height: 1.72;
+    }
+
+    .problem-stat {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-3);
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+    }
+    .problem-stat strong { color: var(--accent-dim); }
+
+    /* ── Solution ─────────────────────────────────────────── */
+    #solution {
+      background: linear-gradient(180deg, transparent, rgba(0,191,255,0.03) 50%, transparent);
+    }
+
+    .solution-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 64px;
+      align-items: center;
+    }
+
+    .solution-pipeline {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .pipeline-step {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+      position: relative;
+    }
+    .pipeline-step:not(:last-child)::after {
+      content: '';
+      position: absolute;
+      left: 19px;
+      top: 42px;
+      bottom: -24px;
+      width: 1px;
+      background: linear-gradient(180deg, var(--border-mid), transparent);
+    }
+
+    .step-icon {
+      width: 40px; height: 40px;
+      border-radius: 10px;
+      border: 1px solid var(--border-mid);
+      background: var(--bg-card);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+      margin-bottom: 24px;
+    }
+
+    .step-content h4 {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+    .step-content p {
+      font-size: 15px;
+      color: var(--text-2);
+      line-height: 1.72;
+    }
+
+    .solution-callout {
+      background: var(--bg-card);
+      border: 1px solid var(--border-mid);
+      border-radius: var(--radius);
+      padding: 36px;
+    }
+    .solution-callout h3 {
+      font-size: 22px;
+      font-weight: 700;
+      line-height: 1.3;
+      margin-bottom: 16px;
+    }
+    .solution-callout p {
+      font-size: 15px;
+      color: var(--text-2);
+      line-height: 1.7;
+      margin-bottom: 24px;
+    }
+
+    .tag-row { display: flex; flex-wrap: wrap; gap: 8px; }
+    .tag {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border-mid);
+      color: var(--accent-dim);
+      background: var(--accent-glow);
+    }
+
+    /* ── Features ─────────────────────────────────────────── */
+    #features { }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+
+    .feature-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      transition: border-color 0.3s, transform 0.3s;
+      position: relative;
+      overflow: hidden;
+    }
+    .feature-card:hover {
+      border-color: var(--border-mid);
+      transform: translateY(-3px);
+    }
+    .feature-card.wide {
+      grid-column: span 2;
+    }
+
+    .feature-icon-wrap {
+      width: 44px; height: 44px;
+      background: var(--accent-glow);
+      border: 1px solid var(--border-mid);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      margin-bottom: 18px;
+    }
+    .feature-card h3 {
+      font-size: 17px;
+      font-weight: 700;
+      margin-bottom: 10px;
+      letter-spacing: -0.01em;
+    }
+    .feature-card p {
+      font-size: 15.5px;
+      color: var(--text-2);
+      line-height: 1.72;
+    }
+    .feature-badge {
+      display: inline-block;
+      margin-top: 14px;
+      font-family: var(--font-mono);
+      font-size: 9.5px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      color: var(--accent-dim);
+    }
+
+    /* ── How it works ─────────────────────────────────────── */
+    #how {
+      background: linear-gradient(180deg, transparent, rgba(0,191,255,0.02) 50%, transparent);
+    }
+
+    .how-flow {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 0;
+      position: relative;
+      margin-top: 48px;
+    }
+    .how-flow::before {
+      content: '';
+      position: absolute;
+      top: 28px; left: 10%; right: 10%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border-mid) 20%, var(--border-mid) 80%, transparent);
+    }
+
+    .how-step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      padding: 0 12px;
+      position: relative;
+    }
+    .how-num {
+      width: 56px; height: 56px;
+      border-radius: 50%;
+      background: var(--bg-card);
+      border: 1px solid var(--border-mid);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-mono);
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--accent);
+      margin-bottom: 16px;
+      position: relative;
+      z-index: 1;
+    }
+    .how-step h4 {
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .how-step p {
+      font-size: 13.5px;
+      color: var(--text-2);
+      line-height: 1.6;
+    }
+
+    .how-time-badge {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 48px;
+      gap: 12px;
+    }
+    .how-time-badge span {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      color: var(--text-3);
+    }
+    .how-time-badge strong {
+      font-family: var(--font-mono);
+      font-size: 26px;
+      font-weight: 700;
+      color: var(--accent);
+      border: 1px solid var(--border-mid);
+      padding: 6px 20px;
+      border-radius: 999px;
+      background: var(--accent-glow);
+    }
+
+    /* ── Tech Stack ───────────────────────────────────────── */
+    #tech { }
+
+    .tech-arch {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      margin-top: 48px;
+    }
+
+    .arch-header {
+      padding: 16px 24px;
+      background: #0d0d0d;
+      border-bottom: 1px solid var(--border);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-3);
+      letter-spacing: 0.06em;
+    }
+
+    .arch-layers {
+      padding: 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .arch-layer {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .arch-layer-header {
+      padding: 8px 16px;
+      font-family: var(--font-mono);
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      border-bottom: 1px solid var(--border);
+    }
+    .arch-layer-header.app  { background: rgba(0,191,255,0.08); color: var(--accent); }
+    .arch-layer-header.data { background: rgba(255,170,0,0.06); color: var(--warn); }
+    .arch-layer-header.ai   { background: rgba(0,230,118,0.06); color: var(--ok); }
+    .arch-layer-header.os   { background: rgba(150,150,150,0.06); color: #888; }
+
+    .arch-layer-body {
+      padding: 14px 16px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .tech-chip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg-raised);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 8px;
+      padding: 8px 14px;
+    }
+    .tech-chip-icon { font-size: 16px; }
+    .tech-chip-info {}
+    .tech-chip-name {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text);
+      display: block;
+    }
+    .tech-chip-detail {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-3);
+      display: block;
+    }
+
+    /* ── Secret Sauce ─────────────────────────────────────── */
+    #sauce {
+      background: linear-gradient(180deg, transparent, rgba(0,191,255,0.025) 50%, transparent);
+    }
+
+    .sauce-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      margin-top: 48px;
+    }
+
+    .sauce-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 32px;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.3s;
+    }
+    .sauce-card:hover { border-color: var(--border-mid); }
+    .sauce-card::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .sauce-card:hover::after { opacity: 1; }
+
+    .sauce-num {
+      font-family: var(--font-mono);
+      font-size: 40px;
+      font-weight: 900;
+      color: rgba(0,191,255,0.08);
+      line-height: 1;
+      margin-bottom: 12px;
+      letter-spacing: -0.04em;
+    }
+    .sauce-card h3 {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      letter-spacing: -0.01em;
+    }
+    .sauce-card p {
+      font-size: 15.5px;
+      color: var(--text-2);
+      line-height: 1.72;
+    }
+
+    /* ── Team ─────────────────────────────────────────────── */
+    #team { }
+
+    .team-context {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-mid);
+      border-radius: 999px;
+      padding: 8px 20px;
+      margin-bottom: 56px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text-2);
+    }
+    .team-context strong { color: var(--accent-dim); }
+
+    .team-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+
+    .team-group-label {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-3);
+      margin: 44px 0 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .team-group-label::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .team-grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+      max-width: calc(66.66% + 10px);
+    }
+
+    .team-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 32px;
+      transition: border-color 0.3s;
+    }
+    .team-card:hover { border-color: var(--border-mid); }
+
+    .team-avatar {
+      width: 56px; height: 56px;
+      border-radius: 50%;
+      border: 2px solid var(--border-mid);
+      background: var(--bg-raised);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      margin-bottom: 16px;
+    }
+
+    .team-card h3 {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .team-role {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--accent-dim);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+    .team-card p {
+      font-size: 15px;
+      color: var(--text-2);
+      line-height: 1.72;
+    }
+    .team-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 16px;
+    }
+    .team-tag {
+      font-family: var(--font-mono);
+      font-size: 9.5px;
+      color: var(--text-3);
+      border: 1px solid var(--border);
+      padding: 3px 8px;
+      border-radius: 999px;
+    }
+
+    /* ── Closing CTA ──────────────────────────────────────── */
+    #closing {
+      text-align: center;
+      padding: 100px 0 80px;
+      border-top: 1px solid var(--border);
+      position: relative;
+      overflow: hidden;
+    }
+    #closing::before {
+      content: '';
+      position: absolute;
+      bottom: -300px; left: 50%;
+      transform: translateX(-50%);
+      width: 600px; height: 600px;
+      background: radial-gradient(circle, rgba(0,191,255,0.06) 0%, transparent 65%);
+    }
+
+    .closing-inner { position: relative; z-index: 1; }
+
+    .hackathon-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-mid);
+      border-radius: 999px;
+      padding: 8px 20px;
+      margin-bottom: 36px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text-2);
+    }
+
+    #closing h2 {
+      font-size: clamp(30px, 5vw, 56px);
+      font-weight: 900;
+      line-height: 1.1;
+      letter-spacing: -0.03em;
+      margin-bottom: 20px;
+    }
+    #closing p {
+      font-size: 17px;
+      color: var(--text-2);
+      max-width: 520px;
+      margin: 0 auto 40px;
+      line-height: 1.7;
+    }
+
+    /* ── Footer ───────────────────────────────────────────── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 32px 24px;
+    }
+    .footer-inner {
+      max-width: var(--max);
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .footer-left {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text-3);
+    }
+    .footer-right {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-3);
+    }
+    .footer-right a { color: var(--text-3); }
+    .footer-right a:hover { color: var(--accent); }
+
+    /* ── Responsive ───────────────────────────────────────── */
+    @media (max-width: 900px) {
+      .problem-grid { grid-template-columns: 1fr; }
+      .solution-layout { grid-template-columns: 1fr; gap: 40px; }
+      .features-grid { grid-template-columns: 1fr 1fr; }
+      .feature-card.wide { grid-column: span 1; }
+      .how-flow { grid-template-columns: repeat(3, 1fr); row-gap: 32px; }
+      .how-flow::before { display: none; }
+      .sauce-grid { grid-template-columns: 1fr; }
+      .team-grid { grid-template-columns: 1fr; }
+      .team-grid-2 { grid-template-columns: 1fr; max-width: 100%; }
+      .mockup-row { gap: 8px; }
+      .phone { width: 130px; }
+      .phone.featured { width: 150px; }
+    }
+
+    @media (max-width: 600px) {
+      section { padding: 72px 0; }
+      .features-grid { grid-template-columns: 1fr; }
+      .how-flow { grid-template-columns: 1fr 1fr; }
+      .hero-stats { gap: 24px; }
+      .mockup-row { display: none; }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- ── Nav ───────────────────────────────────────────────── -->
+  <nav>
+    <div class="nav-inner">
+      <span class="nav-logo">PROMETHEUS <span>/ disaster awareness</span></span>
+      <span class="nav-badge">GOOGLE GEMMA HACKATHON · MAY 2026</span>
+    </div>
+  </nav>
+
+  <!-- ── Hero ──────────────────────────────────────────────── -->
+  <section id="hero">
+    <div class="hero-grid"></div>
+    <div class="hero-glow"></div>
+    <div class="hero-inner">
+
+      <div class="hero-tag">
+        <span class="dot"></span>
+        TEAM GRAVITY FALLS &nbsp;·&nbsp; BUILT FOR INDONESIA
+      </div>
+
+      <h1>
+        <span class="block">When disaster</span>
+        <span class="block">strikes, <span class="accent">your phone</span></span>
+        <span class="block">still talks.</span>
+      </h1>
+
+      <p class="hero-sub">
+        Prometheus combines real-time BMKG seismic data with Gemma 4 running entirely on-device —
+        so you get a spoken alarm, evacuation guidance, and survival answers even when the network goes dark.
+      </p>
+
+      <div class="hero-cta-row">
+        <a href="#features" class="btn-primary">See What It Does ↓</a>
+        <a href="#tech" class="btn-ghost">View the Stack →</a>
+      </div>
+
+      <div class="hero-stats">
+        <div class="hero-stat">
+          <span class="hero-stat-num">100%</span>
+          <span class="hero-stat-label">Offline after download</span>
+        </div>
+        <div class="hero-stat">
+          <span class="hero-stat-num">&lt;30s</span>
+          <span class="hero-stat-label">Alert to spoken briefing</span>
+        </div>
+        <div class="hero-stat">
+          <span class="hero-stat-num">Gemma 4</span>
+          <span class="hero-stat-label">On-device · LiteRT LM</span>
+        </div>
+        <div class="hero-stat">
+          <span class="hero-stat-num">BMKG</span>
+          <span class="hero-stat-label">Live earthquake feeds</span>
+        </div>
+      </div>
+
+      <!-- App screen mockups -->
+      <div class="mockup-row">
+
+        <!-- Monitor screen -->
+        <div class="phone-wrap reveal reveal-delay-1">
+          <div class="phone">
+            <div class="phone-notch"><div class="phone-notch-pill"></div></div>
+            <div class="phone-screen">
+              <div class="ps-bar"><span class="ps-bar-title">PROMETHEUS</span></div>
+              <div class="ps-banner safe">✓ NO ACTIVE ALERTS</div>
+              <div class="ps-card">
+                <div class="ps-mag">M 5.2</div>
+                <div class="ps-loc">Sulawesi Tengah, 87 km depth</div>
+                <div class="ps-row">
+                  <div class="ps-field"><label>DEPTH</label><span>87 km</span></div>
+                  <div class="ps-field"><label>FELT</label><span>III MMI</span></div>
+                </div>
+              </div>
+              <div class="ps-tab-bar">
+                <div class="ps-tab active">MONITOR</div>
+                <div class="ps-tab">EVACUATE</div>
+                <div class="ps-tab">SURVIVAL</div>
+                <div class="ps-tab">VISION</div>
+              </div>
+            </div>
+          </div>
+          <span class="phone-label">Monitor</span>
+        </div>
+
+        <!-- Danger alert screen -->
+        <div class="phone-wrap reveal reveal-delay-2">
+          <div class="phone featured">
+            <div class="phone-notch"><div class="phone-notch-pill"></div></div>
+            <div class="phone-screen">
+              <div class="ps-bar"><span class="ps-bar-title">PROMETHEUS</span></div>
+              <div class="ps-banner danger">🚨 DANGER — TAKE ACTION NOW</div>
+              <div class="ps-card">
+                <div class="ps-mag">M 7.8</div>
+                <div class="ps-loc">Laut Banda, 12 km depth</div>
+                <div class="ps-row">
+                  <div class="ps-field"><label>TSUNAMI POT.</label><span>WASPADA</span></div>
+                  <div class="ps-field"><label>FELT</label><span>VII MMI</span></div>
+                </div>
+              </div>
+              <div class="ps-card" style="border-color:rgba(255,68,85,0.25)">
+                <div style="font-family:var(--font-mono);font-size:7.5px;color:var(--danger);font-weight:700;margin-bottom:4px;">🔊 GEMMA 4 BRIEFING</div>
+                <div style="font-family:var(--font-mono);font-size:6.5px;color:var(--text-2);line-height:1.5">A magnitude 7.8 quake struck 12 km deep. Move to high ground immediately. Avoid the coast. A tsunami watch is in effect<span class="ps-cursor">▋</span></div>
+              </div>
+              <div class="ps-tab-bar">
+                <div class="ps-tab">MONITOR</div>
+                <div class="ps-tab">EVACUATE</div>
+                <div class="ps-tab active">SURVIVAL</div>
+                <div class="ps-tab">VISION</div>
+              </div>
+            </div>
+          </div>
+          <span class="phone-label">Danger Alert</span>
+        </div>
+
+        <!-- Survival chat screen -->
+        <div class="phone-wrap reveal reveal-delay-3">
+          <div class="phone">
+            <div class="phone-notch"><div class="phone-notch-pill"></div></div>
+            <div class="phone-screen">
+              <div class="ps-bar"><span class="ps-bar-title">SURVIVAL ASSISTANT</span></div>
+              <div class="ps-bubble-user">How do I treat a deep cut without supplies?</div>
+              <div class="ps-bubble-ai">Apply firm pressure with clean cloth for 10 minutes. Elevate the limb. If bleeding soaks through, add more cloth on top — do not remove the first layer<span class="ps-cursor">▋</span></div>
+              <div class="ps-tab-bar">
+                <div class="ps-tab">MONITOR</div>
+                <div class="ps-tab">EVACUATE</div>
+                <div class="ps-tab active">SURVIVAL</div>
+                <div class="ps-tab">VISION</div>
+              </div>
+            </div>
+          </div>
+          <span class="phone-label">Survival Chat</span>
+        </div>
+
+        <!-- Vision screen -->
+        <div class="phone-wrap reveal reveal-delay-4">
+          <div class="phone">
+            <div class="phone-notch"><div class="phone-notch-pill"></div></div>
+            <div class="phone-screen">
+              <div class="ps-bar"><span class="ps-bar-title">VISION ASSIST</span></div>
+              <div class="ps-cam-frame">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#00BFFF" stroke-width="1.5">
+                  <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
+                  <circle cx="12" cy="13" r="4"/>
+                </svg>
+                <span>CAMERA FEED</span>
+              </div>
+              <div class="ps-big-btn">TAP TO DESCRIBE SURROUNDINGS</div>
+              <div class="ps-tab-bar">
+                <div class="ps-tab">MONITOR</div>
+                <div class="ps-tab">EVACUATE</div>
+                <div class="ps-tab">SURVIVAL</div>
+                <div class="ps-tab active">VISION</div>
+              </div>
+            </div>
+          </div>
+          <span class="phone-label">Vision Assist</span>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Problem ────────────────────────────────────────────── -->
+  <section id="problem">
+    <div class="container">
+      <div class="section-eyebrow reveal"><span class="label">The Problem</span></div>
+      <h2 class="section-title reveal">Indonesia sits on the Ring of Fire.<br>Most disaster apps don't.</h2>
+      <p class="section-sub reveal">270 million people face earthquakes, tsunamis, volcanic eruptions, and floods every year. The first thing that fails in a disaster is the network — and that's exactly when existing alert apps go silent.</p>
+
+      <div class="problem-grid">
+        <div class="problem-card c-danger reveal reveal-delay-1">
+          <div class="problem-icon">📡</div>
+          <h3>Alerts arrive too late</h3>
+          <p>Standard push-notification systems require working mobile data. In a major earthquake, cell towers are the first infrastructure to fail. By the time an alert reaches you, you may already be in danger.</p>
+          <div class="problem-stat">Network outages average <strong>&lt;4 minutes</strong> after a major seismic event</div>
+        </div>
+        <div class="problem-card c-warn reveal reveal-delay-2">
+          <div class="problem-icon">🗺️</div>
+          <h3>Guidance is generic</h3>
+          <p>Generic "go to high ground" messages ignore the actual epicentre, magnitude, depth, and tsunami potential in the BMKG payload. People need specific, grounded instructions tailored to the actual event.</p>
+          <div class="problem-stat">BMKG provides <strong>structured seismic data</strong> that no consumer app uses for AI briefings</div>
+        </div>
+        <div class="problem-card c-blue reveal reveal-delay-3">
+          <div class="problem-icon">♿</div>
+          <h3>Accessible guidance is absent</h3>
+          <p>In a disaster, reading a screen is hard. Visually impaired users have almost no options. High-stress situations demand eyes-free, hands-free, voice-first interfaces — which no existing disaster app provides.</p>
+          <div class="problem-stat">Vision + speech modality fills a <strong>critical accessibility gap</strong></div>
+        </div>
+        <div class="problem-card c-danger reveal reveal-delay-4">
+          <div class="problem-icon">🧠</div>
+          <h3>AI is locked in the cloud</h3>
+          <p>LLM-powered guidance requires a server call. Post-disaster connectivity is unreliable for hours or days. Any app that depends on an API endpoint is useless the moment you need it most.</p>
+          <div class="problem-stat">LiteRT LM enables <strong>Gemma 4 fully on-device</strong> — no API key, no latency, no outage</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Solution ───────────────────────────────────────────── -->
+  <section id="solution">
+    <div class="container">
+      <div class="solution-layout">
+        <div class="reveal">
+          <div class="section-eyebrow"><span class="label">The Solution</span></div>
+          <h2 class="section-title">One app. Every layer of the crisis pipeline.</h2>
+          <p class="section-sub" style="margin-bottom:36px">Prometheus doesn't rely on the cloud. It fuses BMKG open data with Gemma 4 running on the phone itself — so alarm, briefing, and evacuation guidance fire in under 30 seconds, offline.</p>
+          <div class="solution-pipeline">
+            <div class="pipeline-step">
+              <div class="step-icon">📡</div>
+              <div class="step-content">
+                <h4>Poll BMKG feeds</h4>
+                <p>Continuously reads autogempa.json and gempaterkini.json. Classifies events by magnitude, depth, felt intensity, and tsunami potential against configurable danger thresholds.</p>
+              </div>
+            </div>
+            <div class="pipeline-step">
+              <div class="step-icon">🚨</div>
+              <div class="step-content">
+                <h4>Trigger alarm + briefing</h4>
+                <p>On a dangerous classification: audible alarm fires and Gemma 4 generates a spoken emergency briefing grounded in the actual BMKG payload — what happened, what to do, what to avoid.</p>
+              </div>
+            </div>
+            <div class="pipeline-step">
+              <div class="step-icon">🗺️</div>
+              <div class="step-content">
+                <h4>Plot evacuation route</h4>
+                <p>Pins the epicentre on Google Maps, draws the hazard radius, and computes the shortest path from the user's location to outside the danger zone via the Directions API.</p>
+              </div>
+            </div>
+            <div class="pipeline-step">
+              <div class="step-icon">💬</div>
+              <div class="step-content" style="margin-bottom:0">
+                <h4>Offline survival assistant</h4>
+                <p>A fully offline chat powered by Gemma 4 with a survival system prompt — first aid, water, shelter, evacuation — available at any time, with or without internet.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="solution-callout reveal reveal-delay-2">
+          <h3>Built on a single model that never leaves the device.</h3>
+          <p>Gemma 4 (E2B, ~2.4 GB) runs via LiteRT LM with GPU acceleration. After a one-time download, it handles emergency briefing, survival chat, and camera-to-voice accessibility — all without a single outbound request.</p>
+          <div class="tag-row">
+            <span class="tag">OFFLINE FIRST</span>
+            <span class="tag">GEMMA 4 ON-DEVICE</span>
+            <span class="tag">BMKG-GROUNDED</span>
+            <span class="tag">VOICE OUTPUT</span>
+            <span class="tag">VISION INPUT</span>
+            <span class="tag">GPS ROUTING</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Features ───────────────────────────────────────────── -->
+  <section id="features">
+    <div class="container">
+      <div class="section-eyebrow reveal"><span class="label">Capabilities</span></div>
+      <h2 class="section-title reveal">Five screens. One mission.</h2>
+      <p class="section-sub reveal">Every feature is designed around a single constraint: it must work when the network is down and your hands are shaking.</p>
+
+      <div class="features-grid">
+        <div class="feature-card reveal reveal-delay-1">
+          <div class="feature-icon-wrap">📡</div>
+          <h3>BMKG Live Monitor</h3>
+          <p>Polls BMKG open JSON feeds and classifies events against configurable magnitude, depth, and tsunami-potential thresholds. The danger banner shifts from blue → orange → red as severity escalates.</p>
+          <span class="feature-badge">autogempa.json · gempaterkini.json</span>
+        </div>
+
+        <div class="feature-card wide reveal reveal-delay-2">
+          <div class="feature-icon-wrap">🚨</div>
+          <h3>Danger Alarm + Gemma 4 Spoken Briefing</h3>
+          <p>When a dangerous event is classified, an audible alarm fires and Gemma 4 generates a spoken emergency briefing in under 30 seconds. The briefing is grounded in the real BMKG payload — magnitude, location, depth, felt intensity, tsunami potential — not a generic template. Delivered via <code style="color:var(--accent);font-size:12px">AVSpeechSynthesizer</code>, no screen required.</p>
+          <span class="feature-badge">BMKG → Danger Rules → Gemma 4 Emergency Prompt → TTS</span>
+        </div>
+
+        <div class="feature-card reveal reveal-delay-3">
+          <div class="feature-icon-wrap">🗺️</div>
+          <h3>Evacuation Routing</h3>
+          <p>Plots the BMKG epicentre on Google Maps, overlays the configurable hazard radius, and computes the shortest route from the user's GPS location to outside the danger zone via the Directions API.</p>
+          <span class="feature-badge">Google Maps SDK · Directions API · CoreLocation</span>
+        </div>
+
+        <div class="feature-card reveal reveal-delay-4">
+          <div class="feature-icon-wrap">💬</div>
+          <h3>Offline Survival Chat</h3>
+          <p>A streaming conversation with Gemma 4 using a survival-focused system prompt covering first aid, shelter, water sourcing, and Indonesia-specific hazard awareness. Works with zero connectivity after the initial model download.</p>
+          <span class="feature-badge">Gemma 4 · LiteRT LM · Survival System Prompt</span>
+        </div>
+
+        <div class="feature-card reveal reveal-delay-5">
+          <div class="feature-icon-wrap">👁️</div>
+          <h3>Vision Accessibility Mode</h3>
+          <p>Camera frame → Gemma 4 vision → spoken response. Point the phone at surroundings, signage, or injuries. Gemma describes what it sees in calm plain language via TTS. No typing. No reading. Designed for visually impaired users and high-stress situations where a screen is impractical.</p>
+          <span class="feature-badge">AVCaptureSession · Gemma 4 Vision · AVSpeechSynthesizer</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── How it works ───────────────────────────────────────── -->
+  <section id="how">
+    <div class="container">
+      <div class="section-eyebrow reveal"><span class="label">Alert to Action</span></div>
+      <h2 class="section-title reveal">From seismic event to spoken evacuation<br>in under 30 seconds.</h2>
+
+      <div class="how-flow">
+        <div class="how-step reveal reveal-delay-1">
+          <div class="how-num">01</div>
+          <h4>BMKG publishes data</h4>
+          <p>Open JSON feed updated within minutes of a seismic event</p>
+        </div>
+        <div class="how-step reveal reveal-delay-2">
+          <div class="how-num">02</div>
+          <h4>App polls &amp; classifies</h4>
+          <p>Magnitude, depth, felt intensity, tsunami potential evaluated on-device</p>
+        </div>
+        <div class="how-step reveal reveal-delay-3">
+          <div class="how-num">03</div>
+          <h4>Alarm triggers</h4>
+          <p>Audible alarm fires and Gemma 4 receives structured hazard context</p>
+        </div>
+        <div class="how-step reveal reveal-delay-4">
+          <div class="how-num">04</div>
+          <h4>Gemma reasons</h4>
+          <p>Emergency system prompt + BMKG data → concise spoken briefing, fully on-device</p>
+        </div>
+        <div class="how-step reveal reveal-delay-5">
+          <div class="how-num">05</div>
+          <h4>You evacuate</h4>
+          <p>Map shows the route. Voice guides you. No screen reading required.</p>
+        </div>
+      </div>
+
+      <div class="how-time-badge reveal">
+        <span>End-to-end latency</span>
+        <strong>&lt; 30 seconds</strong>
+        <span>offline · on-device · no API calls</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Tech Stack ─────────────────────────────────────────── -->
+  <section id="tech">
+    <div class="container">
+      <div class="section-eyebrow reveal"><span class="label">Technical Depth</span></div>
+      <h2 class="section-title reveal">Proven stack, production-grade tools.</h2>
+      <p class="section-sub reveal">No experiments. Every layer is a stable, well-documented technology chosen for reliability under disaster conditions.</p>
+
+      <div class="tech-arch reveal">
+        <div class="arch-header">PROMETHEUS — SYSTEM ARCHITECTURE</div>
+        <div class="arch-layers">
+
+          <div class="arch-layer">
+            <div class="arch-layer-header app">Application layer — iOS</div>
+            <div class="arch-layer-body">
+              <div class="tech-chip">
+                <span class="tech-chip-icon">🍎</span>
+                <span class="tech-chip-info">
+                  <span class="tech-chip-name">Swift + SwiftUI</span>
+                  <span class="tech-chip-detail">iOS 17+ · @Observable · async/await</span>
+                </span>
+              </div>
+              <div class="tech-chip">
+                <span class="tech-chip-icon">📍</span>
+                <span class="tech-chip-info">
+                  <span class="tech-chip-name">CoreLocation</span>
+                  <span class="tech-chip-detail">User GPS for evacuation routing origin</span>
+                </span>
+              </div>
+              <div class="tech-chip">
+                <span class="tech-chip-icon">🗺️</span>
+                <span class="tech-chip-info">
+                  <span class="tech-chip-name">Google Maps SDK + Directions API</span>
+                  <span class="tech-chip-detail">Epicentre pin · radius overlay · shortest exit route</span>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div class="arch-layer">
+            <div class="arch-layer-header ai">AI &amp; inference layer</div>
+            <div class="arch-layer-body">
+              <div class="tech-chip">
+                <span class="tech-chip-icon">🤖</span>
+                <span class="tech-chip-info">
+                  <span class="tech-chip-name">Gemma 4 E2B (instruction-tuned)</span>
+                  <span class="tech-chip-detail">Text + Vision · ~2.4 GB on-device model</span>
+                </span>
+              </div>
+              <div class="tech-chip">
+                <span class="tech-chip-icon">⚡</span>
+                <span class="tech-chip-info">
+                  <span class="tech-chip-name">LiteRT LM (Swift SDK)</span>
+                  <span class="tech-chip-detail">GPU-accelerated · streaming tokens · multi-turn conversation</span>
+                </span>
+              </div>
+              <div class="tech-chip">
+                <span class="tech-chip-icon">💬</span>
+                <span class="tech-chip-info">
+                  <span class="tech-chip-name">System Prompts (×3)</span>
+                  <span class="tech-chip-detail">Survival chat · Emergency brief · Vision accessibility</span>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div class="arch-layer">
+            <div class="arch-layer-header data">Hazard data layer</div>
+            <div class="arch-layer-body">
+              <div class="tech-chip">
+                <span class="tech-chip-icon">🌏</span>
+                <span class="tech-chip-info">
+                  <span class="tech-chip-name">BMKG Open JSON Feeds</span>
+                  <span class="tech-chip-detail">autogempa.json · gempaterkini.json · gempadirasakan.json</span>
+                </span>
+              </div>
+              <div class="tech-chip">
+                <span class="tech-chip-icon">📊</span>
+                <span class="tech-chip-info">
+                  <span class="tech-chip-name">Danger Classification Rules</span>
+                  <span class="tech-chip-detail">Magnitude · Depth · Felt intensity · Tsunami potential</span>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div class="arch-layer">
+            <div class="arch-layer-header os">OS &amp; modality layer</div>
+            <div class="arch-layer-body">
+              <div class="tech-chip">
+                <span class="tech-chip-icon">🔊</span>
+                <span class="tech-chip-info">
+                  <span class="tech-chip-name">AVSpeechSynthesizer</span>
+                  <span class="tech-chip-detail">TTS for alarm briefings &amp; vision responses</span>
+                </span>
+              </div>
+              <div class="tech-chip">
+                <span class="tech-chip-icon">📷</span>
+                <span class="tech-chip-info">
+                  <span class="tech-chip-name">AVCaptureSession</span>
+                  <span class="tech-chip-detail">Camera → Gemma 4 vision → spoken response pipeline</span>
+                </span>
+              </div>
+              <div class="tech-chip">
+                <span class="tech-chip-icon">🔔</span>
+                <span class="tech-chip-info">
+                  <span class="tech-chip-name">Local Notifications + Alarm Audio</span>
+                  <span class="tech-chip-detail">In-app alert even when screen is off</span>
+                </span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Secret Sauce ───────────────────────────────────────── -->
+  <section id="sauce">
+    <div class="container">
+      <div class="section-eyebrow reveal"><span class="label">What Makes It Different</span></div>
+      <h2 class="section-title reveal">Three ideas that make Prometheus<br>a genuinely new thing.</h2>
+
+      <div class="sauce-grid">
+        <div class="sauce-card reveal reveal-delay-1">
+          <div class="sauce-num">01</div>
+          <h3>Offline-first AI reasoning</h3>
+          <p>Gemma 4 is downloaded once and never queried remotely. The LiteRT LM engine loads the model into GPU memory and keeps it there — so every alarm, every chat message, and every camera description runs in under a second, with zero network dependency. This is the only disaster app where the AI gets faster when connectivity disappears.</p>
+        </div>
+        <div class="sauce-card reveal reveal-delay-2">
+          <div class="sauce-num">02</div>
+          <h3>BMKG-grounded emergency briefings</h3>
+          <p>Most AI assistants answer disaster questions generically. Prometheus injects the actual BMKG structured payload — coordinates, magnitude, depth, felt intensity, tsunami potential — directly into Gemma's emergency system prompt. The model reasons about the real event, producing guidance that is specific to the quake that just happened 12 km beneath you, not a template for "a large earthquake."</p>
+        </div>
+        <div class="sauce-card reveal reveal-delay-3">
+          <div class="sauce-num">03</div>
+          <h3>Eyes-free, hands-free survival interface</h3>
+          <p>Prometheus treats voice as the primary output and camera as a primary input from the start, not as an afterthought. The Vision Accessibility mode — camera → Gemma 4 multimodal → spoken response — was designed from the ground up for visually impaired users and for anyone in a dark, smoky, or hands-occupied environment where reading a screen is simply not possible.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Team ───────────────────────────────────────────────── -->
+  <section id="team">
+    <div class="container">
+      <div class="section-eyebrow reveal"><span class="label">The Team</span></div>
+      <h2 class="section-title reveal">Team Gravity Falls</h2>
+
+      <div class="team-context reveal">
+        Built for the <strong>Google Gemma Hackathon</strong> &nbsp;·&nbsp; May 2026 &nbsp;·&nbsp; Indonesia
+      </div>
+
+      <h4 class="team-group-label reveal">Engineering &amp; AI</h4>
+      <div class="team-grid">
+        <div class="team-card reveal reveal-delay-1">
+          <div class="team-avatar">👨‍🔬</div>
+          <h3>Andi</h3>
+          <div class="team-role">BMKG Integration</div>
+          <p>Owns BMKG integration end-to-end — endpoint selection, update cadence, attribution, full field parsing, and the danger classification contract: what magnitude thresholds, depth bands, felt intensity levels, and tsunami potential values constitute a dangerous event. Tests rules against live and sample payloads. Provides epicentre coordinates for map routing.</p>
+          <div class="team-tags">
+            <span class="team-tag">BMKG API</span>
+            <span class="team-tag">JSON Parsing</span>
+            <span class="team-tag">Danger Rules</span>
+            <span class="team-tag">Test Fixtures</span>
+          </div>
+        </div>
+
+        <div class="team-card reveal reveal-delay-2">
+          <div class="team-avatar">👩‍💻</div>
+          <h3>Pelangi</h3>
+          <div class="team-role">iOS Lead</div>
+          <p>Owns the full iOS app — SwiftUI architecture, BMKG polling and danger classification, alarm pipeline, TTS playback, Gemma conversation wiring (chat vs. emergency), Google Maps SDK integration, evacuation routing UI, multimodal camera input, and on-device UX.</p>
+          <div class="team-tags">
+            <span class="team-tag">Swift</span>
+            <span class="team-tag">SwiftUI</span>
+            <span class="team-tag">LiteRT LM</span>
+            <span class="team-tag">Google Maps</span>
+            <span class="team-tag">AVFoundation</span>
+          </div>
+        </div>
+
+        <div class="team-card reveal reveal-delay-3">
+          <div class="team-avatar">👨‍🎨</div>
+          <h3>Arund</h3>
+          <div class="team-role">Gemma Behaviour</div>
+          <p>Owns everything Gemma says and how it says it — the survival chat prompt, emergency briefing prompt, and vision accessibility prompt. Responsible for prompt safety, response length for voice output, vision prompting strategy, and evaluating model outputs for real crisis use.</p>
+          <div class="team-tags">
+            <span class="team-tag">System Prompts</span>
+            <span class="team-tag">Prompt Safety</span>
+            <span class="team-tag">Vision Prompting</span>
+            <span class="team-tag">LLM Evaluation</span>
+          </div>
+        </div>
+      </div>
+
+      <h4 class="team-group-label reveal">Video &amp; Storytelling</h4>
+      <div class="team-grid-2">
+        <div class="team-card reveal reveal-delay-1">
+          <div class="team-avatar">🎬</div>
+          <h3>Adfi</h3>
+          <div class="team-role">Videographer</div>
+          <p>Leads video production for the project — shooting, directing, and editing the demo and pitch video. Translates the technical story of Prometheus into visual narrative, capturing the real-world urgency of the problem and the clarity of the solution for hackathon judges.</p>
+          <div class="team-tags">
+            <span class="team-tag">Video Production</span>
+            <span class="team-tag">Editing</span>
+            <span class="team-tag">Direction</span>
+          </div>
+        </div>
+
+        <div class="team-card reveal reveal-delay-2">
+          <div class="team-avatar">🎥</div>
+          <h3>Alifa</h3>
+          <div class="team-role">Videographer</div>
+          <p>Handles cinematography and visual storytelling — framing the app walkthrough, disaster context footage, and team moments. Works alongside Adfi to produce a polished submission video that communicates Prometheus's impact and technical depth within tight time constraints.</p>
+          <div class="team-tags">
+            <span class="team-tag">Cinematography</span>
+            <span class="team-tag">Visual Storytelling</span>
+            <span class="team-tag">Post-Production</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Closing ────────────────────────────────────────────── -->
+  <section id="closing">
+    <div class="container">
+      <div class="closing-inner">
+        <div class="hackathon-badge reveal">
+          🏆 &nbsp; Submitted to the <strong>Google Gemma Hackathon</strong> &nbsp;·&nbsp; May 2026
+        </div>
+        <h2 class="reveal">Prometheus doesn't wait<br>for the network.</h2>
+        <p class="reveal">It speaks when the towers go silent. It guides when the screens go dark. It listens when reading is impossible. Built by three people in Indonesia, for 270 million.</p>
+        <div class="reveal" style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap">
+          <a href="#features" class="btn-primary">Explore the Features</a>
+          <a href="#tech" class="btn-ghost">View the Stack</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Footer ─────────────────────────────────────────────── -->
+  <footer>
+    <div class="footer-inner">
+      <span class="footer-left">PROMETHEUS — Team Gravity Falls · Google Gemma Hackathon · May 2026</span>
+      <span class="footer-right">Not a substitute for official BMKG warnings or emergency services.</span>
+    </div>
+  </footer>
+
+  <script>
+    // Scroll-reveal
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          e.target.classList.add('visible');
+          observer.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.12 });
+
+    document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+  </script>
+
+</body>
+</html>

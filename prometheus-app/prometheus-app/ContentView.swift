@@ -8,6 +8,8 @@
 import SwiftUI
 
 struct ContentView: View {
+    @State private var inference = InferenceManager()
+
     var body: some View {
         TabView {
             MonitorView()
@@ -22,6 +24,7 @@ struct ContentView: View {
             VisionView()
                 .tabItem { Label("VISION", systemImage: "camera.viewfinder") }
         }
+        .environment(inference)
         .tint(.prometheusBlue)
         .preferredColorScheme(.dark)
         .background(Color.darkBackground.ignoresSafeArea())

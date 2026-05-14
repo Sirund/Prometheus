@@ -53,7 +53,8 @@ private struct EvacuationStatusBanner: View {
         }
         .padding(12)
         .background(Color.prometheusBlue.opacity(0.1))
-        .overlay(Rectangle().stroke(Color.prometheusBlue.opacity(0.4), lineWidth: 1))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.prometheusBlue.opacity(0.4), lineWidth: 1))
         .foregroundColor(.prometheusBlue)
     }
 }
@@ -82,7 +83,9 @@ private struct MapPlaceholder: View {
         }
         .frame(maxWidth: .infinity)
         .frame(height: 240)
-        .overlay(Rectangle().stroke(Color.prometheusBlue.opacity(0.3), lineWidth: 1))
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.prometheusBlue.opacity(0.3), lineWidth: 1))
+        .shadow(color: .black.opacity(0.35), radius: 8, x: 0, y: 4)
     }
 }
 
@@ -101,7 +104,9 @@ private struct RoutingDetailsCard: View {
         }
         .padding()
         .background(Color.cardBackground)
-        .overlay(Rectangle().stroke(Color.prometheusBlue.opacity(0.3), lineWidth: 1))
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.prometheusBlue.opacity(0.3), lineWidth: 1))
+        .shadow(color: .black.opacity(0.3), radius: 6, x: 0, y: 3)
     }
 }
 
@@ -118,7 +123,8 @@ private struct EvacuationInfoNote: View {
         }
         .padding()
         .background(Color.cardBackground.opacity(0.5))
-        .overlay(Rectangle().stroke(Color.prometheusBlue.opacity(0.15), lineWidth: 1))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.prometheusBlue.opacity(0.15), lineWidth: 1))
     }
 }
 
