@@ -137,6 +137,15 @@ final class InferenceManager {
         modelState = .notDownloaded
     }
 
+    func redownloadAndLoad() async {
+        print("[InferenceManager] redownloadAndLoad() — forcing fresh download")
+        engine = nil
+        survivalConversation = nil
+        emergencyConversation = nil
+        modelState = .notDownloaded
+        await downloadAndLoad()
+    }
+
     func retryLoad() async {
         let isDownloaded = downloader.isDownloaded(ModelRegistry.gemma4E2B)
         print("[InferenceManager] retryLoad() — isDownloaded=\(isDownloaded)")
@@ -149,6 +158,12 @@ final class InferenceManager {
     }
 
     private func loadEngine() async {
+        #if targetEnvironment(simulator)
+        print("[InferenceManager] loadEngine() — simulator detected, skipping engine load")
+        modelState = .error("On-device inference requires a physical iPhone.\nRun the app on a real device to use Survival Assistant.")
+        return
+        #endif
+
         guard let url = downloader.modelPath(for: ModelRegistry.gemma4E2B) else {
             print("[InferenceManager] loadEngine() — modelPath returned nil")
             modelState = .error("Model file not found on disk")
@@ -156,15 +171,14 @@ final class InferenceManager {
         }
         let fileExists = FileManager.default.fileExists(atPath: url.path)
         print("[InferenceManager] loadEngine() — url=\(url.path) fileExists=\(fileExists)")
+        guard fileExists else {
+            modelState = .error("Model file missing. Please re-download.")
+            return
+        }
         modelState = .loading
 
-        #if targetEnvironment(simulator)
-        print("[InferenceManager] loadEngine() — using CPU backend (simulator)")
-        let config = EngineConfiguration(modelPath: url).backend(.cpu)
-        #else
         print("[InferenceManager] loadEngine() — using GPU backend (device)")
         let config = EngineConfiguration(modelPath: url).backend(.gpu)
-        #endif
 
         print("[InferenceManager] loadEngine() — creating LMEngine…")
         let e = LMEngine(configuration: config)

@@ -168,12 +168,13 @@ struct AssistantView: View {
     // MARK: - Error screen
 
     private func errorView(_ message: String) -> some View {
-        VStack(spacing: 20) {
+        let isSimulatorError = message.contains("physical iPhone")
+        return VStack(spacing: 20) {
             Spacer()
-            Image(systemName: "exclamationmark.triangle.fill")
+            Image(systemName: isSimulatorError ? "iphone.slash" : "exclamationmark.triangle.fill")
                 .font(.system(size: 48))
                 .foregroundColor(.orange)
-            Text("ERROR")
+            Text(isSimulatorError ? "SIMULATOR" : "ERROR")
                 .font(.caption.bold().monospaced())
                 .foregroundColor(.white)
             Text(message)
@@ -181,17 +182,30 @@ struct AssistantView: View {
                 .foregroundColor(.gray)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
-            Button(action: { Task { await inference.retryLoad() } }) {
-                Text("RETRY")
-                    .font(.caption.bold().monospaced())
-                    .padding(.horizontal, 24)
-                    .padding(.vertical, 10)
-                    .background(Color.prometheusBlue.opacity(0.15))
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.prometheusBlue.opacity(0.5), lineWidth: 1))
-                    .foregroundColor(.prometheusBlue)
+            if !isSimulatorError {
+                Button(action: { Task { await inference.retryLoad() } }) {
+                    Text("RETRY")
+                        .font(.caption.bold().monospaced())
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 10)
+                        .background(Color.prometheusBlue.opacity(0.15))
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.prometheusBlue.opacity(0.5), lineWidth: 1))
+                        .foregroundColor(.prometheusBlue)
+                }
+                .buttonStyle(.plain)
+                Button(action: { Task { await inference.redownloadAndLoad() } }) {
+                    Text("RE-DOWNLOAD MODEL")
+                        .font(.caption.bold().monospaced())
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 10)
+                        .background(Color.cardBackground)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.gray.opacity(0.3), lineWidth: 1))
+                        .foregroundColor(.gray)
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
             Spacer()
         }
     }
