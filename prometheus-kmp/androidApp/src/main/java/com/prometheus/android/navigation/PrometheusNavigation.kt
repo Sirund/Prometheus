@@ -1,5 +1,6 @@
 package com.prometheus.android.navigation
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
@@ -52,14 +53,16 @@ fun PrometheusApp(
         },
         containerColor = PrometheusColors.darkBackground
     ) { padding ->
-        when (selectedScreen) {
-            Screen.Monitor -> MonitorScreen(
-                onRefresh = onRefreshBmkg,
-                latestEvent = latestEvent
-            )
-            Screen.Evacuate -> MapScreen()
-            Screen.Survival -> AssistantScreen()
-            Screen.Vision -> VisionScreen()
+        Box(modifier = Modifier.padding(padding)) {
+            when (selectedScreen) {
+                Screen.Monitor -> MonitorScreen(
+                    onRefresh = onRefreshBmkg,
+                    latestEvent = latestEvent
+                )
+                Screen.Evacuate -> MapScreen()
+                Screen.Survival -> AssistantScreen()
+                Screen.Vision -> VisionScreen()
+            }
         }
     }
 }

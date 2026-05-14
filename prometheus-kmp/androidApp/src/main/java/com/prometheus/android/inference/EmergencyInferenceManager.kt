@@ -1,18 +1,21 @@
 package com.prometheus.android.inference
 
 import android.content.Context
+import android.util.Log
 import com.google.ai.edge.litertlm.Backend
-import com.google.ai.edge.litertlm.ConversationConfig
 import com.google.ai.edge.litertlm.Content
+import com.google.ai.edge.litertlm.Contents
+import com.google.ai.edge.litertlm.ConversationConfig
 import com.google.ai.edge.litertlm.Engine
 import com.google.ai.edge.litertlm.EngineConfig
-import com.google.ai.edge.litertlm.Message
 import com.prometheus.model.EarthquakeEvent
 import com.prometheus.monitor.EmergencyBriefingFormatter
 import com.prometheus.prompt.SystemPrompts
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
+
+private const val TAG = "EmergencyInference"
 
 class EmergencyInferenceManager(private val context: Context) {
 
@@ -26,14 +29,19 @@ class EmergencyInferenceManager(private val context: Context) {
                 val modelPath = findModelPath() ?: return@withContext false
                 val config = EngineConfig(
                     modelPath = modelPath,
-                    backend = Backend.CPU
+                    backend = Backend.CPU(),
+                    cacheDir = if (modelPath.startsWith("/data/local/tmp"))
+                        context.getExternalFilesDir(null)?.absolutePath
+                    else null
                 )
                 val newEngine = Engine(config)
                 newEngine.initialize()
                 engine = newEngine
                 ready = true
+                Log.d(TAG, "Emergency engine ready")
                 true
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to load emergency engine", e)
                 false
             }
         }
@@ -45,17 +53,23 @@ class EmergencyInferenceManager(private val context: Context) {
         return withContext(Dispatchers.IO) {
             try {
                 val prompt = buildEmergencyPrompt(event)
-                val config = ConversationConfig(
-                    systemMessage = Message.of(SystemPrompts.EMERGENCY_BRIEFING)
+                val systemMessage = Contents.of(
+                    listOf(Content.Text(SystemPrompts.EMERGENCY_BRIEFING))
                 )
-                val conversation = engine!!.createConversation(config)
-                val response = conversation.sendMessage(Message.of(prompt))
-                val text = response.contents
-                    .filterIsInstance<Content.Text>()
-                    .joinToString("") { it.text }
+                val conversation = engine!!.createConversation(
+                    ConversationConfig(systemInstruction = systemMessage)
+                )
+                val stream = conversation.sendMessageAsync(
+                    Contents.of(listOf(Content.Text(prompt)))
+                )
+                val response = StringBuilder()
+                stream.collect { msg -> response.append(msg.toString()) }
                 conversation.close()
-                text.ifEmpty { EmergencyBriefingFormatter.buildBriefingText(event) }
-            } catch (_: Exception) {
+                response.toString().ifEmpty {
+                    EmergencyBriefingFormatter.buildBriefingText(event)
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Briefing generation failed", e)
                 EmergencyBriefingFormatter.buildBriefingText(event)
             }
         }
@@ -67,7 +81,7 @@ class EmergencyInferenceManager(private val context: Context) {
     }
 
     fun shutdown() {
-        engine?.close()
+        try { engine?.close() } catch (_: Exception) {}
         engine = null
         ready = false
     }
@@ -77,7 +91,8 @@ class EmergencyInferenceManager(private val context: Context) {
             File(context.filesDir, "gemma4.litertlm"),
             File(context.getExternalFilesDir(null), "gemma4.litertlm"),
             File("/data/local/tmp/gemma4.litertlm"),
-            File("/sdcard/gemma4.litertlm")
+            File("/sdcard/gemma4.litertlm"),
+            File("/sdcard/Android/data/${context.packageName}/files/gemma4.litertlm")
         )
         return candidates.firstOrNull { it.exists() }?.absolutePath
     }

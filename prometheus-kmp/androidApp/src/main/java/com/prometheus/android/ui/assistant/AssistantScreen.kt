@@ -14,8 +14,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.prometheus.android.inference.InferenceManager
 import com.prometheus.android.ui.theme.PrometheusColors
@@ -29,12 +35,20 @@ fun AssistantScreen() {
     val manager = remember { InferenceManager(context) }
     var query by remember { mutableStateOf("") }
     var chatHistory by remember { mutableStateOf<List<ChatMessage>>(emptyList()) }
+    var isModelLoaded by remember { mutableStateOf(false) }
+    var statusMessage by remember { mutableStateOf("Initializing...") }
+    var downloadProgress by remember { mutableStateOf(-1) }
+    var isDownloading by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
 
     LaunchedEffect(Unit) {
         manager.setupGemma()
+        isModelLoaded = manager.isModelLoaded
+        statusMessage = manager.statusMessage
     }
+
+    val showDownload = !isModelLoaded && !isDownloading && statusMessage.startsWith("Model not found")
 
     LaunchedEffect(chatHistory.size) {
         if (chatHistory.isNotEmpty()) {
@@ -58,11 +72,11 @@ fun AssistantScreen() {
                             modifier = Modifier
                                 .size(6.dp)
                                 .clip(RoundedCornerShape(3.dp))
-                                .background(if (manager.isModelLoaded) Color.Green else Color(0xFFFFA500))
+                                .background(if (isModelLoaded) Color.Green else Color(0xFFFFA500))
                         )
                         Spacer(Modifier.width(4.dp))
                         Text(
-                            text = manager.statusMessage,
+                            text = statusMessage,
                             color = Color.Gray,
                             style = MaterialTheme.typography.labelSmall
                         )
@@ -110,6 +124,40 @@ fun AssistantScreen() {
                             CapabilityPill(text = "\uD83D\uDCA7  water & supplies")
                             CapabilityPill(text = "\u26A0\uFE0F  Indonesia hazards")
                         }
+                        if (showDownload) {
+                            Spacer(Modifier.height(16.dp))
+                            Button(
+                                onClick = {
+                                    isDownloading = true
+                                    scope.launch {
+                                        val ok = manager.downloadModel { pct ->
+                                            downloadProgress = pct
+                                        }
+                                        isDownloading = false
+                                        if (ok) {
+                                            manager.setupGemma()
+                                        }
+                                        isModelLoaded = manager.isModelLoaded
+                                        statusMessage = manager.statusMessage
+                                        if (!ok) downloadProgress = -1
+                                    }
+                                },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = PrometheusColors.blue,
+                                    contentColor = Color.Black
+                                )
+                            ) {
+                                Text("\u2B07\uFE0F  DOWNLOAD GEMMA 4 (2.4 GB)", fontWeight = FontWeight.Bold)
+                            }
+                        }
+                        if (isDownloading && downloadProgress >= 0) {
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                text = "Downloading: $downloadProgress%",
+                                color = PrometheusColors.blue,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
                     }
                 }
             } else {
@@ -152,7 +200,7 @@ fun AssistantScreen() {
                         focusedIndicatorColor = Color.Transparent,
                         unfocusedIndicatorColor = Color.Transparent
                     ),
-                    enabled = manager.isModelLoaded
+                    enabled = isModelLoaded
                 )
                 VerticalDivider(
                     modifier = Modifier.height(44.dp),
@@ -160,7 +208,7 @@ fun AssistantScreen() {
                 )
                 TextButton(
                     onClick = { /* TODO: TTS */ },
-                    enabled = manager.isModelLoaded,
+                    enabled = isModelLoaded,
                     contentPadding = PaddingValues(14.dp)
                 ) {
                     Text(
@@ -173,24 +221,23 @@ fun AssistantScreen() {
                         val userText = query
                         query = ""
                         chatHistory = chatHistory + ChatMessage(text = userText, isUser = true)
+                        val aiId = "ai-${chatHistory.size}"
                         val aiIndex = chatHistory.size
-                        chatHistory = chatHistory + ChatMessage(text = "Generating...", isUser = false)
+                        chatHistory = chatHistory + ChatMessage(id = aiId, text = "...", isUser = false)
                         scope.launch {
-                            var lastResponse = ""
                             manager.sendMessage(userText) { response ->
-                                lastResponse = response
                                 chatHistory = chatHistory.toMutableList().also { list ->
                                     if (aiIndex < list.size) {
-                                        list[aiIndex] = ChatMessage(text = response, isUser = false)
+                                        list[aiIndex] = ChatMessage(id = aiId, text = response, isUser = false)
                                     }
                                 }
                             }
                         }
                     },
-                    enabled = manager.isModelLoaded && query.isNotBlank(),
+                    enabled = isModelLoaded && query.isNotBlank(),
                     colors = ButtonDefaults.textButtonColors(
-                        containerColor = if (manager.isModelLoaded) PrometheusColors.blue else PrometheusColors.cardBackground,
-                        contentColor = if (manager.isModelLoaded) Color.Black else Color.Gray,
+                        containerColor = if (isModelLoaded) PrometheusColors.blue else PrometheusColors.cardBackground,
+                        contentColor = if (isModelLoaded) Color.Black else Color.Gray,
                         disabledContainerColor = PrometheusColors.cardBackground,
                         disabledContentColor = Color.Gray
                     ),
@@ -258,7 +305,7 @@ private fun ChatBubble(message: ChatMessage) {
         horizontalArrangement = if (message.isUser) Arrangement.End else Arrangement.Start
     ) {
         Text(
-            text = message.text,
+            text = markdownToAnnotated(message.text),
             color = if (message.isUser) Color.Black else Color.White,
             modifier = Modifier
                 .background(
@@ -268,5 +315,72 @@ private fun ChatBubble(message: ChatMessage) {
                 .border(1.dp, PrometheusColors.blue.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
                 .padding(12.dp)
         )
+    }
+}
+
+private fun markdownToAnnotated(text: String): AnnotatedString = buildAnnotatedString {
+    var i = 0
+    while (i < text.length) {
+        when {
+            text.startsWith("**", i) -> {
+                val end = text.indexOf("**", i + 2)
+                if (end != -1) {
+                    withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
+                        append(text.substring(i + 2, end))
+                    }
+                    i = end + 2
+                } else {
+                    append(text[i])
+                    i++
+                }
+            }
+            text.startsWith("__", i) -> {
+                val end = text.indexOf("__", i + 2)
+                if (end != -1) {
+                    withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
+                        append(text.substring(i + 2, end))
+                    }
+                    i = end + 2
+                } else {
+                    append(text[i])
+                    i++
+                }
+            }
+            text.startsWith("*", i) && !text.startsWith("**", i) -> {
+                val end = text.indexOf("*", i + 1)
+                if (end != -1 && end > i + 1) {
+                    withStyle(SpanStyle(fontStyle = FontStyle.Italic)) {
+                        append(text.substring(i + 1, end))
+                    }
+                    i = end + 1
+                } else {
+                    append(text[i])
+                    i++
+                }
+            }
+            text.startsWith("`", i) -> {
+                val end = text.indexOf("`", i + 1)
+                if (end != -1) {
+                    withStyle(SpanStyle(
+                        fontFamily = FontFamily.Monospace,
+                        color = Color(0xFFE6DB74)
+                    )) {
+                        append(text.substring(i + 1, end))
+                    }
+                    i = end + 1
+                } else {
+                    append(text[i])
+                    i++
+                }
+            }
+            text[i] == '\n' -> {
+                append("\n")
+                i++
+            }
+            else -> {
+                append(text[i])
+                i++
+            }
+        }
     }
 }

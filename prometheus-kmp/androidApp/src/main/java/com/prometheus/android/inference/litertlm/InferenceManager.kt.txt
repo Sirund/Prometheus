@@ -1,18 +1,31 @@
+// LiteRT-LM 0.10.0+ API — based on Google's official sample:
+// https://github.com/google-ai-edge/gallery/.../LlmChatModelHelper.kt
+// Activate by copying to ../InferenceManager.kt
+
 package com.prometheus.android.inference
 
 import android.content.Context
-import com.google.ai.edge.litertlm.EngineConfiguration
-import com.google.ai.edge.litertlm.LMConversation
-import com.google.ai.edge.litertlm.LMEngine
-import com.google.ai.edge.litertlm.ModelDownloader
-import com.google.ai.edge.litertlm.ModelRegistry
+import android.util.Log
+import com.google.ai.edge.litertlm.Backend
+import com.google.ai.edge.litertlm.Content
+import com.google.ai.edge.litertlm.Contents
+import com.google.ai.edge.litertlm.Conversation
+import com.google.ai.edge.litertlm.ConversationConfig
+import com.google.ai.edge.litertlm.Engine
+import com.google.ai.edge.litertlm.EngineConfig
+import com.google.ai.edge.litertlm.Message
+import com.google.ai.edge.litertlm.MessageCallback
+import com.prometheus.prompt.SystemPrompts
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.io.File
+
+private const val TAG = "InferenceManager"
 
 class InferenceManager(private val context: Context) {
 
-    private var engine: LMEngine? = null
-    private var conversation: LMConversation? = null
+    private var engine: Engine? = null
+    private var conversation: Conversation? = null
 
     var isModelLoaded = false
     var statusMessage = "Initializing..."
@@ -20,32 +33,37 @@ class InferenceManager(private val context: Context) {
     suspend fun setupGemma() {
         withContext(Dispatchers.IO) {
             try {
-                val downloader = ModelDownloader(context)
-                statusMessage = "Checking model..."
-                isModelLoaded = false
-
-                if (downloader.modelPath(ModelRegistry.gemma4E2B) == null) {
-                    statusMessage = "Downloading Gemma 4 (2.4GB)..."
-                    downloader.download(ModelRegistry.gemma4E2B)
+                val modelPath = findModelPath()
+                if (modelPath == null) {
+                    statusMessage = "Model not found. Push to:\n" +
+                        "adb push gemma4.litertlm ${context.getExternalFilesDir(null)}/gemma4.litertlm"
+                    Log.w(TAG, statusMessage)
+                    return@withContext
                 }
 
-                statusMessage = "Loading to GPU..."
-                val config = EngineConfiguration.builder()
-                    .setModelPath(downloader.modelPath(ModelRegistry.gemma4E2B)!!)
-                    .setBackend(EngineConfiguration.Backend.GPU)
-                    .setVisionBackend(EngineConfiguration.Backend.CPU)
-                    .setAudioBackend(EngineConfiguration.Backend.CPU)
-                    .build()
+                Log.d(TAG, "Loading model from: $modelPath")
+                statusMessage = "Loading model on CPU..."
 
-                val newEngine = LMEngine.create(config)
-                newEngine.load()
+                val config = EngineConfig(
+                    modelPath = modelPath,
+                    backend = Backend.CPU(),
+                    cacheDir = if (modelPath.startsWith("/data/local/tmp"))
+                        context.getExternalFilesDir(null)?.absolutePath
+                    else null
+                )
+
+                val newEngine = Engine(config)
+                newEngine.initialize()
+                Log.d(TAG, "Engine initialized")
 
                 engine = newEngine
-                conversation = newEngine.createConversation()
+                createNewConversation()
                 isModelLoaded = true
                 statusMessage = "Gemma 4 Online"
+                Log.d(TAG, "Gemma 4 ready")
             } catch (e: Exception) {
                 statusMessage = "Error: ${e.message ?: e.javaClass.simpleName}"
+                Log.e(TAG, "setupGemma failed", e)
             }
         }
     }
@@ -56,24 +74,55 @@ class InferenceManager(private val context: Context) {
             return
         }
         try {
-            val builder = StringBuilder()
-            val stream = conv.sendStream(text)
-            stream.collect { token ->
-                builder.append(token)
-                onToken(builder.toString())
-            }
+            val contents = Contents.of(listOf(Content.Text(text)))
+            conv.sendMessageAsync(
+                contents,
+                object : MessageCallback {
+                    override fun onMessage(message: Message) {
+                        onToken(message.toString())
+                    }
+
+                    override fun onDone() {}
+
+                    override fun onError(error: Throwable) {
+                        onToken("Error: ${error.message}")
+                    }
+                }
+            )
         } catch (e: Exception) {
             onToken("Inference failed: ${e.message}")
         }
     }
 
     fun shutdown() {
-        engine?.close()
+        try { conversation?.close() } catch (_: Exception) {}
+        try { engine?.close() } catch (_: Exception) {}
         engine = null
         conversation = null
     }
 
     fun createNewConversation() {
-        conversation = engine?.createConversation()
+        try {
+            val systemInstruction = Contents.of(
+                listOf(Content.Text(SystemPrompts.SURVIVAL_CHATBOT))
+            )
+            conversation = engine?.createConversation(
+                ConversationConfig(systemInstruction = systemInstruction)
+            )
+            Log.d(TAG, "New conversation created")
+        } catch (e: Exception) {
+            Log.e(TAG, "createConversation failed", e)
+        }
+    }
+
+    private fun findModelPath(): String? {
+        val candidates = listOf(
+            File(context.filesDir, "gemma4.litertlm"),
+            File(context.getExternalFilesDir(null), "gemma4.litertlm"),
+            File("/data/local/tmp/gemma4.litertlm"),
+            File("/sdcard/gemma4.litertlm"),
+            File("/sdcard/Android/data/${context.packageName}/files/gemma4.litertlm")
+        )
+        return candidates.firstOrNull { it.exists() }?.absolutePath
     }
 }
