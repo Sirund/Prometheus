@@ -24,7 +24,10 @@ enum class Screen(val label: String, val icon: ImageVector) {
 }
 
 @Composable
-fun PrometheusApp() {
+fun PrometheusApp(
+    onRefreshBmkg: (() -> Unit)? = null,
+    latestEvent: String? = null
+) {
     var selectedScreen by remember { mutableStateOf(Screen.Monitor) }
 
     Scaffold(
@@ -50,7 +53,10 @@ fun PrometheusApp() {
         containerColor = PrometheusColors.darkBackground
     ) { padding ->
         when (selectedScreen) {
-            Screen.Monitor -> MonitorScreen()
+            Screen.Monitor -> MonitorScreen(
+                onRefresh = onRefreshBmkg,
+                latestEvent = latestEvent
+            )
             Screen.Evacuate -> MapScreen()
             Screen.Survival -> AssistantScreen()
             Screen.Vision -> VisionScreen()

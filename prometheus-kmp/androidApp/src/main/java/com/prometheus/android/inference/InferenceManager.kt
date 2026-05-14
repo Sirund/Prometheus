@@ -30,10 +30,10 @@ class InferenceManager(private val context: Context) {
                     return@withContext
                 }
 
-                statusMessage = "Loading to GPU..."
+                statusMessage = "Loading model..."
                 val config = EngineConfig(
                     modelPath = modelPath,
-                    backend = Backend.GPU
+                    backend = Backend.CPU
                 )
 
                 val newEngine = Engine(config)

@@ -26,7 +26,7 @@ class EmergencyInferenceManager(private val context: Context) {
                 val modelPath = findModelPath() ?: return@withContext false
                 val config = EngineConfig(
                     modelPath = modelPath,
-                    backend = Backend.GPU
+                    backend = Backend.CPU
                 )
                 val newEngine = Engine(config)
                 newEngine.initialize()
