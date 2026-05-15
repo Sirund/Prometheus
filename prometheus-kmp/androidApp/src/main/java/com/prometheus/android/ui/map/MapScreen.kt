@@ -149,6 +149,11 @@ fun MapScreen(
         val mapsAvailable = remember {
             GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(context)
         }
+        val apiKeyValid = remember {
+            val ai = context.packageManager.getApplicationInfo(context.packageName, PackageManager.GET_META_DATA)
+            val key = ai.metaData?.getString("com.google.android.geo.API_KEY")
+            !key.isNullOrEmpty() && key != "YOUR_GOOGLE_MAPS_API_KEY_HERE"
+        }
 
         Column(
             modifier = Modifier
@@ -164,7 +169,7 @@ fun MapScreen(
                     .padding(horizontal = 16.dp)
                     .padding(top = 8.dp)
             ) {
-                if (mapsAvailable == ConnectionResult.SUCCESS) {
+                if (mapsAvailable == ConnectionResult.SUCCESS && apiKeyValid) {
                     val hasLocationPermission = ContextCompat.checkSelfPermission(
                         context,
                         Manifest.permission.ACCESS_FINE_LOCATION
@@ -323,6 +328,15 @@ private fun RoutingDetailsCard(
 
 @Composable
 private fun MapUnavailableFallback(epicenter: LatLng?) {
+    val context = LocalContext.current
+    val isApiKeyMissing = remember {
+        try {
+            val ai = context.packageManager.getApplicationInfo(context.packageName, PackageManager.GET_META_DATA)
+            val key = ai.metaData?.getString("com.google.android.geo.API_KEY")
+            key.isNullOrEmpty() || key == "YOUR_GOOGLE_MAPS_API_KEY_HERE"
+        } catch (_: Exception) { true }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -343,18 +357,31 @@ private fun MapUnavailableFallback(epicenter: LatLng?) {
                 fontWeight = FontWeight.Bold
             )
             Spacer(Modifier.height(4.dp))
-            Text(
-                text = "Google Play Services or a valid\nMaps API key may be missing.",
-                color = Color.Gray,
-                style = MaterialTheme.typography.labelSmall,
-                textAlign = TextAlign.Center
-            )
-            Spacer(Modifier.height(12.dp))
-            Text(
-                text = "Epicenter: ${"%.2f".format(epicenter?.latitude ?: 0.0)}, ${"%.2f".format(epicenter?.longitude ?: 0.0)}",
-                color = Color.Gray,
-                style = MaterialTheme.typography.labelSmall
-            )
+            if (isApiKeyMissing) {
+                Text(
+                    text = "Set a Google Maps API key in AndroidManifest.xml:\n" +
+                            "<meta-data android:name=\"com.google.android.geo.API_KEY\"\n" +
+                            "  android:value=\"YOUR_KEY\"/>",
+                    color = Color.Gray,
+                    style = MaterialTheme.typography.labelSmall,
+                    textAlign = TextAlign.Center
+                )
+            } else {
+                Text(
+                    text = "Google Play Services may be missing.",
+                    color = Color.Gray,
+                    style = MaterialTheme.typography.labelSmall,
+                    textAlign = TextAlign.Center
+                )
+            }
+            if (epicenter != null) {
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    text = "Epicenter: ${"%.2f".format(epicenter.latitude)}, ${"%.2f".format(epicenter.longitude)}",
+                    color = Color.Gray,
+                    style = MaterialTheme.typography.labelSmall
+                )
+            }
         }
     }
 }
