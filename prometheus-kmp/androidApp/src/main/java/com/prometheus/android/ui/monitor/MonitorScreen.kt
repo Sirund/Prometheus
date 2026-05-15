@@ -15,7 +15,7 @@ import androidx.compose.ui.unit.dp
 import com.prometheus.android.ui.theme.PrometheusColors
 import com.prometheus.model.EarthquakeEvent
 
-private enum class DangerLevel { None, Watch, Danger }
+private enum class DangerLevel { None, Watch, Medium, Danger }
 
 @Composable
 fun MonitorScreen(
@@ -28,7 +28,11 @@ fun MonitorScreen(
         event.isDangerous -> DangerLevel.Danger
         else -> {
             val mag = event.magnitudeValue
-            if (mag != null && mag >= 4.0f) DangerLevel.Watch else DangerLevel.None
+            when {
+                mag != null && mag >= 5.0f -> DangerLevel.Medium
+                mag != null && mag >= 4.0f -> DangerLevel.Watch
+                else -> DangerLevel.None
+            }
         }
     }
     var lastRefresh by remember { mutableStateOf("Not yet refreshed") }
@@ -98,11 +102,13 @@ private fun DangerStatusBanner(level: DangerLevel) {
     val color = when (level) {
         DangerLevel.None -> PrometheusColors.blue
         DangerLevel.Watch -> Color(0xFFFFA500)
+        DangerLevel.Medium -> Color(0xFFFF8C00)
         DangerLevel.Danger -> Color.Red
     }
     val label = when (level) {
         DangerLevel.None -> "NO ACTIVE ALERTS"
         DangerLevel.Watch -> "WATCH — MONITOR CLOSELY"
+        DangerLevel.Medium -> "MEDIUM — NOTIFIED"
         DangerLevel.Danger -> "DANGER — TAKE ACTION NOW"
     }
 

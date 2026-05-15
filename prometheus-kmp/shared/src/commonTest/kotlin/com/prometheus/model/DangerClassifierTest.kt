@@ -4,6 +4,7 @@ import com.prometheus.loadFixture
 import kotlinx.serialization.json.Json
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 private val testJson = Json { ignoreUnknownKeys = true }
 
@@ -30,69 +31,106 @@ class DangerClassifierTest {
     }
 
     @Test
-    fun gempaterkini_m60depth10_highMagnitudeAndShallow() {
-        val events = loadEvents("gempaterkini.json")
-        val event = events[0]
-
-        assertEquals(6.0f, event.magnitudeValue)
-        assertEquals(10, event.depthKm)
-        assertEquals(false, event.hasTsunamiPotential)
-        assertEquals(true, event.isDangerous)
-
-        val ruleIds = event.matchedDangerRules.map { it.id }.sorted()
-        assertEquals(listOf("high_magnitude", "moderate_magnitude_shallow"), ruleIds)
+    fun localDanger_nearby() {
+        val event = EarthquakeEvent(
+            Magnitude = "5.5", Kedalaman = "30 km",
+            Coordinates = "-7.0,110.0"
+        )
+        // User at Semarang (~25km from epicenter)
+        val matches = DangerClassifier.classify(event, -6.99, 110.35)
+        assertTrue(matches.any { it.id == "local_danger" })
+        assertEquals(DangerSeverity.CRITICAL, matches.first { it.id == "local_danger" }.severity)
     }
 
     @Test
-    fun gempaterkini_m53depth188_deepNotDangerous() {
-        val events = loadEvents("gempaterkini.json")
-        val event = events[1]
-
-        assertEquals(5.3f, event.magnitudeValue)
-        assertEquals(188, event.depthKm)
-        assertEquals(false, event.isDangerous)
-
-        val ruleIds = event.matchedDangerRules.map { it.id }
-        assertEquals(listOf("moderate_magnitude_deep"), ruleIds)
+    fun localDanger_farAway() {
+        val event = EarthquakeEvent(
+            Magnitude = "5.5", Kedalaman = "30 km",
+            Coordinates = "-7.0,110.0"
+        )
+        // User at Jakarta (~450km from epicenter) - outside 50km
+        val matches = DangerClassifier.classify(event, -6.2, 106.8)
+        assertTrue(matches.none { it.id == "local_danger" })
     }
 
     @Test
-    fun gempaterkini_m51depth12_shallowDangerous() {
-        val events = loadEvents("gempaterkini.json")
-        val event = events[4]
-
-        assertEquals(5.1f, event.magnitudeValue)
-        assertEquals(12, event.depthKm)
-        assertEquals(true, event.isDangerous)
-
-        val ruleIds = event.matchedDangerRules.map { it.id }
-        assertEquals(listOf("moderate_magnitude_shallow"), ruleIds)
+    fun regionalMajor() {
+        val event = EarthquakeEvent(
+            Magnitude = "6.5", Kedalaman = "30 km",
+            Coordinates = "-8.0,115.0"
+        )
+        val matches = DangerClassifier.classify(event, -8.0, 115.0)
+        assertTrue(matches.any { it.id == "regional_major" })
+        assertEquals(DangerSeverity.HIGH, matches.first { it.id == "regional_major" }.severity)
     }
 
     @Test
-    fun gempaterkini_m50depth12_shallowAtThreshold() {
-        val events = loadEvents("gempaterkini.json")
-        val event = events[6]
-
-        assertEquals(5.0f, event.magnitudeValue)
-        assertEquals(12, event.depthKm)
-        assertEquals(true, event.isDangerous)
-
-        val ruleIds = event.matchedDangerRules.map { it.id }
-        assertEquals(listOf("moderate_magnitude_shallow"), ruleIds)
+    fun megaEarthquake() {
+        val event = EarthquakeEvent(
+            Magnitude = "7.5", Kedalaman = "50 km",
+            Coordinates = "-10.0,118.0"
+        )
+        // User ~300km away
+        val matches = DangerClassifier.classify(event, -8.0, 115.0)
+        assertTrue(matches.any { it.id == "mega_earthquake" })
+        assertEquals(DangerSeverity.HIGH, matches.first { it.id == "mega_earthquake" }.severity)
     }
 
     @Test
-    fun gempaterkini_m60depth31_dangerous() {
-        val events = loadEvents("gempaterkini.json")
-        val event = events[8]
+    fun distantFelt() {
+        val event = EarthquakeEvent(
+            Magnitude = "5.8", Kedalaman = "30 km",
+            Coordinates = "-10.0,120.0"
+        )
+        // User ~200km away
+        val matches = DangerClassifier.classify(event, -8.5, 118.5)
+        assertTrue(matches.any { it.id == "distant_felt" })
+        assertEquals(DangerSeverity.MEDIUM, matches.first { it.id == "distant_felt" }.severity)
+    }
 
-        assertEquals(6.0f, event.magnitudeValue)
-        assertEquals(31, event.depthKm)
-        assertEquals(true, event.isDangerous)
+    @Test
+    fun deepClose() {
+        val event = EarthquakeEvent(
+            Magnitude = "6.2", Kedalaman = "120 km",
+            Coordinates = "-7.0,110.0"
+        )
+        val matches = DangerClassifier.classify(event, -7.0, 110.0)
+        assertTrue(matches.any { it.id == "deep_close" })
+        assertEquals(DangerSeverity.MEDIUM, matches.first { it.id == "deep_close" }.severity)
+    }
 
-        val ruleIds = event.matchedDangerRules.map { it.id }.sorted()
-        assertEquals(listOf("high_magnitude", "moderate_magnitude_shallow"), ruleIds)
+    @Test
+    fun tsunamiPotential_overridesDistance() {
+        val event = EarthquakeEvent(
+            Magnitude = "5.0", Kedalaman = "10 km",
+            Potensi = "Berpotensi tsunami",
+            Coordinates = "-7.0,110.0"
+        )
+        // Very far away but tsunami potential still triggers CRITICAL
+        val matches = DangerClassifier.classify(event, 40.0, -74.0)
+        assertTrue(matches.any { it.id == "tsunami_potential" })
+        assertEquals(DangerSeverity.CRITICAL, matches.first { it.id == "tsunami_potential" }.severity)
+    }
+
+    @Test
+    fun safeOutOfRange() {
+        val event = EarthquakeEvent(
+            Magnitude = "4.0", Kedalaman = "10 km",
+            Coordinates = "-7.0,110.0"
+        )
+        val matches = DangerClassifier.classify(event, 40.0, -74.0)
+        assertEquals(emptyList(), matches)
+    }
+
+    @Test
+    fun noLocation_noDistanceRules() {
+        val event = EarthquakeEvent(
+            Magnitude = "6.0", Kedalaman = "30 km",
+            Coordinates = "-7.0,110.0"
+        )
+        // Without location, only tsunami_potential can match
+        val matches = DangerClassifier.classify(event, null as Double?)
+        assertTrue(matches.none { it.id == "local_danger" || it.id == "regional_major" })
     }
 
     @Test

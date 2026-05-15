@@ -13,17 +13,24 @@ class BMKGPollingController(context: Context) {
     private val pollingManager = BMKGPollingManager()
     private val alarmManager = PrometheusAlarmManager(context)
     private val emergencyInference = EmergencyInferenceManager(context)
+    private val locationProvider = LocationProvider(context)
 
     var onNewEvent: ((EarthquakeEvent) -> Unit)? = null
     var onPoll: ((EarthquakeEvent) -> Unit)? = null
 
     fun start() {
+        pollingManager.userLocation = locationProvider.getLastKnownLocation()
         pollingManager.onPoll = { events ->
             if (events.isNotEmpty()) onPoll?.invoke(events.first())
+            pollingManager.userLocation = locationProvider.getLastKnownLocation()
         }
         pollingManager.onDangerousEvent = { event ->
             onNewEvent?.invoke(event)
             generateAndAnnounceBriefing(event)
+        }
+        pollingManager.onMediumEvent = { event ->
+            onNewEvent?.invoke(event)
+            alarmManager.triggerMediumAlert(event)
         }
         pollingManager.onNewEvent = { event ->
             onNewEvent?.invoke(event)

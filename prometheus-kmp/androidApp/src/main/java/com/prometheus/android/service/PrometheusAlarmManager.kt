@@ -104,6 +104,26 @@ class PrometheusAlarmManager(private val context: Context) {
         playAlarm()
     }
 
+    fun triggerMediumAlert(event: EarthquakeEvent) {
+        val mag = event.magnitudeValue?.let { "%.1f".format(it) } ?: "?"
+        val loc = event._wilayah?.take(50) ?: "Unknown location"
+        val depth = event._kedalaman ?: "?"
+        val time = buildString {
+            event._tanggal?.let { append(it) }
+            if (event._jam != null) append(" ${event._jam}")
+        }
+
+        val n = NotificationCompat.Builder(context, CHANNEL_ALERT)
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setContentTitle("Gempa Terdeteksi — M$mag")
+            .setContentText("$loc — Depth: $depth — $time")
+            .setStyle(NotificationCompat.BigTextStyle().bigText("Magnitude $mag di $loc, kedalaman $depth.\nTerasa jauh, tidak perlu panik."))
+            .setPriority(NotificationManager.IMPORTANCE_DEFAULT)
+            .setAutoCancel(true)
+            .build()
+        NotificationManagerCompat.from(context).notify(ID_ALERT + 1, n)
+    }
+
     private fun speak(text: String) {
         if (ttsReady) tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "alert")
     }

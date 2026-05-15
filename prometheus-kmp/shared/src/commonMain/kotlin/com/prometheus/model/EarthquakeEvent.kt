@@ -61,7 +61,7 @@ data class EarthquakeEvent(
         get() = checkTsunamiPotential(_potensi)
 
     val matchedDangerRules: List<DangerRuleMatch>
-        get() = DangerClassifier.classify(this)
+        get() = DangerClassifier.classify(this, null as Double?)
 
     val isDangerous: Boolean
         get() = matchedDangerRules.any { it.severity == DangerSeverity.CRITICAL || it.severity == DangerSeverity.HIGH }

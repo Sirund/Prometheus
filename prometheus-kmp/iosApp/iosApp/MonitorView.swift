@@ -84,23 +84,13 @@ struct MonitorView: View {
     private var dangerLevel: DangerLevel {
         switch pollingService.dangerLevel {
         case 2: return .danger
-        case 1: return .watch
+        case 1: return .medium
         default: return .none
         }
     }
 }
 
-enum DangerLevel { case none, watch, danger }
-
-struct DangerStatusBanner: View {
-    let level: DangerLevel
-
-    var color: Color {
-        switch level {
-        case .none:   return .prometheusBlue
-        case .watch:  return .orange
-        case .danger: return .red
-        }
+enum DangerLevel { case none, watch, medium, danger }
     }
     var label: String {
         switch level {

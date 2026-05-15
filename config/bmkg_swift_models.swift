@@ -220,33 +220,57 @@ struct EarthquakeEvent: Codable, Identifiable, Equatable {
 enum DangerSeverity: String, Codable {
     case critical = "CRITICAL"
     case high = "HIGH"
-    case low = "LOW"
+    case medium = "MEDIUM"
     case info = "INFO"
 }
 
 struct DangerRuleMatch: Identifiable, Equatable {
-    let id: String        // rule identifier
+    let id: String
     let severity: DangerSeverity
+    let ruleName: String
+    let tindakanAlarm: String
 }
 
 struct DangerClassifier {
-    static let rules: [(id: String, severity: DangerSeverity, check: (EarthquakeEvent) -> Bool)] = [
-        ("tsunami_potential", .critical, { $0.hasTsunamiPotential }),
-        ("high_magnitude", .high, { ($0.magnitudeValue ?? 0) >= 6.0 }),
-        ("moderate_magnitude_shallow", .high, {
-            guard let mag = $0.magnitudeValue, let depth = $0.depthKm else { return false }
-            return mag >= 5.0 && depth < 70
-        }),
-        ("felt_intensity_damage", .high, { $0.maxMMI >= 5 }),  // MMI V = 5
-        ("moderate_magnitude_deep", .low, {
-            guard let mag = $0.magnitudeValue, let depth = $0.depthKm else { return false }
-            return mag >= 5.0 && depth >= 70
-        }),
+    typealias RuleCheck = (EarthquakeEvent, Double?) -> Bool
+
+    struct Rule {
+        let id: String
+        let ruleName: String
+        let severity: DangerSeverity
+        let tindakanAlarm: String
+        let check: RuleCheck
+    }
+
+    static let rules: [Rule] = [
+        Rule(id: "local_danger", ruleName: "Local Danger", severity: .critical, tindakanAlarm: "Sirine Utama Berbunyi, Evakuasi Mandiri.") { event, dist in
+            guard let mag = event.magnitudeValue, let depth = event.depthKm, let d = dist else { return false }
+            return mag >= 5.0 && depth < 70 && d <= 50
+        },
+        Rule(id: "regional_major", ruleName: "Regional Major", severity: .high, tindakanAlarm: "Alarm Keras, Bersiap Siaga.") { event, dist in
+            guard let mag = event.magnitudeValue, let depth = event.depthKm, let d = dist else { return false }
+            return mag >= 6.0 && depth < 70 && d <= 150
+        },
+        Rule(id: "mega_earthquake", ruleName: "Mega Earthquakes", severity: .high, tindakanAlarm: "Alarm Keras, potensi ayunan kuat.") { event, dist in
+            guard let mag = event.magnitudeValue, let d = dist else { return false }
+            return mag >= 7.0 && d <= 400
+        },
+        Rule(id: "distant_felt", ruleName: "Distant Felt", severity: .medium, tindakanAlarm: "Notifikasi HP / Buzzer Pendek.") { event, dist in
+            guard let mag = event.magnitudeValue, let depth = event.depthKm, let d = dist else { return false }
+            return mag >= 5.5 && depth < 70 && d >= 150 && d <= 300
+        },
+        Rule(id: "deep_close", ruleName: "Deep & Close", severity: .medium, tindakanAlarm: "Notifikasi / Alarm Lemah.") { event, dist in
+            guard let mag = event.magnitudeValue, let depth = event.depthKm, let d = dist else { return false }
+            return mag >= 6.0 && depth >= 70 && d <= 100
+        },
+        Rule(id: "tsunami_potential", ruleName: "Tsunami Potential", severity: .critical, tindakanAlarm: "Sirine Tsunami, Evakuasi ke Tempat Tinggi.") { event, _ in
+            event.hasTsunamiPotential
+        },
     ]
-    
-    static func classify(_ event: EarthquakeEvent) -> [DangerRuleMatch] {
+
+    static func classify(_ event: EarthquakeEvent, distanceKm: Double? = nil) -> [DangerRuleMatch] {
         rules.compactMap { rule in
-            rule.check(event) ? DangerRuleMatch(id: rule.id, severity: rule.severity) : nil
+            rule.check(event, distanceKm) ? DangerRuleMatch(id: rule.id, severity: rule.severity, ruleName: rule.ruleName, tindakanAlarm: rule.tindakanAlarm) : nil
         }
     }
 }
