@@ -13,10 +13,15 @@ import com.google.ai.edge.litertlm.Message
 import com.google.ai.edge.litertlm.MessageCallback
 import com.prometheus.prompt.SystemPrompts
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import java.io.File
 
 private const val TAG = "InferenceManager"
+private const val MODEL_FILENAME = "gemma4.litertlm"
+private const val MODEL_FILENAME_V2 = "gemma-4-E2B-it.litertlm"
+private const val DOWNLOAD_URL = "https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it.litertlm"
+private const val MAX_RETRIES = 3
 
 class InferenceManager(private val context: Context) {
 
@@ -31,8 +36,8 @@ class InferenceManager(private val context: Context) {
             try {
                 val modelPath = findModelPath()
                 if (modelPath == null) {
-                    statusMessage = "Model not found. Push to:\n" +
-                        "adb push gemma4.litertlm ${context.getExternalFilesDir(null)}/gemma4.litertlm"
+                    statusMessage = "Model not found. Download from app or push:\n" +
+                        "adb push $MODEL_FILENAME ${context.getExternalFilesDir(null)}/$MODEL_FILENAME"
                     Log.w(TAG, statusMessage)
                     return@withContext
                 }
@@ -107,64 +112,85 @@ class InferenceManager(private val context: Context) {
 
     suspend fun downloadModel(onProgress: (Int) -> Unit): Boolean {
         return withContext(Dispatchers.IO) {
-            try {
-                val destDir = context.getExternalFilesDir(null)
-                    ?: context.filesDir
-                val destFile = File(destDir, "gemma4.litertlm")
-                if (destFile.exists()) {
-                    statusMessage = "Model already downloaded"
+            val destDir = context.getExternalFilesDir(null)
+                ?: context.filesDir
+            val destFile = File(destDir, MODEL_FILENAME)
+            if (destFile.exists()) {
+                statusMessage = "Model already downloaded"
+                return@withContext true
+            }
+            destDir.mkdirs()
+
+            for (attempt in 1..MAX_RETRIES) {
+                try {
+                    statusMessage = "Downloading Gemma 4 (2.4GB) — attempt $attempt/$MAX_RETRIES"
+                    Log.d(TAG, "Downloading to: ${destFile.absolutePath} (attempt $attempt)")
+
+                    val url = java.net.URL(DOWNLOAD_URL)
+                    val connection = url.openConnection() as java.net.HttpURLConnection
+                    connection.connectTimeout = 60_000
+                    connection.readTimeout = 120_000
+                    connection.setRequestProperty("Accept-Encoding", "identity")
+                    connection.connect()
+
+                    val totalBytes = connection.contentLengthLong
+                    val input = connection.inputStream
+                    val output = java.io.FileOutputStream(destFile)
+                    val buffer = ByteArray(8192)
+                    var bytesRead: Int
+                    var totalRead = 0L
+
+                    while (input.read(buffer).also { bytesRead = it } != -1) {
+                        output.write(buffer, 0, bytesRead)
+                        totalRead += bytesRead
+                        if (totalBytes > 0) {
+                            val percent = ((totalRead * 100) / totalBytes).toInt()
+                            onProgress(percent)
+                            statusMessage = "Downloading: $percent% ($attempt/$MAX_RETRIES)"
+                        }
+                    }
+                    output.close()
+                    input.close()
+                    connection.disconnect()
+
+                    if (totalBytes > 0 && totalRead < totalBytes) {
+                        throw java.io.IOException("Incomplete download: ${totalRead}/$totalBytes bytes")
+                    }
+
+                    statusMessage = "Download complete. Loading model..."
+                    Log.d(TAG, "Downloaded: ${destFile.absolutePath}")
                     return@withContext true
-                }
-                destDir.mkdirs()
-
-                statusMessage = "Downloading Gemma 4 (2.4GB)..."
-                Log.d(TAG, "Downloading to: ${destFile.absolutePath}")
-
-                val url = java.net.URL("https://huggingface.co/litert-community/gemma-4-e2b-litertlm/resolve/main/gemma4.litertlm")
-                val connection = url.openConnection() as java.net.HttpURLConnection
-                connection.connectTimeout = 30_000
-                connection.readTimeout = 60_000
-                connection.connect()
-
-                val totalBytes = connection.contentLengthLong
-                val input = connection.inputStream
-                val output = java.io.FileOutputStream(destFile)
-                val buffer = ByteArray(8192)
-                var bytesRead: Int
-                var totalRead = 0L
-
-                while (input.read(buffer).also { bytesRead = it } != -1) {
-                    output.write(buffer, 0, bytesRead)
-                    totalRead += bytesRead
-                    if (totalBytes > 0) {
-                        val percent = ((totalRead * 100) / totalBytes).toInt()
-                        onProgress(percent)
-                        statusMessage = "Downloading: $percent%"
+                } catch (e: Exception) {
+                    Log.w(TAG, "Download attempt $attempt failed: ${e.message}")
+                    destFile.delete()
+                    if (attempt < MAX_RETRIES) {
+                        statusMessage = "Retrying... ($attempt/$MAX_RETRIES)"
+                        delay(3000L)
+                    } else {
+                        statusMessage = "Download failed after $MAX_RETRIES attempts: ${e.message}"
+                        Log.e(TAG, "Download failed", e)
                     }
                 }
-                output.close()
-                input.close()
-                connection.disconnect()
-
-                statusMessage = "Download complete. Loading model..."
-                Log.d(TAG, "Downloaded to: ${destFile.absolutePath}")
-                true
-            } catch (e: Exception) {
-                statusMessage = "Download failed: ${e.message}"
-                Log.e(TAG, "Download failed", e)
-                false
             }
+            false
         }
     }
 
     private fun findModelPath(): String? {
-        val candidates = listOf(
-            File(context.filesDir, "gemma4.litertlm"),
-            File(context.getExternalFilesDir(null), "gemma4.litertlm"),
-            File("/data/local/tmp/gemma4.litertlm"),
-            File("/sdcard/gemma4.litertlm"),
-            File("/sdcard/Android/data/${context.packageName}/files/gemma4.litertlm")
+        val names = listOf(MODEL_FILENAME, MODEL_FILENAME_V2)
+        val dirs = listOf(
+            context.filesDir,
+            context.getExternalFilesDir(null),
+            File("/data/local/tmp"),
+            File("/sdcard"),
+            File("/sdcard/Android/data/${context.packageName}/files")
         )
-        return candidates.firstOrNull { it.exists() }?.absolutePath
+        for (dir in dirs) {
+            for (name in names) {
+                val file = File(dir, name)
+                if (file.exists()) return file.absolutePath
+            }
+        }
+        return null
     }
 }
