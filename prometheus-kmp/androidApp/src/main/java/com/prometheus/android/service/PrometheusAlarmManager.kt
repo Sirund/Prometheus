@@ -62,7 +62,7 @@ class PrometheusAlarmManager(private val context: Context) {
     }
 
     fun showStatus(active: Boolean) {
-        val text = if (active) "BMKG monitoring active — polling every 30s"
+        val text = if (active) "BMKG monitoring active"
         else "BMKG monitoring stopped"
         val n = NotificationCompat.Builder(context, CHANNEL_STATUS)
             .setSmallIcon(android.R.drawable.ic_dialog_info)
