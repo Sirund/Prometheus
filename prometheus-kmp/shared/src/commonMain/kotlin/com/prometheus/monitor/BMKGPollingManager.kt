@@ -5,7 +5,7 @@ import com.prometheus.network.BMKGClient
 import kotlinx.coroutines.*
 
 class BMKGPollingManager(
-    private val intervalMs: Long = 60_000L
+    private val intervalMs: Long = 30_000L
 ) {
     private val client = BMKGClient()
     private var job: Job? = null

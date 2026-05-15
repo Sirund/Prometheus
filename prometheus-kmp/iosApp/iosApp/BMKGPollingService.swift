@@ -18,7 +18,7 @@ class BMKGPollingService {
     func start() {
         isMonitoring = true
         checkNow()
-        timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
+        timer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
             self?.checkNow()
         }
     }
@@ -71,10 +71,14 @@ class BMKGPollingService {
     private func triggerAlarm(event: EarthquakeEvent) {
         let mag = event.magnitudeValue
         let loc = event.wilayah_ ?? "Unknown location"
+        let depth = event.kedalaman_ ?? "?"
+        let time = "\(event.tanggal_ ?? "") \(event.jam_ ?? "")".trimmingCharacters(in: .whitespaces)
+        let tsunami = event.hasTsunamiPotential ? " ⚠️ TSUNAMI POTENTIAL" : ""
+        let felt = event.dirasakan_?.isEmpty == false ? "\nFelt: \(event.dirasakan_!)" : ""
 
         let content = UNMutableNotificationContent()
-        content.title = "🚨 EARTHQUAKE DETECTED"
-        content.body = "M \(mag) — \(loc)"
+        content.title = "🚨 EARTHQUAKE DETECTED — M\(mag)"
+        content.body = "\(loc)\nDepth: \(depth) | \(time)\(tsunami)\(felt)"
         content.sound = .defaultCritical
         content.interruptionLevel = .critical
 

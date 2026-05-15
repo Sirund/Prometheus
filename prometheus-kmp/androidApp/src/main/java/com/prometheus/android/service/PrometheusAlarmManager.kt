@@ -62,7 +62,7 @@ class PrometheusAlarmManager(private val context: Context) {
     }
 
     fun showStatus(active: Boolean) {
-        val text = if (active) "BMKG monitoring active — polling every 60s"
+        val text = if (active) "BMKG monitoring active — polling every 30s"
         else "BMKG monitoring stopped"
         val n = NotificationCompat.Builder(context, CHANNEL_STATUS)
             .setSmallIcon(android.R.drawable.ic_dialog_info)
@@ -78,12 +78,21 @@ class PrometheusAlarmManager(private val context: Context) {
         val briefing = gemmaBriefing ?: EmergencyBriefingFormatter.buildBriefingText(event)
         val mag = event.magnitudeValue?.let { "%.1f".format(it) } ?: "?"
         val loc = event._wilayah?.take(50) ?: "Unknown location"
+        val depth = event._kedalaman ?: "?"
+        val time = buildString {
+            event._tanggal?.let { append(it) }
+            if (event._jam != null) append(" ${event._jam}")
+        }
+        val tsunami = if (event.hasTsunamiPotential) " ⚠️ TSUNAMI POTENTIAL" else ""
+        val felt = event._dirasakan?.take(60)?.let { "\nFelt: $it" } ?: ""
+
+        val detail = "M$mag | Depth: $depth | $time$tsunami$felt"
 
         val n = NotificationCompat.Builder(context, CHANNEL_ALERT)
             .setSmallIcon(android.R.drawable.ic_dialog_alert)
-            .setContentTitle("\uD83D\uDEA8 EARTHQUAKE DETECTED")
-            .setContentText("M $mag — $loc")
-            .setStyle(NotificationCompat.BigTextStyle().bigText(briefing))
+            .setContentTitle("\uD83D\uDEA8 EARTHQUAKE DETECTED — M$mag")
+            .setContentText(loc)
+            .setStyle(NotificationCompat.BigTextStyle().bigText("$detail\n\n$briefing"))
             .setPriority(NotificationManager.IMPORTANCE_MAX)
             .setAutoCancel(true)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
