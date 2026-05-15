@@ -2,13 +2,13 @@ package com.prometheus.android.ui.vision
 
 import android.Manifest
 import android.content.pm.PackageManager
-import android.graphics.BitmapFactory
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -19,10 +19,10 @@ import java.io.File
 import java.util.concurrent.Executors
 
 @Composable
-fun rememberCameraState(
+fun rememberCameraActions(
     modifier: Modifier = Modifier,
     enabled: Boolean = true
-): CameraState {
+): CameraActions? {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val imageCapture = remember { ImageCapture.Builder().setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY).build() }
@@ -31,35 +31,42 @@ fun rememberCameraState(
         context, Manifest.permission.CAMERA
     ) == PackageManager.PERMISSION_GRANTED
 
+    if (!hasPermission || !enabled) return null
+
     AndroidView(
         factory = { ctx ->
             PreviewView(ctx).apply {
-                if (hasPermission && enabled) {
-                    val providerFuture = ProcessCameraProvider.getInstance(ctx)
-                    providerFuture.addListener({
-                        val provider = providerFuture.get()
-                        val preview = Preview.Builder().build().also {
-                            it.surfaceProvider = surfaceProvider
-                        }
-                        try {
-                            provider.unbindAll()
-                            provider.bindToLifecycle(
-                                lifecycleOwner,
-                                androidx.camera.core.CameraSelector.DEFAULT_BACK_CAMERA,
-                                preview,
-                                imageCapture
-                            )
-                        } catch (_: Exception) {}
-                    }, ContextCompat.getMainExecutor(ctx))
-                }
+                val providerFuture = ProcessCameraProvider.getInstance(ctx)
+                providerFuture.addListener({
+                    val provider = providerFuture.get()
+                    val preview = Preview.Builder().build().also {
+                        it.surfaceProvider = surfaceProvider
+                    }
+                    try {
+                        provider.unbindAll()
+                        provider.bindToLifecycle(
+                            lifecycleOwner,
+                            androidx.camera.core.CameraSelector.DEFAULT_BACK_CAMERA,
+                            preview,
+                            imageCapture
+                        )
+                    } catch (_: Exception) {}
+                }, ContextCompat.getMainExecutor(ctx))
             }
         },
         modifier = modifier
     )
-    return remember { CameraState(imageCapture) }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            try { imageCapture } catch (_: Exception) {}
+        }
+    }
+
+    return remember { CameraActions(imageCapture) }
 }
 
-class CameraState(private val imageCapture: ImageCapture) {
+class CameraActions(private val imageCapture: ImageCapture) {
     fun takePhoto(onResult: (ByteArray?) -> Unit) {
         val executor = Executors.newSingleThreadExecutor()
         val file = File.createTempFile("capture", ".jpg")
