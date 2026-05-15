@@ -19,12 +19,14 @@ import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.CircleOptions
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
+import com.google.android.gms.common.ConnectionResult
+import com.google.android.gms.common.GoogleApiAvailability
+import com.google.maps.android.compose.Circle
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.MapProperties
 import com.google.maps.android.compose.MapType
 import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.Marker
-import com.google.maps.android.compose.MarkerComposable
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
 import com.prometheus.android.service.LocationProvider
@@ -141,6 +143,10 @@ fun MapScreen(
         },
         containerColor = PrometheusColors.darkBackground
     ) { padding ->
+        val mapsAvailable = remember {
+            GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(context)
+        }
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -155,49 +161,53 @@ fun MapScreen(
                     .padding(horizontal = 16.dp)
                     .padding(top = 8.dp)
             ) {
-                GoogleMap(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .border(1.dp, PrometheusColors.blue.copy(alpha = 0.3f)),
-                    cameraPositionState = cameraState,
-                    properties = MapProperties(
-                        isMyLocationEnabled = true,
-                        mapType = MapType.NORMAL
-                    ),
-                    uiSettings = MapUiSettings(
-                        myLocationButtonEnabled = true,
-                        zoomControlsEnabled = true
-                    ),
-                    onMapClick = { /* no-op */ }
-                ) {
-                    if (epicenter != null) {
-                        Marker(
-                            state = MarkerState(position = epicenter),
-                            title = "Epicenter",
-                            snippet = event?._wilayah ?: "",
-                            icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)
-                        )
-                    }
+                if (mapsAvailable == ConnectionResult.SUCCESS) {
+                    GoogleMap(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .border(1.dp, PrometheusColors.blue.copy(alpha = 0.3f)),
+                        cameraPositionState = cameraState,
+                        properties = MapProperties(
+                            isMyLocationEnabled = true,
+                            mapType = MapType.NORMAL
+                        ),
+                        uiSettings = MapUiSettings(
+                            myLocationButtonEnabled = true,
+                            zoomControlsEnabled = true
+                        ),
+                        onMapClick = { /* no-op */ }
+                    ) {
+                        if (epicenter != null) {
+                            Marker(
+                                state = MarkerState(position = epicenter),
+                                title = "Epicenter",
+                                snippet = event?._wilayah ?: "",
+                                icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)
+                            )
+                        }
 
-                    if (userLatLng != null) {
-                        Marker(
-                            state = MarkerState(position = userLatLng),
-                            title = "You",
-                            snippet = "Current location",
-                            icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE)
-                        )
-                    }
+                        if (userLatLng != null) {
+                            Marker(
+                                state = MarkerState(position = userLatLng),
+                                title = "You",
+                                snippet = "Current location",
+                                icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE)
+                            )
+                        }
 
-                    if (epicenter != null && dangerRadiusKm != null) {
-                        val radiusMeters = dangerRadiusKm * 1000.0
-                        com.google.maps.android.compose.Circle(
-                            center = epicenter,
-                            radius = radiusMeters,
-                            fillColor = Color.Red.copy(alpha = 0.15f),
-                            strokeColor = Color.Red.copy(alpha = 0.5f),
-                            strokeWidth = 3f
-                        )
+                        if (epicenter != null && dangerRadiusKm != null) {
+                            val radiusMeters = dangerRadiusKm * 1000.0
+                            Circle(
+                                center = epicenter,
+                                radius = radiusMeters,
+                                fillColor = Color.Red.copy(alpha = 0.15f),
+                                strokeColor = Color.Red.copy(alpha = 0.5f),
+                                strokeWidth = 3f
+                            )
+                        }
                     }
+                } else {
+                    MapUnavailableFallback(epicenter)
                 }
             }
 
@@ -292,15 +302,49 @@ private fun RoutingDetailsCard(
         HorizontalDivider(color = PrometheusColors.blue.copy(alpha = 0.15f))
         RouteInfoRow(label = "MAGNITUDE", value = magStr)
         HorizontalDivider(color = PrometheusColors.blue.copy(alpha = 0.15f))
-        RouteInfoRow(label = "DEPTH", value = depthStr)
-        HorizontalDivider(color = PrometheusColors.blue.copy(alpha = 0.15f))
-        RouteInfoRow(label = "EPICENTER", value = epicenterStr)
-        HorizontalDivider(color = PrometheusColors.blue.copy(alpha = 0.15f))
         RouteInfoRow(label = "USER LOCATION", value = userLocStr)
         HorizontalDivider(color = PrometheusColors.blue.copy(alpha = 0.15f))
         RouteInfoRow(label = "DANGER RADIUS", value = radiusStr)
         HorizontalDivider(color = PrometheusColors.blue.copy(alpha = 0.15f))
         RouteInfoRow(label = "DIRECTION", value = dirStr)
+    }
+}
+
+@Composable
+private fun MapUnavailableFallback(epicenter: LatLng?) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(PrometheusColors.cardBackground)
+            .border(1.dp, PrometheusColors.blue.copy(alpha = 0.3f)),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = "\uD83D\uDDFA\uFE0F",
+                style = MaterialTheme.typography.displayMedium
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = "Maps Unavailable",
+                color = PrometheusColors.blue,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = "Google Play Services or a valid\nMaps API key may be missing.",
+                color = Color.Gray,
+                style = MaterialTheme.typography.labelSmall,
+                textAlign = TextAlign.Center
+            )
+            Spacer(Modifier.height(12.dp))
+            Text(
+                text = "Epicenter: ${"%.2f".format(epicenter?.latitude ?: 0.0)}, ${"%.2f".format(epicenter?.longitude ?: 0.0)}",
+                color = Color.Gray,
+                style = MaterialTheme.typography.labelSmall
+            )
+        }
     }
 }
 
