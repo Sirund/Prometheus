@@ -19,6 +19,9 @@ import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.CircleOptions
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.core.content.ContextCompat
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
 import com.google.maps.android.compose.Circle
@@ -162,13 +165,21 @@ fun MapScreen(
                     .padding(top = 8.dp)
             ) {
                 if (mapsAvailable == ConnectionResult.SUCCESS) {
+                    val hasLocationPermission = ContextCompat.checkSelfPermission(
+                        context,
+                        Manifest.permission.ACCESS_FINE_LOCATION
+                    ) == PackageManager.PERMISSION_GRANTED || ContextCompat.checkSelfPermission(
+                        context,
+                        Manifest.permission.ACCESS_COARSE_LOCATION
+                    ) == PackageManager.PERMISSION_GRANTED
+
                     GoogleMap(
                         modifier = Modifier
                             .fillMaxSize()
                             .border(1.dp, PrometheusColors.blue.copy(alpha = 0.3f)),
                         cameraPositionState = cameraState,
                         properties = MapProperties(
-                            isMyLocationEnabled = true,
+                            isMyLocationEnabled = hasLocationPermission,
                             mapType = MapType.NORMAL
                         ),
                         uiSettings = MapUiSettings(
