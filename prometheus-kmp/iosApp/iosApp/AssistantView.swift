@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct Conversation: Identifiable {
+struct Conversation: Identifiable, Codable {
     let id = UUID()
     var title: String
     var messages: [ChatMessage]
@@ -9,7 +9,7 @@ struct Conversation: Identifiable {
 struct AssistantView: View {
     @State private var manager = InferenceManager()
     @State private var query: String = ""
-    @State private var conversations: [Conversation] = [Conversation(title: "New conversation", messages: [])]
+    @State private var conversations: [Conversation] = loadConversations()
     @State private var activeIndex = 0
     @State private var showSidebar = false
 
@@ -119,6 +119,9 @@ struct AssistantView: View {
         }
         .onAppear {
             Task { await manager.setupGemma() }
+        }
+        .onChange(of: conversations) { _, _ in
+            saveConversations(conversations)
         }
     }
 
@@ -265,4 +268,20 @@ private struct CapabilityPill: View {
         }
         .foregroundColor(.gray)
     }
+}
+
+private let conversationsKey = "saved_conversations"
+
+private func saveConversations(_ conversations: [Conversation]) {
+    if let data = try? JSONEncoder().encode(conversations) {
+        UserDefaults.standard.set(data, forKey: conversationsKey)
+    }
+}
+
+private func loadConversations() -> [Conversation] {
+    guard let data = UserDefaults.standard.data(forKey: conversationsKey),
+          let decoded = try? JSONDecoder().decode([Conversation].self, from: data),
+          !decoded.isEmpty
+    else { return [Conversation(title: "New conversation", messages: [])] }
+    return decoded
 }

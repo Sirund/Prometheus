@@ -77,6 +77,8 @@ class InferenceManager(private val context: Context) {
         }
         try {
             val prompt = buildString {
+                appendLine(SystemPrompts.SURVIVAL_CHATBOT)
+                appendLine()
                 for (msg in history) {
                     val role = if (msg.isUser) "User" else "Assistant"
                     appendLine("$role: ${msg.text}")

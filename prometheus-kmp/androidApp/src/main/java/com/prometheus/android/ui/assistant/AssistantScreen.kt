@@ -28,7 +28,12 @@ import androidx.compose.ui.unit.dp
 import com.prometheus.android.inference.InferenceManager
 import com.prometheus.android.ui.theme.PrometheusColors
 import com.prometheus.model.ChatMessage
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.json.JSONArray
+import org.json.JSONObject
+import java.io.File
 import java.util.UUID
 
 data class ConversationData(
@@ -37,13 +42,66 @@ data class ConversationData(
     val messages: List<ChatMessage> = emptyList()
 )
 
+private fun saveConversations(file: File, conversations: List<ConversationData>) {
+    try {
+        val arr = JSONArray()
+        for (conv in conversations) {
+            val obj = JSONObject().apply {
+                put("id", conv.id)
+                put("title", conv.title)
+                val msgs = JSONArray()
+                for (msg in conv.messages) {
+                    msgs.put(JSONObject().apply {
+                        put("id", msg.id)
+                        put("text", msg.text)
+                        put("isUser", msg.isUser)
+                    })
+                }
+                put("messages", msgs)
+            }
+            arr.put(obj)
+        }
+        file.writeText(JSONObject().apply { put("conversations", arr) }.toString())
+    } catch (_: Exception) {}
+}
+
+private fun loadConversations(file: File): List<ConversationData> {
+    return try {
+        if (!file.exists()) return listOf(ConversationData())
+        val arr = JSONObject(file.readText()).getJSONArray("conversations")
+        val list = mutableListOf<ConversationData>()
+        for (i in 0 until arr.length()) {
+            val obj = arr.getJSONObject(i)
+            val msgs = mutableListOf<ChatMessage>()
+            val msgsArr = obj.getJSONArray("messages")
+            for (j in 0 until msgsArr.length()) {
+                val m = msgsArr.getJSONObject(j)
+                msgs.add(ChatMessage(
+                    id = m.getString("id"),
+                    text = m.getString("text"),
+                    isUser = m.getBoolean("isUser")
+                ))
+            }
+            list.add(ConversationData(
+                id = obj.getString("id"),
+                title = obj.getString("title"),
+                messages = msgs
+            ))
+        }
+        if (list.isEmpty()) listOf(ConversationData()) else list
+    } catch (_: Exception) {
+        listOf(ConversationData())
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AssistantScreen() {
     val context = LocalContext.current
+    val saveFile = remember { File(context.filesDir, "conversations.json") }
     val manager = remember { InferenceManager(context) }
     var query by remember { mutableStateOf("") }
-    var conversations by remember { mutableStateOf(listOf(ConversationData())) }
+    var conversations by remember { mutableStateOf(loadConversations(saveFile)) }
     var activeIndex by remember { mutableStateOf(0) }
     var isModelLoaded by remember { mutableStateOf(false) }
     var statusMessage by remember { mutableStateOf("Initializing...") }
@@ -53,7 +111,13 @@ fun AssistantScreen() {
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
 
-    val chatHistory get() = conversations.getOrNull(activeIndex)?.messages ?: emptyList()
+    val chatHistory by remember { derivedStateOf { conversations.getOrNull(activeIndex)?.messages ?: emptyList() } }
+
+    LaunchedEffect(conversations) {
+        withContext(Dispatchers.IO) {
+            saveConversations(saveFile, conversations)
+        }
+    }
 
     LaunchedEffect(Unit) {
         manager.setupGemma()
