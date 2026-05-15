@@ -165,12 +165,11 @@ struct VisionView: View {
             ZStack {
                 Color.darkBackground.ignoresSafeArea()
 
-                VStack(spacing: 0) {
-                    // Camera preview
+                VStack(spacing: 8) {
+                    // Camera / Captured image area
                     ZStack {
                         CameraPreviewView(session: cameraService.session)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 380)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
 
                         if let image = capturedImage {
                             Image(decorative: image, scale: 1)
@@ -188,7 +187,8 @@ struct VisionView: View {
                     }
                     .overlay(Rectangle().stroke(Color.prometheusBlue.opacity(0.3), lineWidth: 1))
                     .padding(.horizontal)
-                    .padding(.top)
+                    .padding(.top, 8)
+                    .layoutPriority(1)
 
                     // Description / status
                     HStack(spacing: 10) {
@@ -205,16 +205,13 @@ struct VisionView: View {
                     .background(Color.cardBackground)
                     .overlay(Rectangle().stroke(Color.prometheusBlue.opacity(0.2), lineWidth: 1))
                     .padding(.horizontal)
-                    .padding(.top, 12)
-
-                    Spacer()
 
                     // Info card
                     VStack(alignment: .leading, spacing: 6) {
                         Text("VISION ACCESSIBILITY MODE")
                             .font(.caption2.bold().monospaced())
                             .foregroundColor(.prometheusBlue)
-                        Text("Point the camera at surroundings, signage, or injuries. Gemma 4 describes what it sees in calm spoken language — no typing or screen reading needed.")
+                        Text("Point the camera at surroundings, signage, or injuries. Gemma 4 describes what it sees in calm spoken language.")
                             .font(.caption2.monospaced())
                             .foregroundColor(.gray)
                             .lineSpacing(4)
@@ -223,8 +220,6 @@ struct VisionView: View {
                     .background(Color.cardBackground.opacity(0.5))
                     .overlay(Rectangle().stroke(Color.prometheusBlue.opacity(0.15), lineWidth: 1))
                     .padding(.horizontal)
-
-                    Spacer()
 
                     // Capture button
                     let hasCapture = capturedImage != nil
@@ -246,7 +241,7 @@ struct VisionView: View {
                         .foregroundColor(.prometheusBlue)
                     }
                     .buttonStyle(.plain)
-                    .padding()
+                    .padding(.horizontal)
                     .disabled(isCapturing || !visionManager.isModelLoaded)
                 }
             }

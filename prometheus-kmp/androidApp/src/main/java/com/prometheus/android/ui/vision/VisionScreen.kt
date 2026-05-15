@@ -42,6 +42,7 @@ fun VisionScreen() {
     var isCapturing by remember { mutableStateOf(false) }
     var description by remember { mutableStateOf<String?>(null) }
     var capturedImage by remember { mutableStateOf<Bitmap?>(null) }
+    var cameraActions by remember { mutableStateOf<CameraActions?>(null) }
     var hasPermission by remember {
         mutableStateOf(
             ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) ==
@@ -68,27 +69,14 @@ fun VisionScreen() {
         }
     }
 
-    // Camera lives at this level so it persists across capture cycles
-    var cameraActions by remember { mutableStateOf<CameraActions?>(null) }
-
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Vision Assist", color = PrometheusColors.blue) },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = PrometheusColors.cardBackground
-                ),
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = PrometheusColors.cardBackground),
                 actions = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(end = 8.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(6.dp)
-                                .clip(RoundedCornerShape(3.dp))
-                                .background(if (isModelLoaded) Color.Green else Color(0xFFFFA500))
-                        )
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(end = 8.dp)) {
+                        Box(Modifier.size(6.dp).clip(RoundedCornerShape(3.dp)).background(if (isModelLoaded) Color.Green else Color(0xFFFFA500)))
                         Spacer(Modifier.width(4.dp))
                         Text(statusMessage, color = Color.Gray, style = MaterialTheme.typography.labelSmall)
                     }
@@ -97,69 +85,23 @@ fun VisionScreen() {
         },
         containerColor = PrometheusColors.darkBackground
     ) { padding ->
-        Column(
-            modifier = Modifier.fillMaxSize().padding(padding)
-        ) {
+        Column(Modifier.fillMaxSize().padding(padding)) {
+
             // --- Camera / Captured image area ---
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(380.dp)
-                    .padding(horizontal = 16.dp)
-                    .padding(top = 16.dp)
-                    .background(PrometheusColors.cardBackground)
-                    .border(1.dp, PrometheusColors.blue.copy(alpha = 0.3f))
-            ) {
-                if (!hasPermission) {
-                    Column(
-                        modifier = Modifier.align(Alignment.Center),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text("\uD83D\uDCF7", style = MaterialTheme.typography.displayLarge)
-                        Spacer(Modifier.height(8.dp))
-                        Text("CAMERA PERMISSION REQUIRED", color = Color.White,
-                            style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
-                        Spacer(Modifier.height(12.dp))
-                        Button(
-                            onClick = { permissionLauncher.launch(Manifest.permission.CAMERA) },
-                            colors = ButtonDefaults.buttonColors(containerColor = PrometheusColors.blue, contentColor = Color.Black)
-                        ) { Text("GRANT CAMERA PERMISSION", fontWeight = FontWeight.Bold) }
-                    }
-                } else {
-                    cameraActions = rememberCameraActions(
-                        modifier = Modifier.fillMaxSize(),
-                        enabled = capturedImage == null
-                    )
-
-                    // Overlay captured image on top of camera preview
-                    if (capturedImage != null) {
-                        Image(
-                            bitmap = capturedImage!!.asImageBitmap(),
-                            contentDescription = "Captured view",
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Fit
-                        )
-                    }
-
-                    // Capturing overlay
-                    if (isCapturing) {
-                        Box(
-                            modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.5f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text("CAPTURING...", color = PrometheusColors.blue,
-                                style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                }
-            }
+            CameraFrame(
+                modifier = Modifier.fillMaxWidth().weight(1f).padding(horizontal = 16.dp, vertical = 8.dp),
+                hasPermission = hasPermission,
+                capturedImage = capturedImage,
+                isCapturing = isCapturing,
+                onPermissionRequest = { permissionLauncher.launch(Manifest.permission.CAMERA) },
+                onCameraActionsReady = { cameraActions = it }
+            )
 
             // --- Description row ---
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp)
-                    .padding(top = 12.dp)
                     .background(PrometheusColors.cardBackground)
                     .border(1.dp, PrometheusColors.blue.copy(alpha = 0.2f))
                     .padding(12.dp),
@@ -183,7 +125,7 @@ fun VisionScreen() {
                 )
             }
 
-            Spacer(Modifier.weight(1f))
+            Spacer(Modifier.height(8.dp))
 
             // --- Info card ---
             Column(
@@ -199,12 +141,12 @@ fun VisionScreen() {
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(6.dp))
-                Text("Point the camera at surroundings, signage, or injuries. Gemma 4 describes what it sees in calm spoken language — no typing or screen reading needed.",
+                Text("Point the camera at surroundings, signage, or injuries. Gemma 4 describes what it sees in calm spoken language.",
                     color = Color.Gray,
                     style = MaterialTheme.typography.labelSmall)
             }
 
-            Spacer(Modifier.weight(1f))
+            Spacer(Modifier.height(8.dp))
 
             // --- Action button ---
             Button(
@@ -226,14 +168,12 @@ fun VisionScreen() {
 
                     cameraActions?.takePhoto { bytes ->
                         if (bytes == null) {
-                            isCapturing = false
-                            description = "Capture failed. Try again."
+                            isCapturing = false; description = "Capture failed. Try again."
                             return@takePhoto
                         }
                         val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
                         if (bitmap == null) {
-                            isCapturing = false
-                            description = "Failed to decode image."
+                            isCapturing = false; description = "Failed to decode image."
                             return@takePhoto
                         }
                         capturedImage = bitmap
@@ -241,17 +181,14 @@ fun VisionScreen() {
                         scope.launch {
                             val sb = StringBuilder()
                             visionManager.describeImage(bitmap) { token ->
-                                sb.append(token)
-                                description = sb.toString()
+                                sb.append(token); description = sb.toString()
                             }
-                            if (sb.isNotEmpty()) {
-                                ttsManager.speak(sb.toString())
-                            }
+                            if (sb.isNotEmpty()) ttsManager.speak(sb.toString())
                         }
                     }
                 },
                 enabled = hasPermission,
-                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 8.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = PrometheusColors.blue.copy(alpha = 0.12f),
                     contentColor = PrometheusColors.blue,
@@ -261,20 +198,69 @@ fun VisionScreen() {
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        text = when {
-                            isCapturing -> "\u23F3"
-                            capturedImage != null -> "\uD83D\uDDBC\uFE0F"
-                            else -> "\uD83D\uDCF7"
-                        },
+                        text = when { isCapturing -> "\u23F3"; capturedImage != null -> "\uD83D\uDDBC\uFE0F"; else -> "\uD83D\uDCF7" },
                         style = MaterialTheme.typography.displaySmall)
                     Text(
-                        text = when {
-                            isCapturing -> "DESCRIBING..."
-                            capturedImage != null -> "TAP FOR NEW CAPTURE"
-                            else -> "TAP TO DESCRIBE SURROUNDINGS"
-                        },
+                        text = when { isCapturing -> "DESCRIBING..."; capturedImage != null -> "TAP FOR NEW CAPTURE"; else -> "TAP TO DESCRIBE SURROUNDINGS" },
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CameraFrame(
+    modifier: Modifier = Modifier,
+    hasPermission: Boolean,
+    capturedImage: Bitmap?,
+    isCapturing: Boolean,
+    onPermissionRequest: () -> Unit,
+    onCameraActionsReady: (CameraActions?) -> Unit
+) {
+    Box(
+        modifier = modifier
+            .background(PrometheusColors.cardBackground)
+            .border(1.dp, PrometheusColors.blue.copy(alpha = 0.3f))
+    ) {
+        if (!hasPermission) {
+            Column(
+                Modifier.align(Alignment.Center),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text("\uD83D\uDCF7", style = MaterialTheme.typography.displayLarge)
+                Spacer(Modifier.height(8.dp))
+                Text("CAMERA PERMISSION REQUIRED", color = Color.White,
+                    style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(12.dp))
+                Button(
+                    onClick = onPermissionRequest,
+                    colors = ButtonDefaults.buttonColors(containerColor = PrometheusColors.blue, contentColor = Color.Black)
+                ) { Text("GRANT CAMERA PERMISSION", fontWeight = FontWeight.Bold) }
+            }
+        } else {
+            onCameraActionsReady(rememberCameraActions(
+                modifier = Modifier.fillMaxSize(),
+                enabled = capturedImage == null
+            ))
+
+            if (capturedImage != null) {
+                Image(
+                    bitmap = capturedImage.asImageBitmap(),
+                    contentDescription = "Captured view",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Fit
+                )
+            }
+
+            if (isCapturing) {
+                Box(
+                    Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.5f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("CAPTURING...", color = PrometheusColors.blue,
+                        style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
                 }
             }
         }
