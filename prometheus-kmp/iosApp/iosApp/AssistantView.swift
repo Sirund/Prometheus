@@ -1,9 +1,22 @@
 import SwiftUI
 
+struct Conversation: Identifiable {
+    let id = UUID()
+    var title: String
+    var messages: [ChatMessage]
+}
+
 struct AssistantView: View {
     @State private var manager = InferenceManager()
     @State private var query: String = ""
-    @State private var chatHistory: [ChatMessage] = []
+    @State private var conversations: [Conversation] = [Conversation(title: "New conversation", messages: [])]
+    @State private var activeIndex = 0
+    @State private var showSidebar = false
+
+    private var chatHistory: [ChatMessage] {
+        guard activeIndex < conversations.count else { return [] }
+        return conversations[activeIndex].messages
+    }
 
     var body: some View {
         NavigationStack {
@@ -83,6 +96,12 @@ struct AssistantView: View {
             .toolbarBackground(Color.cardBackground, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
             .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button(action: { showSidebar.toggle() }) {
+                        Image(systemName: "line.3.horizontal")
+                            .foregroundColor(.prometheusBlue)
+                    }
+                }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     HStack(spacing: 4) {
                         Circle()
@@ -95,24 +114,110 @@ struct AssistantView: View {
                 }
             }
         }
+        .sheet(isPresented: $showSidebar) {
+            sidebarView
+        }
         .onAppear {
             Task { await manager.setupGemma() }
         }
+    }
+
+    private var sidebarView: some View {
+        NavigationStack {
+            ZStack {
+                Color.darkBackground.ignoresSafeArea()
+                VStack(alignment: .leading, spacing: 0) {
+                    Text("Conversations")
+                        .font(.title3.bold().monospaced())
+                        .foregroundColor(.prometheusBlue)
+                        .padding()
+
+                    Button(action: {
+                        conversations.append(Conversation(title: "New conversation", messages: []))
+                        activeIndex = conversations.count - 1
+                        showSidebar = false
+                    }) {
+                        HStack {
+                            Image(systemName: "plus")
+                            Text("New conversation")
+                                .font(.caption.bold().monospaced())
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(12)
+                        .background(Color.prometheusBlue)
+                        .foregroundColor(.black)
+                    }
+                    .padding(.horizontal)
+
+                    Divider().background(Color.prometheusBlue.opacity(0.15)).padding(.vertical, 8)
+
+                    List {
+                        ForEach(Array(conversations.enumerated()), id: \.element.id) { index, conv in
+                            let title = conv.messages.first(where: { $0.isUser })?.text.prefix(40) ?? "New conversation"
+                            let isActive = index == activeIndex
+                            HStack {
+                                Text(String(title))
+                                    .font(.caption.monospaced())
+                                    .foregroundColor(isActive ? .prometheusBlue : .white)
+                                    .fontWeight(isActive ? .bold : .regular)
+                                Spacer()
+                                if conversations.count > 1 {
+                                    Button(action: {
+                                        conversations.remove(at: index)
+                                        if activeIndex >= conversations.count {
+                                            activeIndex = conversations.count - 1
+                                        }
+                                        if conversations.isEmpty {
+                                            conversations = [Conversation(title: "New conversation", messages: [])]
+                                            activeIndex = 0
+                                        }
+                                    }) {
+                                        Image(systemName: "xmark")
+                                            .font(.caption2)
+                                            .foregroundColor(.gray)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                            .padding(.vertical, 4)
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                activeIndex = index
+                                showSidebar = false
+                            }
+                        }
+                    }
+                    .scrollContentBackground(.hidden)
+                    .listStyle(.plain)
+                }
+            }
+            .navigationTitle("Conversations")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") { showSidebar = false }
+                        .foregroundColor(.prometheusBlue)
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
     }
 
     func sendToGemma() {
         let userText = query
         query = ""
 
-        let userMessage = ChatMessage(text: userText, isUser: true)
-        chatHistory.append(userMessage)
+        let history = chatHistory
+        let aiIndex = history.count + 1
 
-        let aiMessageIndex = chatHistory.count
-        chatHistory.append(ChatMessage(text: "...", isUser: false))
+        conversations[activeIndex].messages.append(ChatMessage(text: userText, isUser: true))
+        conversations[activeIndex].messages.append(ChatMessage(text: "...", isUser: false))
 
         Task {
-            await manager.sendMessage(userText) { updatedText in
-                chatHistory[aiMessageIndex] = ChatMessage(text: updatedText, isUser: false)
+            await manager.sendMessage(userText, history: history) { updatedText in
+                if aiIndex < conversations[activeIndex].messages.count {
+                    conversations[activeIndex].messages[aiIndex] = ChatMessage(text: updatedText, isUser: false)
+                }
             }
         }
     }

@@ -11,6 +11,7 @@ import com.google.ai.edge.litertlm.Engine
 import com.google.ai.edge.litertlm.EngineConfig
 import com.google.ai.edge.litertlm.Message
 import com.google.ai.edge.litertlm.MessageCallback
+import com.prometheus.model.ChatMessage
 import com.prometheus.prompt.SystemPrompts
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -69,13 +70,25 @@ class InferenceManager(private val context: Context) {
         }
     }
 
-    suspend fun sendMessage(text: String, onToken: (String) -> Unit) = withContext(Dispatchers.IO) {
+    suspend fun sendMessage(text: String, history: List<ChatMessage> = emptyList(), onToken: (String) -> Unit) = withContext(Dispatchers.IO) {
         val conv = conversation ?: run {
             onToken("Model not loaded.")
             return@withContext
         }
         try {
-            val contents = Contents.of(listOf(Content.Text(text)))
+            val prompt = buildString {
+                if (history.isNotEmpty()) {
+                    appendLine("[Previous conversation]")
+                    for (msg in history) {
+                        val role = if (msg.isUser) "User" else "Assistant"
+                        appendLine("$role: ${msg.text}")
+                    }
+                    appendLine()
+                }
+                appendLine("User: $text")
+                append("Assistant:")
+            }
+            val contents = Contents.of(listOf(Content.Text(prompt)))
             val response = StringBuilder()
             conv.sendMessageAsync(contents).collect { msg ->
                 response.append(msg.toString())
