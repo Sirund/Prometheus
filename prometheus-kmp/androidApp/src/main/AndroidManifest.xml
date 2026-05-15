@@ -17,7 +17,7 @@
         android:theme="@style/Theme.Prometheus">
         <meta-data
             android:name="com.google.android.geo.API_KEY"
-            android:value="YOUR_GOOGLE_MAPS_API_KEY_HERE" />
+            android:value="AIzaSyCiZZpL35mjtw-h4Fi5xXs_IUJh7SiRRNI" />
         <uses-native-library android:name="libvndksupport.so" android:required="false" />
         <uses-native-library android:name="libOpenCL.so" android:required="false" />
         <activity
