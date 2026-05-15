@@ -156,6 +156,7 @@ struct VisionView: View {
     @State private var visionManager = VisionInferenceManager()
     @State private var cameraService = CameraService()
     @State private var isCapturing = false
+    @State private var capturedImage: CGImage?
     @State private var description: String?
     private let synthesizer = AVSpeechSynthesizer()
 
@@ -169,21 +170,29 @@ struct VisionView: View {
                     ZStack {
                         CameraPreviewView(session: cameraService.session)
                             .frame(maxWidth: .infinity)
-                            .frame(height: 320)
-                            .overlay(Rectangle().stroke(Color.prometheusBlue.opacity(0.3), lineWidth: 1))
-                            .padding(.horizontal)
-                            .padding(.top)
+                            .frame(height: 380)
+
+                        if let image = capturedImage {
+                            Image(decorative: image, scale: 1)
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        }
 
                         if isCapturing {
+                            Color.black.opacity(0.5)
                             Text("CAPTURING...")
                                 .font(.caption.bold().monospaced())
                                 .foregroundColor(.prometheusBlue)
                         }
                     }
+                    .overlay(Rectangle().stroke(Color.prometheusBlue.opacity(0.3), lineWidth: 1))
+                    .padding(.horizontal)
+                    .padding(.top)
 
                     // Description / status
                     HStack(spacing: 10) {
-                        Image(systemName: isCapturing ? "hourglass" : "waveform")
+                        Image(systemName: isCapturing ? "hourglass" : capturedImage != nil ? "photo.fill" : "waveform")
                             .font(.body)
                             .foregroundColor(.prometheusBlue.opacity(0.5))
                         Text(description ?? "Point camera and tap Describe to hear surroundings")
@@ -218,11 +227,12 @@ struct VisionView: View {
                     Spacer()
 
                     // Capture button
+                    let hasCapture = capturedImage != nil
                     Button(action: captureAndDescribe) {
                         VStack(spacing: 10) {
-                            Image(systemName: isCapturing ? "hourglass.circle.fill" : "camera.circle.fill")
+                            Image(systemName: isCapturing ? "hourglass.circle.fill" : hasCapture ? "arrow.circlepath" : "camera.circle.fill")
                                 .font(.system(size: 60))
-                            Text(isCapturing ? "DESCRIBING..." : "TAP TO DESCRIBE SURROUNDINGS")
+                            Text(isCapturing ? "DESCRIBING..." : hasCapture ? "TAP FOR NEW CAPTURE" : "TAP TO DESCRIBE SURROUNDINGS")
                                 .font(.caption.bold().monospaced())
                         }
                         .frame(maxWidth: .infinity)
@@ -266,6 +276,12 @@ struct VisionView: View {
     }
 
     private func captureAndDescribe() {
+        if capturedImage != nil {
+            capturedImage = nil
+            description = nil
+            return
+        }
+
         isCapturing = true
         description = "Capturing..."
 
@@ -276,6 +292,7 @@ struct VisionView: View {
                 return
             }
 
+            capturedImage = cgImage
             description = "Analyzing image..."
             await visionManager.describeImage(cgImage) { text in
                 description = text
