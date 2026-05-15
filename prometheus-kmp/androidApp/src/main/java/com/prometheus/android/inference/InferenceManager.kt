@@ -37,7 +37,7 @@ class InferenceManager(private val context: Context) {
                 val modelPath = findModelPath()
                 if (modelPath == null) {
                     statusMessage = "Model not found. Download from app or push:\n" +
-                        "adb push $MODEL_FILENAME ${context.getExternalFilesDir(null)}/$MODEL_FILENAME"
+                        "adb push $MODEL_FILENAME_V2 ${context.getExternalFilesDir(null)}/$MODEL_FILENAME_V2"
                     Log.w(TAG, statusMessage)
                     return@withContext
                 }
@@ -114,11 +114,89 @@ class InferenceManager(private val context: Context) {
         return withContext(Dispatchers.IO) {
             val destDir = context.getExternalFilesDir(null)
                 ?: context.filesDir
-            val destFile = File(destDir, MODEL_FILENAME)
+            val destFile = File(destDir, MODEL_FILENAME_V2)
             if (destFile.exists()) {
                 statusMessage = "Model already downloaded"
                 return@withContext true
             }
+            destDir.mkdirs()
+
+            for (attempt in 1..MAX_RETRIES) {
+                try {
+                    statusMessage = "Downloading Gemma 4 (2.4GB) — attempt $attempt/$MAX_RETRIES"
+                    Log.d(TAG, "Downloading to: ${destFile.absolutePath} (attempt $attempt)")
+
+                    val url = java.net.URL(DOWNLOAD_URL)
+                    val connection = url.openConnection() as java.net.HttpURLConnection
+                    connection.connectTimeout = 60_000
+                    connection.readTimeout = 120_000
+                    connection.setRequestProperty("Accept-Encoding", "identity")
+                    connection.connect()
+
+                    val totalBytes = connection.contentLengthLong
+                    val input = connection.inputStream
+                    val output = java.io.FileOutputStream(destFile)
+                    val buffer = ByteArray(8192)
+                    var bytesRead: Int
+                    var totalRead = 0L
+
+                    while (input.read(buffer).also { bytesRead = it } != -1) {
+                        output.write(buffer, 0, bytesRead)
+                        totalRead += bytesRead
+                        if (totalBytes > 0) {
+                            val percent = ((totalRead * 100) / totalBytes).toInt()
+                            onProgress(percent)
+                            statusMessage = "Downloading: $percent% ($attempt/$MAX_RETRIES)"
+                        }
+                    }
+                    output.close()
+                    input.close()
+                    connection.disconnect()
+
+                    if (totalBytes > 0 && totalRead < totalBytes) {
+                        throw java.io.IOException("Incomplete download: ${totalRead}/$totalBytes bytes")
+                    }
+
+                    statusMessage = "Download complete. Loading model..."
+                    Log.d(TAG, "Downloaded: ${destFile.absolutePath}")
+                    return@withContext true
+                } catch (e: Exception) {
+                    Log.w(TAG, "Download attempt $attempt failed: ${e.message}")
+                    destFile.delete()
+                    if (attempt < MAX_RETRIES) {
+                        statusMessage = "Retrying... ($attempt/$MAX_RETRIES)"
+                        delay(3000L)
+                } else {
+                        statusMessage = "Download failed after $MAX_RETRIES attempts: ${e.message}"
+                        Log.e(TAG, "Download failed", e)
+                    }
+                }
+            }
+            false
+        }
+    }
+
+    private fun findModelPath(): String? {
+        val names = listOf(MODEL_FILENAME_V2, MODEL_FILENAME)
+        val dirs = listOf(
+            context.filesDir,
+            context.getExternalFilesDir(null),
+            File("/data/local/tmp")
+        )
+        for (dir in dirs) {
+            for (name in names) {
+                val file = File(dir, name)
+                if (file.exists()) return file.absolutePath
+            }
+        }
+        return null
+    }
+}
+                }
+            }
+            false
+        }
+    }
             destDir.mkdirs()
 
             for (attempt in 1..MAX_RETRIES) {
@@ -177,13 +255,11 @@ class InferenceManager(private val context: Context) {
     }
 
     private fun findModelPath(): String? {
-        val names = listOf(MODEL_FILENAME, MODEL_FILENAME_V2)
+        val names = listOf(MODEL_FILENAME_V2, MODEL_FILENAME)
         val dirs = listOf(
             context.filesDir,
             context.getExternalFilesDir(null),
-            File("/data/local/tmp"),
-            File("/sdcard"),
-            File("/sdcard/Android/data/${context.packageName}/files")
+            File("/data/local/tmp")
         )
         for (dir in dirs) {
             for (name in names) {
