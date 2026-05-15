@@ -41,22 +41,22 @@ class InferenceManager {
     }
 
     func sendMessage(_ text: String, history: [ChatMessage] = [], completion: @escaping (String) -> Void) async {
-        guard let conversation = conversation else { return }
+        guard let engine = engine else { return }
 
         do {
             var prompt = ""
-            if !history.isEmpty {
-                prompt += "[Previous conversation]\n"
-                for msg in history {
-                    let role = msg.isUser ? "User" : "Assistant"
-                    prompt += "\(role): \(msg.text)\n"
-                }
-                prompt += "\n"
+            for msg in history {
+                let role = msg.isUser ? "User" : "Assistant"
+                prompt += "\(role): \(msg.text)\n"
             }
             prompt += "User: \(text)\nAssistant:"
 
+            conversation?.close()
+            let newConv = try await engine.createConversation()
+            conversation = newConv
+
             var fullResponse = ""
-            let stream = try await conversation.sendStream(prompt)
+            let stream = try await newConv.sendStream(prompt)
 
             for try await token in stream {
                 fullResponse += token

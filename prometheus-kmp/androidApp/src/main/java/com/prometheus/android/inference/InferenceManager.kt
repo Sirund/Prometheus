@@ -71,23 +71,29 @@ class InferenceManager(private val context: Context) {
     }
 
     suspend fun sendMessage(text: String, history: List<ChatMessage> = emptyList(), onToken: (String) -> Unit) = withContext(Dispatchers.IO) {
-        val conv = conversation ?: run {
+        val eng = engine ?: run {
             onToken("Model not loaded.")
             return@withContext
         }
         try {
             val prompt = buildString {
-                if (history.isNotEmpty()) {
-                    appendLine("[Previous conversation]")
-                    for (msg in history) {
-                        val role = if (msg.isUser) "User" else "Assistant"
-                        appendLine("$role: ${msg.text}")
-                    }
-                    appendLine()
+                for (msg in history) {
+                    val role = if (msg.isUser) "User" else "Assistant"
+                    appendLine("$role: ${msg.text}")
                 }
                 appendLine("User: $text")
                 append("Assistant:")
             }
+
+            try { conversation?.close() } catch (_: Exception) {}
+            val systemInstruction = Contents.of(
+                listOf(Content.Text(SystemPrompts.SURVIVAL_CHATBOT))
+            )
+            val conv = eng.createConversation(
+                ConversationConfig(systemInstruction = systemInstruction)
+            )
+            conversation = conv
+
             val contents = Contents.of(listOf(Content.Text(prompt)))
             val response = StringBuilder()
             conv.sendMessageAsync(contents).collect { msg ->
