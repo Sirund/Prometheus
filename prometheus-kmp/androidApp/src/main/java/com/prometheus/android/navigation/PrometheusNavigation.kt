@@ -17,6 +17,7 @@ import com.prometheus.android.ui.monitor.MonitorScreen
 import com.prometheus.android.ui.theme.PrometheusColors
 import com.prometheus.android.ui.vision.VisionScreen
 import com.prometheus.model.EarthquakeEvent
+import com.prometheus.model.UserLocation
 
 enum class Screen(val label: String, val icon: ImageVector) {
     Monitor("MONITOR", Icons.Filled.Radio),
@@ -29,7 +30,8 @@ enum class Screen(val label: String, val icon: ImageVector) {
 fun PrometheusApp(
     onRefreshBmkg: (() -> Unit)? = null,
     latestEvent: String? = null,
-    currentEvent: EarthquakeEvent? = null
+    currentEvent: EarthquakeEvent? = null,
+    currentLocation: UserLocation? = null
 ) {
     var selectedScreen by remember { mutableStateOf(Screen.Monitor) }
 
@@ -62,7 +64,10 @@ fun PrometheusApp(
                     event = currentEvent,
                     latestEvent = latestEvent
                 )
-                Screen.Evacuate -> MapScreen()
+                Screen.Evacuate -> MapScreen(
+                    event = currentEvent,
+                    userLocation = currentLocation
+                )
                 Screen.Survival -> AssistantScreen()
                 Screen.Vision -> VisionScreen()
             }
