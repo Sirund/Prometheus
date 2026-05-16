@@ -228,24 +228,16 @@ class EvacuationRouter(private val googleApiKey: String = "") {
             it.distToExitKm / max(it.exitDistFromEpicenterKm - dangerRadiusKm, 0.1)
         } ?: return null
 
-        val exitCoord = best.modeResult.polyline[best.exitIndex]
-        val exitPolyline = best.modeResult.polyline.take(best.exitIndex + 1)
-
-        val walkingDriving = fetchDirections(userLat, userLon, exitCoord.first, exitCoord.second, "walking")
-        val cyclingResult = fetchDirections(userLat, userLon, exitCoord.first, exitCoord.second, "bicycling")
-
-        val fullKm = cumulativeKm(best.modeResult.polyline)
-        val ratio = if (fullKm > 0) best.distToExitKm / fullKm else 1.0
-        val fullDurationMin = best.modeResult.durationMin * ratio
+        val dr = best.modeResult
 
         return EvacuationRoute(
-            coordinates = exitPolyline,
-            distanceKm = best.distToExitKm,
-            durationMin = fullDurationMin,
-            walkMin = walkingDriving?.durationMin ?: (best.distToExitKm / 5.0 * 60.0),
-            runMin = (walkingDriving?.distanceKm ?: best.distToExitKm) / 10.0 * 60.0,
-            cycleMin = cyclingResult?.durationMin ?: (best.distToExitKm / 15.0 * 60.0),
-            motorMin = best.distToExitKm / 40.0 * 60.0
+            coordinates = dr.polyline,
+            distanceKm = dr.distanceKm,
+            durationMin = dr.durationMin,
+            walkMin = dr.distanceKm / 5.0 * 60.0,
+            runMin = dr.distanceKm / 10.0 * 60.0,
+            cycleMin = dr.distanceKm / 15.0 * 60.0,
+            motorMin = dr.distanceKm / 40.0 * 60.0
         )
     }
 
