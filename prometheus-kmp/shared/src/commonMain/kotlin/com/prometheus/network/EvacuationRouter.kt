@@ -3,7 +3,6 @@ package com.prometheus.network
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
-import io.ktor.client.statement.*
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.serialization.Serializable
@@ -11,22 +10,30 @@ import kotlinx.serialization.json.Json
 import kotlin.math.*
 
 @Serializable
-data class OSRMResponse(
-    val code: String,
-    val routes: List<OSRMRoute> = emptyList()
+data class DirectionsResponse(
+    val status: String,
+    val routes: List<DirectionsRoute> = emptyList()
 )
 
 @Serializable
-data class OSRMRoute(
-    val geometry: OSRMGeometry,
-    val distance: Double = 0.0,
-    val duration: Double = 0.0
+data class DirectionsRoute(
+    val legs: List<DirectionsLeg> = emptyList(),
+    val overview_polyline: PolylinePoint? = null
 )
 
 @Serializable
-data class OSRMGeometry(
-    val coordinates: List<List<Double>> = emptyList()
+data class PolylinePoint(val points: String = "")
+
+@Serializable
+data class DirectionsLeg(
+    val distance: DistanceValue = DistanceValue(),
+    val duration: DurationValue = DurationValue()
 )
+
+@Serializable
+data class DistanceValue(val value: Int = 0)
+@Serializable
+data class DurationValue(val value: Int = 0)
 
 data class EvacuationRoute(
     val coordinates: List<Pair<Double, Double>>,
@@ -38,7 +45,43 @@ data class EvacuationRoute(
     val motorMin: Double
 )
 
-class EvacuationRouter {
+object PolylineDecoder {
+    fun decode(encoded: String): List<Pair<Double, Double>> {
+        var index = 0
+        val len = encoded.length
+        var lat = 0
+        var lng = 0
+        val result = mutableListOf<Pair<Double, Double>>()
+
+        while (index < len) {
+            var b: Int
+            var shift = 0
+            var value = 0
+            do {
+                b = encoded[index++].code - 63
+                value = value or ((b and 0x1f) shl shift)
+                shift += 5
+            } while (b >= 0x20)
+            val dlat = if (value and 1 == 1) -(value shr 1) else value shr 1
+            lat += dlat
+
+            shift = 0
+            value = 0
+            do {
+                b = encoded[index++].code - 63
+                value = value or ((b and 0x1f) shl shift)
+                shift += 5
+            } while (b >= 0x20)
+            val dlng = if (value and 1 == 1) -(value shr 1) else value shr 1
+            lng += dlng
+
+            result.add((lat / 1e5) to (lng / 1e5))
+        }
+        return result
+    }
+}
+
+class EvacuationRouter(private val googleApiKey: String = "") {
     private val json = Json { ignoreUnknownKeys = true }
     private val client = HttpClient()
 
@@ -63,21 +106,20 @@ class EvacuationRouter {
 
         fun destAtAngle(angleDeg: Double): Pair<Double, Double> {
             val rad = Math.toRadians(angleDeg)
-            val lat = asin(
+            val dlat = asin(
                 sin(Math.toRadians(userLat)) * cos(angularDist) +
                         cos(Math.toRadians(userLat)) * sin(angularDist) * cos(rad)
             )
-            val lon = Math.toRadians(userLon) + atan2(
+            val dlon = Math.toRadians(userLon) + atan2(
                 sin(rad) * sin(angularDist) * cos(Math.toRadians(userLat)),
-                cos(angularDist) - sin(Math.toRadians(userLat)) * sin(lat)
+                cos(angularDist) - sin(Math.toRadians(userLat)) * sin(dlat)
             )
-            return Math.toDegrees(lat) to ((Math.toDegrees(lon) + 540) % 360 - 180)
+            return Math.toDegrees(dlat) to ((Math.toDegrees(dlon) + 540) % 360 - 180)
         }
 
         val offsets = listOf(
             0.0 to "primary",
-            -30.0 to "left30", 30.0 to "right30",
-            -60.0 to "left60", 60.0 to "right60",
+            -45.0 to "left45", 45.0 to "right45",
             -90.0 to "left90", 90.0 to "right90"
         )
         val seen = mutableSetOf<Pair<Double, Double>>()
@@ -87,26 +129,39 @@ class EvacuationRouter {
         }
     }
 
-    private suspend fun fetchRoute(
+    private data class ModeResult(
+        val mode: String,
+        val polyline: List<Pair<Double, Double>>,
+        val distanceKm: Double,
+        val durationMin: Double
+    )
+
+    private suspend fun fetchDirections(
         startLat: Double, startLon: Double,
-        endLat: Double, endLon: Double
-    ): EvacuationRoute? {
+        endLat: Double, endLon: Double,
+        mode: String
+    ): ModeResult? {
+        if (googleApiKey.isBlank()) return null
         return try {
-            val url = "https://router.project-osrm.org/route/v1/driving/$startLon,$startLat;$endLon,$endLat?overview=full&geometries=geojson"
-            val response: String = client.get(url).body()
-            val parsed = json.decodeFromString<OSRMResponse>(response)
-            val route = parsed.routes.firstOrNull() ?: return null
-            if (route.geometry.coordinates.isEmpty()) return null
-            val coords = route.geometry.coordinates.map { (it[1] to it[0]) }
-            val distKm = route.distance / 1000.0
-            EvacuationRoute(
-                coordinates = coords,
-                distanceKm = distKm,
-                durationMin = route.duration / 60.0,
-                walkMin = distKm / 5.0 * 60.0,
-                runMin = distKm / 10.0 * 60.0,
-                cycleMin = distKm / 15.0 * 60.0,
-                motorMin = distKm / 40.0 * 60.0
+            val url = buildString {
+                append("https://maps.googleapis.com/maps/api/directions/json")
+                append("?origin=$startLat,$startLon")
+                append("&destination=$endLat,$endLon")
+                append("&mode=$mode")
+                append("&key=$googleApiKey")
+            }
+            val response: DirectionsResponse = client.get(url).body()
+            if (response.status != "OK") return null
+            val route = response.routes.firstOrNull() ?: return null
+            val leg = route.legs.firstOrNull() ?: return null
+            val poly = route.overview_polyline ?: return null
+            val coords = PolylineDecoder.decode(poly.points)
+            if (coords.isEmpty()) return null
+            ModeResult(
+                mode = mode,
+                polyline = coords,
+                distanceKm = leg.distance.value / 1000.0,
+                durationMin = leg.duration.value / 60.0
             )
         } catch (_: Exception) {
             null
@@ -121,16 +176,18 @@ class EvacuationRouter {
     }
 
     private fun scoreRoute(
-        route: EvacuationRoute,
+        polyline: List<Pair<Double, Double>>,
+        distanceKm: Double,
         userLat: Double, userLon: Double,
         epicenterLat: Double, epicenterLon: Double
     ): Double {
-        val last = route.coordinates.last()
+        val last = polyline.last()
         val distUserToEpicenter = haversineKm(userLat, userLon, epicenterLat, epicenterLon)
         val distDestToEpicenter = haversineKm(last.first, last.second, epicenterLat, epicenterLon)
         val netAwayKm = distDestToEpicenter - distUserToEpicenter
         if (netAwayKm <= 0) return Double.MAX_VALUE
-        return route.distanceKm / max(netAwayKm, 0.1)
+        val distUserToDest = haversineKm(userLat, userLon, last.first, last.second)
+        return distanceKm / max(netAwayKm, 0.1)
     }
 
     suspend fun fetchEvacuationRoute(
@@ -139,17 +196,38 @@ class EvacuationRouter {
         dangerRadiusKm: Double
     ): EvacuationRoute? {
         val candidates = generateCandidates(userLat, userLon, epicenterLat, epicenterLon, dangerRadiusKm)
+        if (candidates.isEmpty()) return null
+
+        class CandidateResult(val candidate: Candidate, val modeResult: ModeResult)
 
         val results = coroutineScope {
             candidates.map { c ->
-                async { fetchRoute(userLat, userLon, c.lat, c.lon) }
-            }.map { it.await() }
+                async { fetchDirections(userLat, userLon, c.lat, c.lon, "driving")?.let { CandidateResult(c, it) } }
+            }.mapNotNull { it.await() }
         }
 
-        return results
-            .filterNotNull()
-            .filter { it.coordinates.size >= 2 }
-            .minByOrNull { scoreRoute(it, userLat, userLon, epicenterLat, epicenterLon) }
+        val best = results
+            .filter { it.modeResult.polyline.size >= 2 }
+            .minByOrNull { scoreRoute(it.modeResult.polyline, it.modeResult.distanceKm, userLat, userLon, epicenterLat, epicenterLon) }
+            ?: return null
+
+        val walkingDriving = fetchDirections(userLat, userLon, best.candidate.lat, best.candidate.lon, "walking")
+        val cyclingResult = fetchDirections(userLat, userLon, best.candidate.lat, best.candidate.lon, "bicycling")
+
+        val dr = best.modeResult
+        val walkDist = walkingDriving?.distanceKm ?: dr.distanceKm
+        val walkDur = walkingDriving?.durationMin ?: (dr.distanceKm / 5.0 * 60.0)
+        val cycleDur = cyclingResult?.durationMin ?: (dr.distanceKm / 15.0 * 60.0)
+
+        return EvacuationRoute(
+            coordinates = dr.polyline,
+            distanceKm = dr.distanceKm,
+            durationMin = dr.durationMin,
+            walkMin = walkDur,
+            runMin = walkDist / 10.0 * 60.0,
+            cycleMin = cycleDur,
+            motorMin = dr.distanceKm / 40.0 * 60.0
+        )
     }
 
     fun close() { client.close() }

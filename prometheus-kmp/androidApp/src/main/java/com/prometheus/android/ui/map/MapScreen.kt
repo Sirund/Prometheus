@@ -22,8 +22,8 @@ import com.google.android.gms.maps.model.LatLngBounds
 import android.Manifest
 import android.content.pm.PackageManager
 import androidx.core.content.ContextCompat
-import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
+import com.google.android.gms.common.ConnectionResult
 import com.google.maps.android.compose.Circle
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.MapProperties
@@ -142,11 +142,18 @@ fun MapScreen(
     var evacuationRoute by remember { mutableStateOf<EvacuationRoute?>(null) }
     var routeLoading by remember { mutableStateOf(false) }
 
+    val googleApiKey = remember {
+        try {
+            val ai = context.packageManager.getApplicationInfo(context.packageName, PackageManager.GET_META_DATA)
+            ai.metaData?.getString("com.google.android.geo.API_KEY") ?: ""
+        } catch (_: Exception) { "" }
+    }
+
     LaunchedEffect(epicenter, userLatLng, dangerRadiusKm) {
         evacuationRoute = null
-        if (epicenter != null && userLatLng != null && dangerRadiusKm != null && isDangerous) {
+        if (epicenter != null && userLatLng != null && dangerRadiusKm != null && isDangerous && googleApiKey.isNotEmpty()) {
             routeLoading = true
-            val router = EvacuationRouter()
+            val router = EvacuationRouter(googleApiKey)
             try {
                 evacuationRoute = router.fetchEvacuationRoute(
                     userLat = userLatLng.latitude,

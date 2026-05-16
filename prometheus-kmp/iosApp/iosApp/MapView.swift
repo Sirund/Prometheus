@@ -2,6 +2,8 @@ import SwiftUI
 import MapKit
 import shared
 
+private let googleMapsApiKey = "AIzaSyCiZZpL35mjtw-h4Fi5xXs_IUJh7SiRRNI"
+
 struct MapView: View {
     @Environment(BMKGPollingService.self) private var pollingService
     @State private var evacuationRoute: EvacuationRoute?
@@ -124,7 +126,7 @@ struct MapView: View {
         let radius = dangerRadiusKm ?? 50.0
 
         routeLoading = true
-        let router = EvacuationRouter()
+        let router = EvacuationRouter(googleApiKey: googleMapsApiKey)
         do {
             let route = try await router.fetchEvacuationRoute(
                 userLat: userLat, userLon: userLon,
