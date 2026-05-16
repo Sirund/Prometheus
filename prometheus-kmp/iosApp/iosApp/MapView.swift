@@ -8,6 +8,7 @@ struct MapView: View {
     @Environment(BMKGPollingService.self) private var pollingService
     @State private var evacuationRoute: EvacuationRoute?
     @State private var routeLoading = false
+    @State private var showDetails = false
 
     private var epicenter: CLLocationCoordinate2D? {
         guard let pair = pollingService.latestEarthquakeEvent?.coordinatePair else { return nil }
@@ -51,14 +52,25 @@ struct MapView: View {
                             .padding(16)
                     }
 
-                    RoutingDetailsCard(
-                        event: pollingService.latestEarthquakeEvent,
-                        isDangerous: isDangerous,
-                        dangerRadiusKm: dangerRadiusKm,
-                        evacuationRoute: evacuationRoute,
-                        routeLoading: routeLoading
+                    DisclosureGroup(
+                        isExpanded: $showDetails,
+                        content: {
+                            RoutingDetailsCard(
+                                event: pollingService.latestEarthquakeEvent,
+                                isDangerous: isDangerous,
+                                dangerRadiusKm: dangerRadiusKm,
+                                evacuationRoute: evacuationRoute,
+                                routeLoading: routeLoading
+                            )
+                        },
+                        label: {
+                            Text("ROUTING DETAILS")
+                                .font(.caption.bold().monospaced())
+                                .foregroundColor(.prometheusBlue)
+                        }
                     )
                     .padding(.horizontal, 16)
+                    .tint(.prometheusBlue)
 
                     Spacer()
                 }
