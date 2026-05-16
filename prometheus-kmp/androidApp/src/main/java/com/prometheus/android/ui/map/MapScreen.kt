@@ -145,7 +145,7 @@ fun MapScreen(
     val googleApiKey = remember {
         try {
             val ai = context.packageManager.getApplicationInfo(context.packageName, PackageManager.GET_META_DATA)
-            ai.metaData?.getString("com.google.android.geo.API_KEY") ?: ""
+            ai.metaData?.getString("com.google.android.directions.API_KEY") ?: ""
         } catch (_: Exception) { "" }
     }
 

@@ -19,6 +19,9 @@
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="AIzaSyCiZZpL35mjtw-h4Fi5xXs_IUJh7SiRRNI" />
+        <meta-data
+            android:name="com.google.android.directions.API_KEY"
+            android:value="AIzaSyD2S0REeAlSuzkJVDAd8oW9cAk18IgmztQ" />
         <uses-native-library android:name="libvndksupport.so" android:required="false" />
         <uses-native-library android:name="libOpenCL.so" android:required="false" />
         <activity
