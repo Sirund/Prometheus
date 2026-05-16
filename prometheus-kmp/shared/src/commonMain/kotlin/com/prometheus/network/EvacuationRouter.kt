@@ -118,15 +118,11 @@ class EvacuationRouter(private val googleApiKey: String = "") {
             return Math.toDegrees(dlat) to ((Math.toDegrees(dlon) + 540) % 360 - 180)
         }
 
-        val offsets = listOf(
-            0.0 to "primary",
-            -45.0 to "left45", 45.0 to "right45",
-            -90.0 to "left90", 90.0 to "right90"
-        )
         val seen = mutableSetOf<Pair<Double, Double>>()
-        return offsets.mapNotNull { (offset, label) ->
-            val (dlat, dlon) = destAtAngle(away + offset)
-            if (seen.add(dlat to dlon)) Candidate(dlat, dlon, away + offset, label) else null
+        return (0 until 12).mapNotNull { i ->
+            val angle = i * 30.0
+            val (dlat, dlon) = destAtAngle(away + angle)
+            if (seen.add(dlat to dlon)) Candidate(dlat, dlon, away + angle, "${i * 30}deg") else null
         }
     }
 
