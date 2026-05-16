@@ -2,7 +2,9 @@ package com.prometheus.android.service
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
 import android.media.AudioAttributes
 import android.media.MediaPlayer
 import android.net.Uri
@@ -74,6 +76,13 @@ class PrometheusAlarmManager(private val context: Context) {
         NotificationManagerCompat.from(context).notify(ID_STATUS, n)
     }
 
+    private fun openAppIntent(): PendingIntent {
+        val intent = Intent(context, com.prometheus.android.MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        return PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+    }
+
     fun triggerAlert(event: EarthquakeEvent, gemmaBriefing: String? = null) {
         val briefing = gemmaBriefing ?: EmergencyBriefingFormatter.buildBriefingText(event)
         val mag = event.magnitudeValue?.let { "%.1f".format(it) } ?: "?"
@@ -96,6 +105,7 @@ class PrometheusAlarmManager(private val context: Context) {
             .setPriority(NotificationManager.IMPORTANCE_MAX)
             .setAutoCancel(true)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
+            .setContentIntent(openAppIntent())
             .setFullScreenIntent(null, true)
             .build()
         NotificationManagerCompat.from(context).notify(ID_ALERT, n)
@@ -119,6 +129,7 @@ class PrometheusAlarmManager(private val context: Context) {
             .setContentText("$loc — Depth: $depth — $time")
             .setStyle(NotificationCompat.BigTextStyle().bigText("Magnitude $mag di $loc, kedalaman $depth.\nTerasa jauh, tidak perlu panik."))
             .setPriority(NotificationManager.IMPORTANCE_DEFAULT)
+            .setContentIntent(openAppIntent())
             .setAutoCancel(true)
             .build()
         NotificationManagerCompat.from(context).notify(ID_ALERT + 1, n)
