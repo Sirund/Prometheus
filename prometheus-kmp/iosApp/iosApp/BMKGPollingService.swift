@@ -10,7 +10,7 @@ class BMKGPollingService: NSObject, CLLocationManagerDelegate {
     private var lastEventId: String?
     private let synth = AVSpeechSynthesizer()
     private let locationManager = CLLocationManager()
-    private var currentLocation: UserLocation?
+    var currentLocation: UserLocation?
 
     var isMonitoring = false
     var latestEvent: String?

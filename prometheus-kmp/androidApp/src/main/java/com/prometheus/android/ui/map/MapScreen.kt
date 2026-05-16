@@ -31,12 +31,15 @@ import com.google.maps.android.compose.MapType
 import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
+import com.google.maps.android.compose.Polyline
 import com.google.maps.android.compose.rememberCameraPositionState
 import com.prometheus.android.service.LocationProvider
 import com.prometheus.android.ui.theme.PrometheusColors
 import com.prometheus.model.DangerClassifier
 import com.prometheus.model.EarthquakeEvent
 import com.prometheus.model.UserLocation
+import com.prometheus.network.EvacuationRouter
+import com.prometheus.network.EvacuationRoute
 import kotlin.math.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -127,6 +130,29 @@ fun MapScreen(
     }
 
     val isDangerous = highestSev != null && (highestSev.severity.ordinal <= 1)
+
+    var evacuationRoute by remember { mutableStateOf<EvacuationRoute?>(null) }
+    var routeLoading by remember { mutableStateOf(false) }
+
+    LaunchedEffect(epicenter, userLatLng, dangerRadiusKm) {
+        evacuationRoute = null
+        if (epicenter != null && userLatLng != null && dangerRadiusKm != null && isDangerous) {
+            routeLoading = true
+            val router = EvacuationRouter()
+            try {
+                evacuationRoute = router.fetchEvacuationRoute(
+                    userLat = userLatLng.latitude,
+                    userLon = userLatLng.longitude,
+                    epicenterLat = epicenter.latitude,
+                    epicenterLon = epicenter.longitude,
+                    dangerRadiusKm = dangerRadiusKm
+                )
+            } finally {
+                router.close()
+                routeLoading = false
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -221,6 +247,14 @@ fun MapScreen(
                                 strokeWidth = 3f
                             )
                         }
+
+                        if (evacuationRoute != null) {
+                            Polyline(
+                                points = evacuationRoute!!.coordinates.map { LatLng(it.first, it.second) },
+                                color = PrometheusColors.blue,
+                                width = 6f
+                            )
+                        }
                     }
                 } else {
                     MapUnavailableFallback(epicenter)
@@ -235,7 +269,9 @@ fun MapScreen(
                 isDangerous = isDangerous,
                 dangerRadiusKm = dangerRadiusKm,
                 evacDirection = evacDirection,
-                ruleName = highestSev?.ruleName
+                ruleName = highestSev?.ruleName,
+                evacuationRoute = evacuationRoute,
+                routeLoading = routeLoading
             )
 
             Spacer(Modifier.height(8.dp))
@@ -285,7 +321,9 @@ private fun RoutingDetailsCard(
     isDangerous: Boolean,
     dangerRadiusKm: Double?,
     evacDirection: Pair<Double, String>?,
-    ruleName: String?
+    ruleName: String?,
+    evacuationRoute: EvacuationRoute?,
+    routeLoading: Boolean
 ) {
     Column(
         modifier = Modifier
@@ -311,6 +349,15 @@ private fun RoutingDetailsCard(
         val dirStr = if (isDangerous && evacDirection != null) {
             "Evacuate ${evacDirection.second} (${"%.0f".format(evacDirection.first)}° from epicenter)"
         } else if (isDangerous) "Calculating..." else "No active event"
+        val routeStr = if (routeLoading) {
+            "Computing..."
+        } else if (evacuationRoute != null) {
+            "${"%.1f".format(evacuationRoute.distanceKm)} km — ${"%.0f".format(evacuationRoute.durationMin)} min"
+        } else if (isDangerous) {
+            "Route unavailable"
+        } else {
+            "--"
+        }
         val magStr = event?.magnitudeValue?.let { "M ${"%.1f".format(it)}" } ?: "--"
         val depthStr = event?._kedalaman ?: "--"
 
@@ -323,6 +370,8 @@ private fun RoutingDetailsCard(
         RouteInfoRow(label = "DANGER RADIUS", value = radiusStr)
         HorizontalDivider(color = PrometheusColors.blue.copy(alpha = 0.15f))
         RouteInfoRow(label = "DIRECTION", value = dirStr)
+        HorizontalDivider(color = PrometheusColors.blue.copy(alpha = 0.15f))
+        RouteInfoRow(label = "EVAC ROUTE", value = routeStr)
     }
 }
 
