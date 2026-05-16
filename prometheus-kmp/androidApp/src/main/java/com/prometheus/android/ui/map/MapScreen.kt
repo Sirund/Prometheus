@@ -388,7 +388,6 @@ private fun RoutingDetailsCard(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp)
             .background(PrometheusColors.surface)
             .padding(20.dp)
     ) {
@@ -520,7 +519,7 @@ private fun TransportTimeRow(icon: String, label: String, minutes: Double) {
             text = label,
             color = PrometheusColors.textSecondary,
             style = MaterialTheme.typography.labelSmall,
-            modifier = Modifier.width(56.dp)
+            modifier = Modifier.width(48.dp)
         )
         Spacer(Modifier.weight(1f))
         Text(
@@ -544,7 +543,7 @@ private fun RouteInfoRow(label: String, value: String) {
             text = label,
             color = PrometheusColors.textSecondary,
             style = MaterialTheme.typography.labelSmall,
-            modifier = Modifier.width(128.dp)
+            modifier = Modifier.width(100.dp)
         )
         Text(
             text = value,

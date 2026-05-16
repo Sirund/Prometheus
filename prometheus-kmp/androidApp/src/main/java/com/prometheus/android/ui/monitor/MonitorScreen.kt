@@ -220,13 +220,15 @@ private fun HeroEventCard(
         )
         Spacer(Modifier.height(16.dp))
         Row(modifier = Modifier.fillMaxWidth()) {
-            Column {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(text = "FELT", style = MaterialTheme.typography.labelSmall, color = PrometheusColors.textSecondary)
+                Spacer(Modifier.height(2.dp))
                 Text(text = felt, style = MaterialTheme.typography.labelLarge, color = PrometheusColors.textPrimary)
             }
-            Spacer(Modifier.weight(1f))
-            Column(horizontalAlignment = Alignment.End) {
+            Spacer(Modifier.width(12.dp))
+            Column(horizontalAlignment = Alignment.End, modifier = Modifier.weight(1f)) {
                 Text(text = "TSUNAMI POTENTIAL", style = MaterialTheme.typography.labelSmall, color = PrometheusColors.textSecondary)
+                Spacer(Modifier.height(2.dp))
                 Text(text = potential, style = MaterialTheme.typography.labelLarge, color = when {
                     potential.contains("berpotensi", ignoreCase = true) || potential.contains("warning", ignoreCase = true) || potential.contains("ya", ignoreCase = true) -> PrometheusColors.danger
                     else -> PrometheusColors.textPrimary
