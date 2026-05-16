@@ -65,7 +65,7 @@ fun MapScreen(
     val matches = remember(event, currentLocation) {
         if (event != null && currentLocation != null) {
             DangerClassifier.classify(event, currentLocation.latitude, currentLocation.longitude)
-        } else emptyList()
+        } else event?.matchedDangerRules ?: emptyList()
     }
 
     val highestSev = remember(matches) {
@@ -78,7 +78,15 @@ fun MapScreen(
             "regional_major" -> 150.0
             "mega_earthquake" -> 400.0
             "deep_close" -> 100.0
-            else -> null
+            "tsunami_potential" -> 100.0
+            else -> event?.magnitudeValue?.let { mag ->
+                when {
+                    mag >= 7.0f -> 400.0
+                    mag >= 6.0f -> 150.0
+                    mag >= 5.0f -> 50.0
+                    else -> null
+                }
+            }
         }
     }
 
