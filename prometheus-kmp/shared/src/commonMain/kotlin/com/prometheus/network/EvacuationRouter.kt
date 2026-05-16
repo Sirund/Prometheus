@@ -31,7 +31,11 @@ data class OSRMGeometry(
 data class EvacuationRoute(
     val coordinates: List<Pair<Double, Double>>,
     val distanceKm: Double,
-    val durationMin: Double
+    val durationMin: Double,
+    val walkMin: Double,
+    val runMin: Double,
+    val cycleMin: Double,
+    val motorMin: Double
 )
 
 class EvacuationRouter {
@@ -94,10 +98,15 @@ class EvacuationRouter {
             val route = parsed.routes.firstOrNull() ?: return null
             if (route.geometry.coordinates.isEmpty()) return null
             val coords = route.geometry.coordinates.map { (it[1] to it[0]) }
+            val distKm = route.distance / 1000.0
             EvacuationRoute(
                 coordinates = coords,
-                distanceKm = route.distance / 1000.0,
-                durationMin = route.duration / 60.0
+                distanceKm = distKm,
+                durationMin = route.duration / 60.0,
+                walkMin = distKm / 5.0 * 60.0,
+                runMin = distKm / 10.0 * 60.0,
+                cycleMin = distKm / 15.0 * 60.0,
+                motorMin = distKm / 40.0 * 60.0
             )
         } catch (_: Exception) {
             null

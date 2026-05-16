@@ -357,15 +357,6 @@ private fun RoutingDetailsCard(
         val dirStr = if (isDangerous && evacDirection != null) {
             "Evacuate ${evacDirection.second} (${"%.0f".format(evacDirection.first)}° from epicenter)"
         } else if (isDangerous) "Calculating..." else "No active event"
-        val routeStr = if (routeLoading) {
-            "Computing..."
-        } else if (evacuationRoute != null) {
-            "${"%.1f".format(evacuationRoute.distanceKm)} km — ${"%.0f".format(evacuationRoute.durationMin)} min"
-        } else if (isDangerous) {
-            "Route unavailable"
-        } else {
-            "--"
-        }
         val magStr = event?.magnitudeValue?.let { "M ${"%.1f".format(it)}" } ?: "--"
         val depthStr = event?._kedalaman ?: "--"
 
@@ -379,7 +370,21 @@ private fun RoutingDetailsCard(
         HorizontalDivider(color = PrometheusColors.blue.copy(alpha = 0.15f))
         RouteInfoRow(label = "DIRECTION", value = dirStr)
         HorizontalDivider(color = PrometheusColors.blue.copy(alpha = 0.15f))
-        RouteInfoRow(label = "EVAC ROUTE", value = routeStr)
+        RouteInfoRow(label = "DISTANCE", value = if (evacuationRoute != null) "${"%.1f".format(evacuationRoute.distanceKm)} km" else if (isDangerous && !routeLoading) "Unavailable" else "--")
+        if (evacuationRoute != null) {
+            HorizontalDivider(color = PrometheusColors.blue.copy(alpha = 0.15f))
+            Text(
+                text = "ESTIMATED TIME",
+                color = Color.Gray,
+                style = MaterialTheme.typography.labelSmall,
+                modifier = Modifier.padding(vertical = 4.dp)
+            )
+            TransportTimeRow(icon = "\uD83D\uDEB6", label = "Walk", minutes = evacuationRoute.walkMin)
+            TransportTimeRow(icon = "\uD83C\uDFC3", label = "Run", minutes = evacuationRoute.runMin)
+            TransportTimeRow(icon = "\uD83D\uDEB2", label = "Cycle", minutes = evacuationRoute.cycleMin)
+            TransportTimeRow(icon = "\uD83D\uDEF4", label = "Motor", minutes = evacuationRoute.motorMin)
+            TransportTimeRow(icon = "\uD83D\uDE97", label = "Car", minutes = evacuationRoute.durationMin)
+        }
     }
 }
 
@@ -440,6 +445,39 @@ private fun MapUnavailableFallback(epicenter: LatLng?) {
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun TransportTimeRow(icon: String, label: String, minutes: Double) {
+    val display = when {
+        minutes < 1.0 -> "< 1 min"
+        minutes < 60.0 -> "${"%.0f".format(minutes)} min"
+        else -> {
+            val h = (minutes / 60).toInt()
+            val m = (minutes % 60).toInt()
+            "${h}h ${m}m"
+        }
+    }
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(text = icon, style = MaterialTheme.typography.labelSmall)
+        Spacer(Modifier.width(6.dp))
+        Text(
+            text = label,
+            color = Color.Gray,
+            style = MaterialTheme.typography.labelSmall,
+            modifier = Modifier.width(56.dp)
+        )
+        Spacer(Modifier.weight(1f))
+        Text(
+            text = display,
+            color = Color.White,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Bold
+        )
     }
 }
 

@@ -205,12 +205,12 @@ private struct RoutingDetailsCard: View {
         return "\(Int(km)) km"
     }
 
-    private var routeStr: String {
-        if routeLoading { return "Computing..." }
-        guard let r = evacuationRoute else {
-            return isDangerous ? "Route unavailable" : "--"
-        }
-        return "\(String(format: "%.1f", r.distanceKm)) km — \(String(format: "%.0f", r.durationMin)) min"
+    private func formatTime(_ minutes: Double) -> String {
+        if minutes < 1 { return "< 1 min" }
+        if minutes < 60 { return "\(Int(minutes.rounded())) min" }
+        let h = Int(minutes / 60)
+        let m = Int(minutes.truncatingRemainder(dividingBy: 60))
+        return "\(h)h \(m)m"
     }
 
     var body: some View {
@@ -220,12 +220,43 @@ private struct RoutingDetailsCard: View {
             RouteInfoRow(label: "USER LOCATION", value: userLocStr)
             Divider().background(Color.prometheusBlue.opacity(0.15))
             RouteInfoRow(label: "SAFE RADIUS", value: radiusStr)
-            Divider().background(Color.prometheusBlue.opacity(0.15))
-            RouteInfoRow(label: "EXIT ROUTE", value: routeStr)
+
+            if let r = evacuationRoute {
+                Divider().background(Color.prometheusBlue.opacity(0.15))
+                RouteInfoRow(label: "DISTANCE", value: "\(String(format: "%.1f", r.distanceKm)) km")
+                Divider().background(Color.prometheusBlue.opacity(0.15))
+                Text("ESTIMATED TIME")
+                    .font(.caption2.bold().monospaced())
+                    .foregroundColor(.gray)
+                    .padding(.vertical, 2)
+                TransportTimeRow(icon: "figure.walk", label: "Walk", time: formatTime(r.walkMin))
+                TransportTimeRow(icon: "figure.run", label: "Run", time: formatTime(r.runMin))
+                TransportTimeRow(icon: "bicycle", label: "Cycle", time: formatTime(r.cycleMin))
+                TransportTimeRow(icon: "motorcycle", label: "Motor", time: formatTime(r.motorMin))
+                TransportTimeRow(icon: "car", label: "Car", time: formatTime(r.durationMin))
+            } else {
+                Divider().background(Color.prometheusBlue.opacity(0.15))
+                RouteInfoRow(label: "EXIT ROUTE", value: routeLoading ? "Computing..." : (isDangerous ? "Unavailable" : "--"))
+            }
         }
         .padding()
         .background(Color.cardBackground)
         .overlay(Rectangle().stroke(Color.prometheusBlue.opacity(0.3), lineWidth: 1))
+    }
+}
+
+private struct TransportTimeRow: View {
+    let icon: String
+    let label: String
+    let time: String
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon).font(.caption2).foregroundColor(.gray).frame(width: 16)
+            Text(label).font(.caption2.monospaced()).foregroundColor(.gray).frame(width: 48, alignment: .leading)
+            Spacer()
+            Text(time).font(.caption2.bold().monospaced()).foregroundColor(.white)
+        }
     }
 }
 
