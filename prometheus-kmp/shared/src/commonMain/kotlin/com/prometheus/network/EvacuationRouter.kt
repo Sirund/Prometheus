@@ -3,6 +3,7 @@ package com.prometheus.network
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
+import io.ktor.client.statement.*
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.serialization.Serializable
@@ -150,7 +151,8 @@ class EvacuationRouter(private val googleApiKey: String = "") {
                 append("&mode=$mode")
                 append("&key=$googleApiKey")
             }
-            val response: DirectionsResponse = client.get(url).body()
+            val raw: String = client.get(url).body()
+        val response = json.decodeFromString<DirectionsResponse>(raw)
             if (response.status != "OK") return null
             val route = response.routes.firstOrNull() ?: return null
             val leg = route.legs.firstOrNull() ?: return null
