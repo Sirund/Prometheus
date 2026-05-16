@@ -20,6 +20,9 @@ env/
 .env
 .env.*
 
+# Model files (too large for git)
+*.litertlm
+
 # Logs
 *.log
 log.md
