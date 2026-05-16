@@ -109,11 +109,11 @@ fun MonitorScreen(
 
         EntranceAnimation(visible = true, index = 3) {
             SectionHeader(text = "RECENT EVENTS")
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(10.dp))
             Text(
                 text = latestEvent ?: "No data loaded. Tap refresh to poll BMKG.",
                 color = PrometheusColors.textSecondary,
-                style = MaterialTheme.typography.bodySmall
+                style = MaterialTheme.typography.bodyMedium
             )
         }
 
