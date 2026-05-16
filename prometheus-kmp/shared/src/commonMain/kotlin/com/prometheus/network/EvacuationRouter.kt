@@ -102,7 +102,7 @@ class EvacuationRouter(private val googleApiKey: String = "") {
                     sin(Math.toRadians(epicenterLat)) * cos(Math.toRadians(userLat)) * cos(Math.toRadians(userLon - epicenterLon))
         )
         val away = Math.toDegrees(bearing + PI)
-        val exitDistanceKm = dangerRadiusKm * 1.5
+        val exitDistanceKm = dangerRadiusKm * 3.0
         val angularDist = exitDistanceKm / 6371.0
 
         fun destAtAngle(angleDeg: Double): Pair<Double, Double> {
@@ -173,18 +173,23 @@ class EvacuationRouter(private val googleApiKey: String = "") {
         return 2 * atan2(sqrt(a), sqrt(1 - a)) * 6371.0
     }
 
-    private fun scoreRoute(
+    private fun findExitIndex(
         polyline: List<Pair<Double, Double>>,
-        distanceKm: Double,
-        userLat: Double, userLon: Double,
         epicenterLat: Double, epicenterLon: Double,
         dangerRadiusKm: Double
-    ): Double {
-        val last = polyline.last()
-        val distDestToEpicenter = haversineKm(last.first, last.second, epicenterLat, epicenterLon)
-        if (distDestToEpicenter <= dangerRadiusKm) return Double.MAX_VALUE
-        val safetyMargin = distDestToEpicenter - dangerRadiusKm
-        return distanceKm / max(safetyMargin, 0.1)
+    ): Int? {
+        for (i in polyline.indices) {
+            val d = haversineKm(polyline[i].first, polyline[i].second, epicenterLat, epicenterLon)
+            if (d > dangerRadiusKm) return i
+        }
+        return null
+    }
+
+    private fun cumulativeKm(polyline: List<Pair<Double, Double>>): Double {
+        if (polyline.size < 2) return 0.0
+        return polyline.zipWithNext().sumOf { (a, b) ->
+            haversineKm(a.first, a.second, b.first, b.second)
+        }
     }
 
     suspend fun fetchEvacuationRoute(
@@ -203,27 +208,44 @@ class EvacuationRouter(private val googleApiKey: String = "") {
             }.mapNotNull { it.await() }
         }
 
-        val best = results
-            .filter { it.modeResult.polyline.size >= 2 }
-            .minByOrNull { scoreRoute(it.modeResult.polyline, it.modeResult.distanceKm, userLat, userLon, epicenterLat, epicenterLon, dangerRadiusKm) }
-            ?: return null
+        data class Scored(
+            val candidate: Candidate, val modeResult: ModeResult,
+            val exitIndex: Int, val exitDistFromEpicenterKm: Double,
+            val distToExitKm: Double
+        )
 
-        val walkingDriving = fetchDirections(userLat, userLon, best.candidate.lat, best.candidate.lon, "walking")
-        val cyclingResult = fetchDirections(userLat, userLon, best.candidate.lat, best.candidate.lon, "bicycling")
+        val scored = results.filter { it.modeResult.polyline.size >= 2 }.mapNotNull { r ->
+            val exitIdx = findExitIndex(r.modeResult.polyline, epicenterLat, epicenterLon, dangerRadiusKm) ?: return@mapNotNull null
+            val exitCoord = r.modeResult.polyline[exitIdx]
+            Scored(
+                candidate = r.candidate, modeResult = r.modeResult, exitIndex = exitIdx,
+                exitDistFromEpicenterKm = haversineKm(exitCoord.first, exitCoord.second, epicenterLat, epicenterLon),
+                distToExitKm = cumulativeKm(r.modeResult.polyline.take(exitIdx + 1))
+            )
+        }
 
-        val dr = best.modeResult
-        val walkDist = walkingDriving?.distanceKm ?: dr.distanceKm
-        val walkDur = walkingDriving?.durationMin ?: (dr.distanceKm / 5.0 * 60.0)
-        val cycleDur = cyclingResult?.durationMin ?: (dr.distanceKm / 15.0 * 60.0)
+        val best = scored.minByOrNull {
+            it.distToExitKm / max(it.exitDistFromEpicenterKm - dangerRadiusKm, 0.1)
+        } ?: return null
+
+        val exitCoord = best.modeResult.polyline[best.exitIndex]
+        val exitPolyline = best.modeResult.polyline.take(best.exitIndex + 1)
+
+        val walkingDriving = fetchDirections(userLat, userLon, exitCoord.first, exitCoord.second, "walking")
+        val cyclingResult = fetchDirections(userLat, userLon, exitCoord.first, exitCoord.second, "bicycling")
+
+        val fullKm = cumulativeKm(best.modeResult.polyline)
+        val ratio = if (fullKm > 0) best.distToExitKm / fullKm else 1.0
+        val fullDurationMin = best.modeResult.durationMin * ratio
 
         return EvacuationRoute(
-            coordinates = dr.polyline,
-            distanceKm = dr.distanceKm,
-            durationMin = dr.durationMin,
-            walkMin = walkDur,
-            runMin = walkDist / 10.0 * 60.0,
-            cycleMin = cycleDur,
-            motorMin = dr.distanceKm / 40.0 * 60.0
+            coordinates = exitPolyline,
+            distanceKm = best.distToExitKm,
+            durationMin = fullDurationMin,
+            walkMin = walkingDriving?.durationMin ?: (best.distToExitKm / 5.0 * 60.0),
+            runMin = (walkingDriving?.distanceKm ?: best.distToExitKm) / 10.0 * 60.0,
+            cycleMin = cyclingResult?.durationMin ?: (best.distToExitKm / 15.0 * 60.0),
+            motorMin = best.distToExitKm / 40.0 * 60.0
         )
     }
 
