@@ -1,5 +1,7 @@
 package com.prometheus.android.navigation
 
+import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -62,22 +64,30 @@ fun PrometheusApp(
         containerColor = PrometheusColors.darkBackground
     ) { padding ->
         Box(modifier = Modifier.padding(padding)) {
-            when (selectedScreen) {
-                Screen.Monitor -> MonitorScreen(
-                    onRefresh = onRefreshBmkg,
-                    event = currentEvent,
-                    latestEvent = latestEvent,
-                    injectionEnabled = injectionEnabled,
-                    injectionIp = injectionIp,
-                    injectionPort = injectionPort,
-                    onApplyInjection = onApplyInjection
-                )
-                Screen.Evacuate -> MapScreen(
-                    event = currentEvent,
-                    userLocation = currentLocation
-                )
-                Screen.Survival -> AssistantScreen()
-                Screen.Vision -> VisionScreen()
+            AnimatedContent(
+                targetState = selectedScreen,
+                transitionSpec = {
+                    fadeIn(animationSpec = tween(300)) togetherWith fadeOut(animationSpec = tween(300))
+                },
+                label = "screen_transition"
+            ) { screen ->
+                when (screen) {
+                    Screen.Monitor -> MonitorScreen(
+                        onRefresh = onRefreshBmkg,
+                        event = currentEvent,
+                        latestEvent = latestEvent,
+                        injectionEnabled = injectionEnabled,
+                        injectionIp = injectionIp,
+                        injectionPort = injectionPort,
+                        onApplyInjection = onApplyInjection
+                    )
+                    Screen.Evacuate -> MapScreen(
+                        event = currentEvent,
+                        userLocation = currentLocation
+                    )
+                    Screen.Survival -> AssistantScreen()
+                    Screen.Vision -> VisionScreen()
+                }
             }
         }
     }

@@ -1,5 +1,9 @@
 package com.prometheus.android.ui.assistant
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.slideInHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -470,21 +474,29 @@ private fun CapabilityPill(text: String) {
 
 @Composable
 private fun ChatBubble(message: ChatMessage) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = if (message.isUser) Arrangement.End else Arrangement.Start
+    AnimatedVisibility(
+        visible = true,
+        enter = slideInHorizontally(
+            animationSpec = tween(300),
+            initialOffsetX = { if (message.isUser) it else -it }
+        ) + fadeIn(animationSpec = tween(300))
     ) {
-        Text(
-            text = markdownToAnnotated(message.text),
-            color = if (message.isUser) Color.Black else Color.White,
-            modifier = Modifier
-                .background(
-                    color = if (message.isUser) PrometheusColors.blue else PrometheusColors.cardBackground,
-                    shape = RoundedCornerShape(16.dp)
-                )
-                .border(1.dp, PrometheusColors.blue.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
-                .padding(12.dp)
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = if (message.isUser) Arrangement.End else Arrangement.Start
+        ) {
+            Text(
+                text = markdownToAnnotated(message.text),
+                color = if (message.isUser) Color.Black else Color.White,
+                modifier = Modifier
+                    .background(
+                        color = if (message.isUser) PrometheusColors.blue else PrometheusColors.cardBackground,
+                        shape = RoundedCornerShape(16.dp)
+                    )
+                    .border(1.dp, PrometheusColors.blue.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
+                    .padding(12.dp)
+            )
+        }
     }
 }
 

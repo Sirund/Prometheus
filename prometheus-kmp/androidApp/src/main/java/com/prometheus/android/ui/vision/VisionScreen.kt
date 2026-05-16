@@ -6,6 +6,8 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -245,13 +247,20 @@ private fun CameraFrame(
                 enabled = capturedImage == null
             ))
 
-            if (capturedImage != null) {
-                Image(
-                    bitmap = capturedImage.asImageBitmap(),
-                    contentDescription = "Captured view",
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Fit
-                )
+            Crossfade(
+                targetState = if (capturedImage != null) 1 else 0,
+                animationSpec = tween(400),
+                label = "camera_crossfade"
+            ) { showCapture ->
+                when {
+                    showCapture == 1 -> Image(
+                        bitmap = capturedImage!!.asImageBitmap(),
+                        contentDescription = "Captured view",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Fit
+                    )
+                    else -> Box(Modifier.fillMaxSize())
+                }
             }
 
             if (isCapturing) {

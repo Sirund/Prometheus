@@ -1,20 +1,27 @@
 package com.prometheus.android.ui.monitor
 
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.prometheus.android.ui.shared.EntranceAnimation
+import com.prometheus.android.ui.shared.PrometheusCard
+import com.prometheus.android.ui.shared.SectionHeader
 import com.prometheus.android.ui.theme.PrometheusColors
 import com.prometheus.model.EarthquakeEvent
 
@@ -69,74 +76,85 @@ fun MonitorScreen(
 
         Spacer(Modifier.height(20.dp))
 
-        SectionHeader(title = "LATEST BMKG EVENT")
-        Spacer(Modifier.height(8.dp))
-        BMKGEventCard(
-            magnitude = event?._magnitude ?: "--",
-            location = event?._wilayah ?: if (event != null) "Unknown location" else "Waiting for data...",
-            depth = event?._kedalaman ?: "--",
-            felt = event?._dirasakan ?: "--",
-            potential = event?._potensi ?: "--",
-            timestamp = lastRefresh
-        )
-
-        Spacer(Modifier.height(20.dp))
-
-        SectionHeader(title = "ALARM & BRIEFING")
-        Spacer(Modifier.height(8.dp))
-        AlarmStatusCard()
-
-        Spacer(Modifier.height(20.dp))
-
-        SectionHeader(title = "RECENT EVENTS")
-        Spacer(Modifier.height(4.dp))
-        Text(
-            text = latestEvent ?: "No data loaded. Tap refresh to poll BMKG.",
-            color = Color.Gray,
-            style = MaterialTheme.typography.labelSmall
-        )
-
-        Spacer(Modifier.height(16.dp))
-
-        Button(
-            onClick = {
-                lastRefresh = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date())
-                onRefresh?.invoke()
-            },
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = PrometheusColors.blue.copy(alpha = 0.15f),
-                contentColor = PrometheusColors.blue
-            )
-        ) {
-            Text(
-                text = "REFRESH BMKG",
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Bold
+        EntranceAnimation(visible = true, index = 0) {
+            SectionHeader(text = "LATEST BMKG EVENT")
+            Spacer(Modifier.height(8.dp))
+            BMKGEventCard(
+                magnitude = event?._magnitude ?: "--",
+                location = event?._wilayah ?: if (event != null) "Unknown location" else "Waiting for data...",
+                depth = event?._kedalaman ?: "--",
+                felt = event?._dirasakan ?: "--",
+                potential = event?._potensi ?: "--",
+                timestamp = lastRefresh
             )
         }
 
         Spacer(Modifier.height(20.dp))
 
-        SectionHeader(title = "LOCAL INJECTION")
-        Spacer(Modifier.height(8.dp))
-        InjectionStatusCard(
-            enabled = injectionEnabled,
-            ip = injectionIp,
-            port = injectionPort,
-            onClick = { showInjectionDialog = true }
-        )
+        EntranceAnimation(visible = true, index = 1) {
+            SectionHeader(text = "ALARM & BRIEFING")
+            Spacer(Modifier.height(8.dp))
+            AlarmStatusCard()
+        }
+
+        Spacer(Modifier.height(20.dp))
+
+        EntranceAnimation(visible = true, index = 2) {
+            SectionHeader(text = "RECENT EVENTS")
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = latestEvent ?: "No data loaded. Tap refresh to poll BMKG.",
+                color = Color.Gray,
+                style = MaterialTheme.typography.labelSmall
+            )
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        EntranceAnimation(visible = true, index = 3) {
+            Button(
+                onClick = {
+                    lastRefresh = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date())
+                    onRefresh?.invoke()
+                },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = PrometheusColors.blue.copy(alpha = 0.15f),
+                    contentColor = PrometheusColors.blue
+                )
+            ) {
+                Text(
+                    text = "REFRESH BMKG",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+
+        Spacer(Modifier.height(20.dp))
+
+        EntranceAnimation(visible = true, index = 4) {
+            SectionHeader(text = "LOCAL INJECTION")
+            Spacer(Modifier.height(8.dp))
+            InjectionStatusCard(
+                enabled = injectionEnabled,
+                ip = injectionIp,
+                port = injectionPort,
+                onClick = { showInjectionDialog = true }
+            )
+        }
     }
 }
 
 @Composable
 private fun DangerStatusBanner(level: DangerLevel) {
-    val color = when (level) {
+    val targetColor = when (level) {
         DangerLevel.None -> PrometheusColors.blue
-        DangerLevel.Watch -> Color(0xFFFFA500)
+        DangerLevel.Watch -> PrometheusColors.warning
         DangerLevel.Medium -> Color(0xFFFF8C00)
-        DangerLevel.Danger -> Color.Red
+        DangerLevel.Danger -> PrometheusColors.danger
     }
+    val color by animateColorAsState(targetColor, animationSpec = tween(400), label = "danger_banner")
     val label = when (level) {
         DangerLevel.None -> "NO ACTIVE ALERTS"
         DangerLevel.Watch -> "WATCH — MONITOR CLOSELY"
@@ -144,14 +162,25 @@ private fun DangerStatusBanner(level: DangerLevel) {
         DangerLevel.Danger -> "DANGER — TAKE ACTION NOW"
     }
 
+    val infinite = rememberInfiniteTransition(label = "pulse")
+    val pulseAlpha by infinite.animateFloat(
+        initialValue = 0.6f, targetValue = 0.3f,
+        animationSpec = infiniteRepeatable(tween(800), RepeatMode.Reverse),
+        label = "pulse_alpha"
+    )
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(color.copy(alpha = 0.15f))
-            .border(1.dp, color.copy(alpha = 0.6f))
+            .background(if (level == DangerLevel.Danger) color.copy(alpha = pulseAlpha) else color.copy(alpha = 0.15f))
+            .border(1.dp, if (level == DangerLevel.Danger) color.copy(alpha = 0.6f) else color.copy(alpha = 0.6f))
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        if (level == DangerLevel.Danger) {
+            Text(text = "\u26A0\uFE0F", style = MaterialTheme.typography.bodyLarge)
+            Spacer(Modifier.width(8.dp))
+        }
         Text(
             text = label,
             color = color,
@@ -170,13 +199,7 @@ private fun BMKGEventCard(
     potential: String,
     timestamp: String
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(PrometheusColors.cardBackground)
-            .border(1.dp, PrometheusColors.blue.copy(alpha = 0.3f))
-            .padding(16.dp)
-    ) {
+    PrometheusCard {
         Row(modifier = Modifier.fillMaxWidth()) {
             Column {
                 Text(
@@ -230,43 +253,46 @@ private fun EventField(label: String, value: String) {
 }
 
 @Composable
-private fun SectionHeader(title: String) {
-    Text(
-        text = title,
-        color = PrometheusColors.blue,
-        style = MaterialTheme.typography.labelSmall,
-        fontWeight = FontWeight.Bold
-    )
-}
-
-@Composable
 private fun AlarmStatusCard() {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(PrometheusColors.cardBackground)
-            .border(1.dp, PrometheusColors.blue.copy(alpha = 0.3f))
-            .padding(16.dp)
-    ) {
-        AlarmIndicatorRow(icon = "\uD83D\uDD14", label = "AUDIBLE ALARM", status = "ARMED", statusColor = PrometheusColors.blue)
+    val infinite = rememberInfiniteTransition(label = "alarm_pulse")
+    val gemmaAlpha by infinite.animateFloat(
+        initialValue = 0.3f, targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(1200), RepeatMode.Reverse),
+        label = "gemma_alpha"
+    )
+
+    PrometheusCard {
+        AlarmIndicatorRow(isActive = true, label = "AUDIBLE ALARM", status = "ARMED")
         Spacer(Modifier.height(8.dp))
         HorizontalDivider(color = PrometheusColors.blue.copy(alpha = 0.15f))
         Spacer(Modifier.height(8.dp))
-        AlarmIndicatorRow(icon = "\uD83D\uDD0A", label = "TTS BRIEFING", status = "READY", statusColor = PrometheusColors.blue)
+        AlarmIndicatorRow(isActive = true, label = "TTS BRIEFING", status = "READY")
         Spacer(Modifier.height(8.dp))
         HorizontalDivider(color = PrometheusColors.blue.copy(alpha = 0.15f))
         Spacer(Modifier.height(8.dp))
-        AlarmIndicatorRow(icon = "\uD83E\uDDE0", label = "GEMMA 4 EMERGENCY PROMPT", status = "NOT LOADED", statusColor = Color.Gray)
+        AlarmIndicatorRow(isActive = false, label = "GEMMA 4 EMERGENCY PROMPT", status = "NOT LOADED", statusAlpha = gemmaAlpha)
     }
 }
 
 @Composable
-private fun AlarmIndicatorRow(icon: String, label: String, status: String, statusColor: Color) {
+private fun AlarmIndicatorRow(
+    isActive: Boolean,
+    label: String,
+    status: String,
+    statusAlpha: Float = 1f
+) {
+    val statusColor = if (isActive) PrometheusColors.success else Color.Gray
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(text = icon, color = statusColor.copy(alpha = 0.7f))
+        Box(
+            modifier = Modifier
+                .size(8.dp)
+                .clip(CircleShape)
+                .background(statusColor.copy(alpha = statusAlpha))
+        )
         Spacer(Modifier.width(8.dp))
         Text(
             text = label,
@@ -276,7 +302,7 @@ private fun AlarmIndicatorRow(icon: String, label: String, status: String, statu
         Spacer(Modifier.weight(1f))
         Text(
             text = status,
-            color = statusColor,
+            color = statusColor.copy(alpha = statusAlpha),
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.Bold
         )

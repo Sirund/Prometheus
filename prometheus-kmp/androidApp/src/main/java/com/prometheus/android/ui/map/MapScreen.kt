@@ -1,6 +1,8 @@
 package com.prometheus.android.ui.map
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
@@ -38,6 +40,7 @@ import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.Polyline
 import com.google.maps.android.compose.rememberCameraPositionState
 import com.prometheus.android.service.LocationProvider
+import com.prometheus.android.ui.shared.LoadingOverlay
 import com.prometheus.android.ui.theme.PrometheusColors
 import com.prometheus.model.DangerClassifier
 import com.prometheus.model.EarthquakeEvent
@@ -215,6 +218,7 @@ fun MapScreen(
                     .padding(horizontal = 16.dp)
                     .padding(top = 8.dp)
             ) {
+                LoadingOverlay(isLoading = routeLoading) {
                 if (mapsAvailable == ConnectionResult.SUCCESS && apiKeyValid) {
                     val hasLocationPermission = ContextCompat.checkSelfPermission(
                         context,
@@ -279,6 +283,7 @@ fun MapScreen(
                 } else {
                     MapUnavailableFallback(epicenter)
                 }
+                }
             }
 
             Spacer(Modifier.height(8.dp))
@@ -338,11 +343,12 @@ fun MapScreen(
 
 @Composable
 private fun EvacuationStatusBanner(isDangerous: Boolean, severity: com.prometheus.model.DangerSeverity?) {
-    val color = when {
-        isDangerous -> Color.Red
-        severity == com.prometheus.model.DangerSeverity.MEDIUM -> Color(0xFFFF8C00)
+    val targetColor = when {
+        isDangerous -> PrometheusColors.danger
+        severity == com.prometheus.model.DangerSeverity.MEDIUM -> PrometheusColors.warning
         else -> PrometheusColors.blue
     }
+    val color by animateColorAsState(targetColor, animationSpec = tween(400), label = "banner_color")
     val label = when {
         isDangerous -> "EVACUATION ROUTING — ACTIVE"
         severity == com.prometheus.model.DangerSeverity.MEDIUM -> "MEDIUM ALERT — MONITOR"
