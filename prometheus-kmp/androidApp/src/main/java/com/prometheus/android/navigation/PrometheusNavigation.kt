@@ -30,7 +30,7 @@ import com.prometheus.model.UserLocation
 enum class Screen(val label: String, val icon: ImageVector) {
     Monitor("MONITOR", Icons.Filled.Radio),
     Evacuate("EVACUATE", Icons.Filled.Map),
-    Survival("SURVIVAL", Icons.Filled.ChatBubble),
+    Chat("CHAT", Icons.Filled.ChatBubble),
     Vision("TALK", Icons.Filled.RecordVoiceOver)
 }
 
@@ -115,7 +115,7 @@ fun PrometheusApp(
                         event = currentEvent,
                         userLocation = currentLocation
                     )
-                    Screen.Survival -> AssistantScreen()
+                    Screen.Chat -> AssistantScreen()
                     Screen.Vision -> VisionScreen()
                 }
             }

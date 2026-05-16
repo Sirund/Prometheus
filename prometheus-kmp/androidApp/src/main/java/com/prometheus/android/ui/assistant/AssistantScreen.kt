@@ -1,9 +1,15 @@
 package com.prometheus.android.ui.assistant
 
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInHorizontally
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -12,13 +18,18 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
@@ -31,6 +42,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.prometheus.android.inference.InferenceManager
 import com.prometheus.android.inference.ModelManager
+import com.prometheus.android.inference.VisionInferenceManager
 import com.prometheus.android.ui.theme.PrometheusColors
 import com.prometheus.model.ChatMessage
 import com.prometheus.prompt.SystemPrompts
@@ -107,7 +119,9 @@ fun AssistantScreen() {
     val context = LocalContext.current
     val saveFile = remember { File(context.filesDir, "conversations.json") }
     val manager = remember { InferenceManager() }
+    val visionManager = remember { VisionInferenceManager(context) }
     var query by remember { mutableStateOf("") }
+    var selectedImageBitmap by remember { mutableStateOf<Bitmap?>(null) }
     var conversations by remember { mutableStateOf(loadConversations(saveFile)) }
     var activeIndex by remember { mutableStateOf(0) }
     var isModelLoaded by remember { mutableStateOf(false) }
@@ -119,6 +133,17 @@ fun AssistantScreen() {
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
+
+    val galleryLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            val bitmap = context.contentResolver.openInputStream(uri)?.use { stream ->
+                BitmapFactory.decodeStream(stream)
+            }
+            selectedImageBitmap = bitmap
+        }
+    }
 
     val chatHistory by remember { derivedStateOf { conversations.getOrNull(activeIndex)?.messages ?: emptyList() } }
 
@@ -435,6 +460,37 @@ fun AssistantScreen() {
                         .border(1.dp, PrometheusColors.blue.copy(alpha = 0.3f)),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    if (selectedImageBitmap != null) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .padding(2.dp)
+                        ) {
+                            Image(
+                                bitmap = selectedImageBitmap!!.asImageBitmap(),
+                                contentDescription = "Selected image",
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clip(RoundedCornerShape(6.dp)),
+                                contentScale = ContentScale.Crop
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .size(16.dp)
+                                    .clip(CircleShape)
+                                    .background(Color.Black.copy(alpha = 0.6f))
+                                    .clickable { selectedImageBitmap = null },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("\u2716",
+                                    color = Color.White,
+                                    style = MaterialTheme.typography.labelSmall
+                                )
+                            }
+                        }
+                        Spacer(Modifier.width(6.dp))
+                    }
                     TextField(
                         value = query,
                         onValueChange = { query = it },
@@ -464,23 +520,26 @@ fun AssistantScreen() {
                         color = PrometheusColors.blue.copy(alpha = 0.2f)
                     )
                     TextButton(
-                        onClick = { /* TODO: TTS */ },
+                        onClick = { galleryLauncher.launch("image/*") },
                         enabled = isModelLoaded,
                         contentPadding = PaddingValues(14.dp)
                     ) {
-                        Text(
-                            text = "\uD83D\uDD0A",
-                            style = MaterialTheme.typography.bodyLarge
+                        Icon(
+                            Icons.Filled.Image,
+                            contentDescription = "Attach image",
+                            tint = PrometheusColors.blue.copy(alpha = 0.6f)
                         )
                     }
                     TextButton(
                         onClick = {
                             val userText = query
+                            val image = selectedImageBitmap
                             val sysPrompt = when (chatMode) {
                                 "EMERGENCY_BRIEF" -> SystemPrompts.EMERGENCY_BRIEFING
                                 else -> SystemPrompts.SURVIVAL_CHATBOT
                             }
                             query = ""
+                            selectedImageBitmap = null
                             val history = chatHistory
                             val oldSize = history.size
                             val aiIndex = oldSize + 1
@@ -490,7 +549,7 @@ fun AssistantScreen() {
                                 )
                             }
                             scope.launch {
-                                manager.sendMessage(userText, history, sysPrompt) { response ->
+                                val onToken: (String) -> Unit = { response ->
                                     conversations = conversations.toMutableList().also { list ->
                                         val msgs = list[activeIndex].messages.toMutableList()
                                         if (aiIndex < msgs.size) {
@@ -499,9 +558,14 @@ fun AssistantScreen() {
                                         list[activeIndex] = list[activeIndex].copy(messages = msgs)
                                     }
                                 }
+                                if (image != null) {
+                                    visionManager.sendMessage(userText, image, onToken)
+                                } else {
+                                    manager.sendMessage(userText, history, sysPrompt, onToken)
+                                }
                             }
                         },
-                        enabled = isModelLoaded && query.isNotBlank(),
+                        enabled = isModelLoaded && (query.isNotBlank() || selectedImageBitmap != null),
                         colors = ButtonDefaults.textButtonColors(
                             containerColor = if (isModelLoaded) PrometheusColors.blue else PrometheusColors.surface,
                             contentColor = if (isModelLoaded) Color.Black else Color.Gray,
@@ -511,7 +575,7 @@ fun AssistantScreen() {
                         contentPadding = PaddingValues(14.dp)
                     ) {
                         Text(
-                            text = "\u26A1",
+                            text = "\u2708\uFE0F",
                             style = MaterialTheme.typography.bodyLarge
                         )
                     }
