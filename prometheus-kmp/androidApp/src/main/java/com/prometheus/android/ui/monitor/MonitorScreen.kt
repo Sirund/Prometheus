@@ -94,9 +94,11 @@ fun MonitorScreen(
         Spacer(Modifier.height(20.dp))
 
         EntranceAnimation(visible = true, index = 1) {
-            SectionHeader(text = "SYSTEM STATUS")
-            Spacer(Modifier.height(8.dp))
-            SystemStatusCard()
+            Column {
+                SectionHeader(text = "SYSTEM STATUS")
+                Spacer(Modifier.height(8.dp))
+                SystemStatusCard()
+            }
         }
 
         Spacer(Modifier.height(16.dp))
@@ -108,13 +110,15 @@ fun MonitorScreen(
         Spacer(Modifier.height(28.dp))
 
         EntranceAnimation(visible = true, index = 3) {
-            SectionHeader(text = "RECENT EVENTS")
-            Spacer(Modifier.height(10.dp))
-            Text(
-                text = latestEvent ?: "No data loaded. Tap refresh to poll BMKG.",
-                color = PrometheusColors.textSecondary,
-                style = MaterialTheme.typography.bodyMedium
-            )
+            Column {
+                SectionHeader(text = "RECENT EVENTS")
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    text = latestEvent ?: "No data loaded. Tap refresh to poll BMKG.",
+                    color = PrometheusColors.textSecondary,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
         }
 
         Spacer(Modifier.height(16.dp))
@@ -143,14 +147,16 @@ fun MonitorScreen(
         Spacer(Modifier.height(20.dp))
 
         EntranceAnimation(visible = true, index = 5) {
-            SectionHeader(text = "LOCAL INJECTION")
-            Spacer(Modifier.height(8.dp))
-            InjectionStatusCard(
-                enabled = injectionEnabled,
-                ip = injectionIp,
-                port = injectionPort,
-                onClick = { showInjectionDialog = true }
-            )
+            Column {
+                SectionHeader(text = "LOCAL INJECTION")
+                Spacer(Modifier.height(8.dp))
+                InjectionStatusCard(
+                    enabled = injectionEnabled,
+                    ip = injectionIp,
+                    port = injectionPort,
+                    onClick = { showInjectionDialog = true }
+                )
+            }
         }
     }
 }
