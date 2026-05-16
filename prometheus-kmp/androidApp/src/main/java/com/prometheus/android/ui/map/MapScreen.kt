@@ -1,7 +1,11 @@
 package com.prometheus.android.ui.map
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -141,6 +145,7 @@ fun MapScreen(
 
     var evacuationRoute by remember { mutableStateOf<EvacuationRoute?>(null) }
     var routeLoading by remember { mutableStateOf(false) }
+    var showDetails by remember { mutableStateOf(false) }
 
     val googleApiKey = remember {
         try {
@@ -278,16 +283,53 @@ fun MapScreen(
 
             Spacer(Modifier.height(8.dp))
 
-            RoutingDetailsCard(
-                event = event,
-                userLocation = currentLocation,
-                isDangerous = isDangerous,
-                dangerRadiusKm = dangerRadiusKm,
-                evacDirection = evacDirection,
-                ruleName = highestSev?.ruleName,
-                evacuationRoute = evacuationRoute,
-                routeLoading = routeLoading
-            )
+            Box(
+                modifier = Modifier.padding(horizontal = 16.dp)
+            ) {
+                Column {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(PrometheusColors.cardBackground)
+                            .border(1.dp, PrometheusColors.blue.copy(alpha = 0.3f))
+                            .clickable { showDetails = !showDetails }
+                            .padding(horizontal = 16.dp, vertical = 10.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "ROUTING DETAILS",
+                                color = PrometheusColors.blue,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(Modifier.weight(1f))
+                            Text(
+                                text = if (showDetails) "\u25BC" else "\u25B2",
+                                color = PrometheusColors.blue,
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                        }
+                    }
+
+                    AnimatedVisibility(
+                        visible = showDetails,
+                        enter = slideInVertically(initialOffsetY = { it }),
+                        exit = slideOutVertically(targetOffsetY = { it })
+                    ) {
+                        RoutingDetailsCard(
+                            event = event,
+                            userLocation = currentLocation,
+                            isDangerous = isDangerous,
+                            dangerRadiusKm = dangerRadiusKm,
+                            evacDirection = evacDirection,
+                            ruleName = highestSev?.ruleName,
+                            evacuationRoute = evacuationRoute,
+                            routeLoading = routeLoading
+                        )
+                    }
+                }
+            }
 
             Spacer(Modifier.height(8.dp))
         }
