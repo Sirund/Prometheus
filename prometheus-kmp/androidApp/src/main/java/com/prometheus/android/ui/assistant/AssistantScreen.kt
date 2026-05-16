@@ -134,6 +134,8 @@ fun AssistantScreen() {
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
 
+    var showImageSourceDialog by remember { mutableStateOf(false) }
+
     val galleryLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
@@ -141,6 +143,14 @@ fun AssistantScreen() {
             val bitmap = context.contentResolver.openInputStream(uri)?.use { stream ->
                 BitmapFactory.decodeStream(stream)
             }
+            selectedImageBitmap = bitmap
+        }
+    }
+
+    val cameraLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.TakePicturePreview()
+    ) { bitmap: Bitmap? ->
+        if (bitmap != null) {
             selectedImageBitmap = bitmap
         }
     }
@@ -520,7 +530,7 @@ fun AssistantScreen() {
                         color = PrometheusColors.blue.copy(alpha = 0.2f)
                     )
                     TextButton(
-                        onClick = { galleryLauncher.launch("image/*") },
+                        onClick = { showImageSourceDialog = true },
                         enabled = isModelLoaded,
                         contentPadding = PaddingValues(14.dp)
                     ) {
@@ -582,6 +592,50 @@ fun AssistantScreen() {
                 }
             }
         }
+    }
+
+    if (showImageSourceDialog) {
+        AlertDialog(
+            onDismissRequest = { showImageSourceDialog = false },
+            title = {
+                Text("Choose Image Source",
+                    color = PrometheusColors.blue,
+                    fontWeight = FontWeight.Bold)
+            },
+            text = {
+                Column {
+                    TextButton(
+                        onClick = {
+                            showImageSourceDialog = false
+                            cameraLauncher.launch(null)
+                        },
+                        modifier = Modifier.fillMaxWidth().height(48.dp)
+                    ) {
+                        Text("\uD83D\uDCF7  Take Photo",
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold)
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    TextButton(
+                        onClick = {
+                            showImageSourceDialog = false
+                            galleryLauncher.launch("image/*")
+                        },
+                        modifier = Modifier.fillMaxWidth().height(48.dp)
+                    ) {
+                        Text("\uD83D\uDDBC\uFE0F  Gallery",
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold)
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showImageSourceDialog = false }) {
+                    Text("Cancel", color = Color.Gray)
+                }
+            },
+            containerColor = PrometheusColors.surface
+        )
     }
 }
 
