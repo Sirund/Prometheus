@@ -10,31 +10,31 @@ import kotlinx.coroutines.*
 class BMKGPollingController(context: Context, baseUrlOverride: String? = null) {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val locationProvider = LocationProvider(context)
     private var pollingManager = createPollingManager(baseUrlOverride)
     private val alarmManager = PrometheusAlarmManager(context)
     private val emergencyInference = EmergencyInferenceManager(context)
-    private val locationProvider = LocationProvider(context)
 
     var onNewEvent: ((EarthquakeEvent) -> Unit)? = null
-    var onPoll: ((EarthquakeEvent) -> Unit)? = null
+    var onPoll: ((List<EarthquakeEvent>) -> Unit)? = null
 
     private fun createPollingManager(baseUrlOverride: String?): BMKGPollingManager {
         return BMKGPollingManager(baseUrlOverride = baseUrlOverride).apply {
             userLocation = locationProvider.getLastKnownLocation()
             onPoll = { events ->
-                if (events.isNotEmpty()) onPoll?.invoke(events.first())
+                this@BMKGPollingController.onPoll?.invoke(events)
                 userLocation = locationProvider.getLastKnownLocation()
             }
             onDangerousEvent = { event ->
-                onNewEvent?.invoke(event)
+                this@BMKGPollingController.onNewEvent?.invoke(event)
                 generateAndAnnounceBriefing(event)
             }
             onMediumEvent = { event ->
-                onNewEvent?.invoke(event)
+                this@BMKGPollingController.onNewEvent?.invoke(event)
                 alarmManager.triggerMediumAlert(event)
             }
             onNewEvent = { event ->
-                onNewEvent?.invoke(event)
+                this@BMKGPollingController.onNewEvent?.invoke(event)
             }
             onError = { error ->
                 Log.e("BMKGPolling", "Poll error", error)

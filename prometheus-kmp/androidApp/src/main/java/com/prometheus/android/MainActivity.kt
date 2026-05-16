@@ -122,11 +122,12 @@ class MainActivity : ComponentActivity() {
                 this,
                 baseUrlOverride = InjectionSettings.baseUrl
             ).apply {
-                onPoll = { event ->
+                onPoll = { events ->
+                    val event = events.firstOrNull()
                     currentEvent = event
                     currentLocation = locProvider.getLastKnownLocation()
-                    val mag = event.magnitudeValue?.let { "M $it" } ?: "Unknown"
-                    latestEvent = "$mag — ${event._wilayah ?: "Unknown location"}"
+                    val mag = event?.magnitudeValue?.let { "M $it" } ?: "Unknown"
+                    latestEvent = "$mag — ${event?._wilayah ?: "Unknown location"}"
                 }
                 onNewEvent = { event ->
                     currentEvent = event
