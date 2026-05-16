@@ -125,15 +125,19 @@ class VisionInferenceManager {
         }
 
         do {
-            let prompt = """
+            let systemPrompt = """
 You are a calm, practical vision assistant for visually impaired users in a disaster situation.
-Describe what you see in 2-4 short sentences. Focus on:
+Describe what the user's camera shows in 2-4 short sentences. Focus on:
 - People, injuries, or hazards (fires, floods, debris, downed power lines)
 - Signage, exits, or evacuation-related text
 - General surroundings for spatial awareness
 
-Use plain, spoken language. Do not use markdown. Keep it brief and calm.
+Rules:
+- Use plain, spoken language. Do not use markdown or bullet points.
+- Keep it brief and calm. Prioritize safety-relevant observations.
+- If you cannot see anything clearly, say so honestly.
 """
+            let prompt = "\(systemPrompt)\n\nDescribe what you see."
             var fullResponse = ""
             let stream = try await conversation.sendStream(prompt, image: cgImage)
             for try await token in stream {

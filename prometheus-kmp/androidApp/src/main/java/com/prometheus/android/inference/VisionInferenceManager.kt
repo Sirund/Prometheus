@@ -10,6 +10,7 @@ import com.google.ai.edge.litertlm.Conversation
 import com.google.ai.edge.litertlm.ConversationConfig
 import com.google.ai.edge.litertlm.Engine
 import com.google.ai.edge.litertlm.EngineConfig
+import com.prometheus.prompt.SystemPrompts
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -71,19 +72,9 @@ class VisionInferenceManager(private val context: Context) {
         withContext(Dispatchers.IO) {
             try {
                 val imageFile = saveBitmapToTempFile(imageBitmap)
-                val prompt = """
-You are a calm, practical vision assistant for visually impaired users in a disaster situation.
-Describe what you see in 2-4 short sentences. Focus on:
-- People, injuries, or hazards (fires, floods, debris, downed power lines)
-- Signage, exits, or evacuation-related text
-- General surroundings for spatial awareness
-
-Use plain, spoken language. Do not use markdown. Keep it brief and calm.
-""".trimIndent()
-
                 conv.sendMessageAsync(Contents.of(
                     Content.ImageFile(imageFile.absolutePath),
-                    Content.Text(prompt)
+                    Content.Text("Describe what you see.")
                 )).collect { msg ->
                     onToken(msg.toString())
                 }
@@ -105,7 +96,12 @@ Use plain, spoken language. Do not use markdown. Keep it brief and calm.
 
     private fun createConversation() {
         try {
-            conversation = engine?.createConversation(ConversationConfig())
+            val systemInstruction = Contents.of(
+                listOf(Content.Text(SystemPrompts.VISION_ASSIST))
+            )
+            conversation = engine?.createConversation(
+                ConversationConfig(systemInstruction = systemInstruction)
+            )
         } catch (e: Exception) {
             Log.e(TAG, "createConversation failed", e)
         }
