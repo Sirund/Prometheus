@@ -177,15 +177,14 @@ class EvacuationRouter(private val googleApiKey: String = "") {
         polyline: List<Pair<Double, Double>>,
         distanceKm: Double,
         userLat: Double, userLon: Double,
-        epicenterLat: Double, epicenterLon: Double
+        epicenterLat: Double, epicenterLon: Double,
+        dangerRadiusKm: Double
     ): Double {
         val last = polyline.last()
-        val distUserToEpicenter = haversineKm(userLat, userLon, epicenterLat, epicenterLon)
         val distDestToEpicenter = haversineKm(last.first, last.second, epicenterLat, epicenterLon)
-        val netAwayKm = distDestToEpicenter - distUserToEpicenter
-        if (netAwayKm <= 0) return Double.MAX_VALUE
-        val distUserToDest = haversineKm(userLat, userLon, last.first, last.second)
-        return distanceKm / max(netAwayKm, 0.1)
+        if (distDestToEpicenter <= dangerRadiusKm) return Double.MAX_VALUE
+        val safetyMargin = distDestToEpicenter - dangerRadiusKm
+        return distanceKm / max(safetyMargin, 0.1)
     }
 
     suspend fun fetchEvacuationRoute(
@@ -206,7 +205,7 @@ class EvacuationRouter(private val googleApiKey: String = "") {
 
         val best = results
             .filter { it.modeResult.polyline.size >= 2 }
-            .minByOrNull { scoreRoute(it.modeResult.polyline, it.modeResult.distanceKm, userLat, userLon, epicenterLat, epicenterLon) }
+            .minByOrNull { scoreRoute(it.modeResult.polyline, it.modeResult.distanceKm, userLat, userLon, epicenterLat, epicenterLon, dangerRadiusKm) }
             ?: return null
 
         val walkingDriving = fetchDirections(userLat, userLon, best.candidate.lat, best.candidate.lon, "walking")
