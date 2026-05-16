@@ -30,6 +30,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.prometheus.android.inference.InferenceManager
+import com.prometheus.android.inference.ModelManager
 import com.prometheus.android.ui.theme.PrometheusColors
 import com.prometheus.model.ChatMessage
 import com.prometheus.prompt.SystemPrompts
@@ -105,7 +106,7 @@ private fun loadConversations(file: File): List<ConversationData> {
 fun AssistantScreen() {
     val context = LocalContext.current
     val saveFile = remember { File(context.filesDir, "conversations.json") }
-    val manager = remember { InferenceManager(context) }
+    val manager = remember { InferenceManager() }
     var query by remember { mutableStateOf("") }
     var conversations by remember { mutableStateOf(loadConversations(saveFile)) }
     var activeIndex by remember { mutableStateOf(0) }
@@ -128,25 +129,23 @@ fun AssistantScreen() {
     }
 
     LaunchedEffect(Unit) {
-        manager.setupGemma()
-        isModelLoaded = manager.isModelLoaded
-        statusMessage = manager.statusMessage
+        isModelLoaded = ModelManager.isLoaded
+        statusMessage = ModelManager.statusMessage
 
         if (!isModelLoaded) {
-            var existing = manager.getDownloadProgress()
+            var existing = ModelManager.getDownloadProgress(context)
             if (existing == null) {
-                val activeId = manager.findActiveDownloadByUrl()
-                if (activeId != null) existing = manager.getDownloadProgress()
+                val activeId = ModelManager.findActiveDownloadByUrl(context)
+                if (activeId != null) existing = ModelManager.getDownloadProgress(context)
             }
             if (existing != null && (existing.isRunning || existing.isPending || existing.isPaused)) {
                 isDownloading = true
                 downloadProgress = existing.percent
                 statusMessage = "Downloading: ${existing.percent}%"
-            } else if (manager.isDownloadComplete()) {
-                manager.clearDownloadState()
-                manager.setupGemma()
-                isModelLoaded = manager.isModelLoaded
-                statusMessage = manager.statusMessage
+            } else if (ModelManager.isDownloadComplete(context)) {
+                ModelManager.clearDownloadState(context)
+                isModelLoaded = ModelManager.isLoaded
+                statusMessage = ModelManager.statusMessage
             }
         }
     }
@@ -155,7 +154,7 @@ fun AssistantScreen() {
         if (!isDownloading) return@LaunchedEffect
         while (true) {
             delay(2000)
-            val progress = manager.getDownloadProgress()
+            val progress = ModelManager.getDownloadProgress(context)
             if (progress != null) {
                 downloadProgress = progress.percent
                 downloadId = progress.hashCode().toLong()
@@ -168,18 +167,16 @@ fun AssistantScreen() {
                     else -> "Downloading: ${progress.percent}%"
                 }
                 if (progress.isComplete) {
-                    manager.clearDownloadState()
-                    manager.setupGemma()
-                    isModelLoaded = manager.isModelLoaded
+                    ModelManager.clearDownloadState(context)
+                    isModelLoaded = ModelManager.isLoaded
                     isDownloading = !isModelLoaded
                     return@LaunchedEffect
                 }
             } else {
-                val isComplete = manager.isDownloadComplete()
+                val isComplete = ModelManager.isDownloadComplete(context)
                 if (isComplete) {
-                    manager.clearDownloadState()
-                    manager.setupGemma()
-                    isModelLoaded = manager.isModelLoaded
+                    ModelManager.clearDownloadState(context)
+                    isModelLoaded = ModelManager.isLoaded
                     isDownloading = !isModelLoaded
                     return@LaunchedEffect
                 }
@@ -355,7 +352,7 @@ fun AssistantScreen() {
                             if (showDownload || isDownloading || downloadProgress >= 0) {
                                 Spacer(Modifier.height(16.dp))
                                 val isPaused = isDownloading && downloadProgress >= 0 &&
-                                    manager.getDownloadProgress()?.isPaused == true
+                                    ModelManager.getDownloadProgress(context)?.isPaused == true
                                 val btnColor = when {
                                     !isDownloading -> PrometheusColors.blue
                                     isPaused -> Color(0xFFFFA500).copy(alpha = 0.6f)
@@ -372,20 +369,20 @@ fun AssistantScreen() {
                                     onClick = {
                                         when {
                                             !isDownloading -> {
-                                                manager.enqueueDownload()
-                                                isDownloading = true
-                                                downloadProgress = 0
-                                                statusMessage = "Download pending..."
+                                        ModelManager.enqueueDownload(context)
+                                        isDownloading = true
+                                        downloadProgress = 0
+                                        statusMessage = "Download pending..."
                                             }
                                             isPaused -> {
-                                                manager.resumeDownload()
+                                                ModelManager.resumeDownload(context)
                                                 statusMessage = "Downloading: $downloadProgress%"
                                             }
                                             else -> {
-                                                val ok = manager.pauseDownload()
+                                                val ok = ModelManager.pauseDownload(context)
                                                 if (ok) statusMessage = "Download Paused: $downloadProgress%"
                                                 else {
-                                                    manager.cancelDownload()
+                                                    ModelManager.cancelDownload(context)
                                                     isDownloading = false
                                                     downloadProgress = -1
                                                     statusMessage = "Pause failed. Tap to restart."

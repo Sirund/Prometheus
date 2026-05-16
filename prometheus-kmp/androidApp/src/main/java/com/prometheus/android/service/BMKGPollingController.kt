@@ -13,7 +13,7 @@ class BMKGPollingController(context: Context, baseUrlOverride: String? = null) {
     private val locationProvider = LocationProvider(context)
     private var pollingManager = createPollingManager(baseUrlOverride)
     private val alarmManager = PrometheusAlarmManager(context)
-    private val emergencyInference = EmergencyInferenceManager(context)
+    private val emergencyInference = EmergencyInferenceManager()
 
     var onNewEvent: ((EarthquakeEvent) -> Unit)? = null
     var onPoll: ((List<EarthquakeEvent>) -> Unit)? = null

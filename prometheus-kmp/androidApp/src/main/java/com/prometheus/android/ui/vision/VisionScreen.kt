@@ -22,7 +22,7 @@ import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
-import com.prometheus.android.inference.InferenceManager
+import com.prometheus.android.inference.ModelManager
 import com.prometheus.android.inference.STTManager
 import com.prometheus.android.inference.TTSManager
 import com.prometheus.android.inference.VisionInferenceManager
@@ -40,8 +40,8 @@ fun VisionScreen() {
     val ttsManager = remember { TTSManager(context) }
     val sttManager = remember { STTManager(context) }
 
-    var isModelLoaded by remember { mutableStateOf(false) }
-    var statusMessage by remember { mutableStateOf("Initializing...") }
+    var isModelLoaded by remember { mutableStateOf(ModelManager.isLoaded) }
+    var statusMessage by remember { mutableStateOf(ModelManager.statusMessage) }
     var isCapturing by remember { mutableStateOf(false) }
     var capturedImage by remember { mutableStateOf<Bitmap?>(null) }
     var freezeBitmap by remember { mutableStateOf<Bitmap?>(null) }
@@ -72,13 +72,11 @@ fun VisionScreen() {
         hasAudioPermission = permissions[Manifest.permission.RECORD_AUDIO] == true
     }
 
-    val inferManager = remember { InferenceManager(context) }
     val longPressTimeoutMs = LocalViewConfiguration.current.longPressTimeoutMillis
 
     LaunchedEffect(Unit) {
-        visionManager.setup()
-        isModelLoaded = visionManager.isModelLoaded
-        statusMessage = visionManager.statusMessage
+        isModelLoaded = ModelManager.isLoaded
+        statusMessage = ModelManager.statusMessage
 
         if (!hasCameraPermission || !hasAudioPermission) {
             permissionLauncher.launch(
@@ -87,20 +85,19 @@ fun VisionScreen() {
         }
 
         if (!isModelLoaded) {
-            var existing = inferManager.getDownloadProgress()
+            var existing = ModelManager.getDownloadProgress(context)
             if (existing == null) {
-                val activeId = inferManager.findActiveDownloadByUrl()
-                if (activeId != null) existing = inferManager.getDownloadProgress()
+                val activeId = ModelManager.findActiveDownloadByUrl(context)
+                if (activeId != null) existing = ModelManager.getDownloadProgress(context)
             }
             if (existing != null && (existing.isRunning || existing.isPending || existing.isPaused)) {
                 isDownloading = true
                 downloadProgress = existing.percent
                 statusMessage = "Downloading: ${existing.percent}%"
-            } else if (inferManager.isDownloadComplete()) {
-                inferManager.clearDownloadState()
-                visionManager.setup()
-                isModelLoaded = visionManager.isModelLoaded
-                statusMessage = visionManager.statusMessage
+            } else if (ModelManager.isDownloadComplete(context)) {
+                ModelManager.clearDownloadState(context)
+                isModelLoaded = ModelManager.isLoaded
+                statusMessage = ModelManager.statusMessage
             }
         }
     }
@@ -109,7 +106,7 @@ fun VisionScreen() {
         if (!isDownloading) return@LaunchedEffect
         while (true) {
             delay(2000)
-            val progress = inferManager.getDownloadProgress()
+            val progress = ModelManager.getDownloadProgress(context)
             if (progress != null) {
                 downloadProgress = progress.percent
                 statusMessage = when {
@@ -121,17 +118,15 @@ fun VisionScreen() {
                     else -> "Downloading: ${progress.percent}%"
                 }
                 if (progress.isComplete) {
-                    inferManager.clearDownloadState()
-                    visionManager.setup()
-                    isModelLoaded = visionManager.isModelLoaded
+                    ModelManager.clearDownloadState(context)
+                    isModelLoaded = ModelManager.isLoaded
                     isDownloading = !isModelLoaded
                     return@LaunchedEffect
                 }
             } else {
-                if (inferManager.isDownloadComplete()) {
-                    inferManager.clearDownloadState()
-                    visionManager.setup()
-                    isModelLoaded = visionManager.isModelLoaded
+                if (ModelManager.isDownloadComplete(context)) {
+                    ModelManager.clearDownloadState(context)
+                    isModelLoaded = ModelManager.isLoaded
                     isDownloading = !isModelLoaded
                     return@LaunchedEffect
                 }
@@ -159,7 +154,7 @@ fun VisionScreen() {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Talk to Gemma", color = PrometheusColors.blue) },
+                title = { Text("Virtual Assistant", color = PrometheusColors.blue) },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = PrometheusColors.surface),
                 actions = {
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(end = 8.dp)) {
@@ -179,17 +174,15 @@ fun VisionScreen() {
                     DownloadPrompt(
                         isDownloading = isDownloading,
                         downloadProgress = downloadProgress,
-                        inferManager = inferManager,
+                        context = context,
                         onDownloadChange = { downloading, progress, msg ->
                             isDownloading = downloading
                             downloadProgress = progress
                             statusMessage = msg
                         },
                         onModelLoaded = {
-                            scope.launch {
-                                visionManager.setup()
-                                isModelLoaded = visionManager.isModelLoaded
-                            }
+                            isModelLoaded = ModelManager.isLoaded
+                            statusMessage = ModelManager.statusMessage
                         }
                     )
                 }
@@ -408,7 +401,7 @@ private fun PermissionGate(
 private fun DownloadPrompt(
     isDownloading: Boolean,
     downloadProgress: Int,
-    inferManager: InferenceManager,
+    context: android.content.Context,
     onDownloadChange: (Boolean, Int, String) -> Unit,
     onModelLoaded: () -> Unit
 ) {
@@ -426,7 +419,7 @@ private fun DownloadPrompt(
             Spacer(Modifier.height(16.dp))
 
             val isPaused = isDownloading && downloadProgress >= 0 &&
-                inferManager.getDownloadProgress()?.isPaused == true
+                ModelManager.getDownloadProgress(context)?.isPaused == true
             val btnColor = when {
                 !isDownloading -> PrometheusColors.blue
                 isPaused -> Color(0xFFFFA500).copy(alpha = 0.6f)
@@ -443,19 +436,19 @@ private fun DownloadPrompt(
                 onClick = {
                     when {
                         !isDownloading -> {
-                            inferManager.enqueueDownload()
+                            ModelManager.enqueueDownload(context)
                             onDownloadChange(true, 0, "Download pending...")
                         }
                         isPaused -> {
-                            inferManager.resumeDownload()
+                            ModelManager.resumeDownload(context)
                             onDownloadChange(true, downloadProgress, "Downloading: $downloadProgress%")
                         }
                         else -> {
-                            val ok = inferManager.pauseDownload()
+                            val ok = ModelManager.pauseDownload(context)
                             if (ok) {
                                 onDownloadChange(true, downloadProgress, "Download Paused: $downloadProgress%")
                             } else {
-                                inferManager.cancelDownload()
+                                ModelManager.cancelDownload(context)
                                 onDownloadChange(false, -1, "Tap to restart.")
                             }
                         }

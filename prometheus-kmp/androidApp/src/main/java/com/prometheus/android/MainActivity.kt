@@ -14,6 +14,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
+import com.prometheus.android.inference.ModelManager
 import com.prometheus.android.service.BMKGPollingController
 import com.prometheus.android.service.InjectionSettings
 import com.prometheus.android.service.LocationProvider
@@ -22,6 +24,7 @@ import com.prometheus.android.ui.theme.PrometheusTheme
 import com.prometheus.android.navigation.PrometheusApp
 import com.prometheus.model.EarthquakeEvent
 import com.prometheus.model.UserLocation
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
@@ -52,6 +55,10 @@ class MainActivity : ComponentActivity() {
         injectionEnabled = InjectionSettings.enabled
         injectionIp = InjectionSettings.ip
         injectionPort = InjectionSettings.port
+
+        lifecycleScope.launch {
+            ModelManager.init(this@MainActivity)
+        }
 
         setContent {
             PrometheusTheme {
@@ -88,6 +95,7 @@ class MainActivity : ComponentActivity() {
         super.onDestroy()
         pollingController?.stop()
         pollingController = null
+        ModelManager.shutdown()
     }
 
     private fun requestNotificationPermission() {
