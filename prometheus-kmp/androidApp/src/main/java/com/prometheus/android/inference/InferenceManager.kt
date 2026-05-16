@@ -1,6 +1,10 @@
 package com.prometheus.android.inference
 
+import android.app.DownloadManager
 import android.content.Context
+import android.database.Cursor
+import android.net.Uri
+import android.os.Build
 import android.util.Log
 import com.google.ai.edge.litertlm.Backend
 import com.google.ai.edge.litertlm.Content
@@ -20,9 +24,26 @@ import java.io.File
 
 private const val TAG = "InferenceManager"
 private const val MODEL_FILENAME = "gemma4.litertlm"
-private const val MODEL_FILENAME_V2 = "gemma-4-E2B-it.litertlm"
+const val MODEL_FILENAME_V2 = "gemma-4-E2B-it.litertlm"
 private const val DOWNLOAD_URL = "https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it.litertlm"
-private const val MAX_RETRIES = 3
+
+private const val PREFS_NAME = "model_download"
+private const val PREF_DOWNLOAD_ID = "download_id"
+private const val PREF_DOWNLOAD_COMPLETE = "download_complete"
+
+data class DownloadProgress(
+    val bytesDownloaded: Long,
+    val bytesTotal: Long,
+    val status: Int,
+    val reason: Int
+) {
+    val percent: Int get() = if (bytesTotal > 0) ((bytesDownloaded * 100) / bytesTotal).toInt() else 0
+    val isComplete: Boolean get() = status == DownloadManager.STATUS_SUCCESSFUL
+    val isFailed: Boolean get() = status == DownloadManager.STATUS_FAILED
+    val isPaused: Boolean get() = status == DownloadManager.STATUS_PAUSED
+    val isPending: Boolean get() = status == DownloadManager.STATUS_PENDING
+    val isRunning: Boolean get() = status == DownloadManager.STATUS_RUNNING
+}
 
 class InferenceManager(private val context: Context) {
 
@@ -37,8 +58,7 @@ class InferenceManager(private val context: Context) {
             try {
                 val modelPath = findModelPath()
                 if (modelPath == null) {
-                    statusMessage = "Model not found. Download from app or push:\n" +
-                        "adb push $MODEL_FILENAME_V2 ${context.getExternalFilesDir(null)}/$MODEL_FILENAME_V2"
+                    statusMessage = "Model not found"
                     Log.w(TAG, statusMessage)
                     return@withContext
                 }
@@ -131,70 +151,122 @@ class InferenceManager(private val context: Context) {
         }
     }
 
-    suspend fun downloadModel(onProgress: (Int) -> Unit): Boolean {
-        return withContext(Dispatchers.IO) {
-            val destDir = context.getExternalFilesDir(null)
-                ?: context.filesDir
-            val destFile = File(destDir, MODEL_FILENAME_V2)
-            if (destFile.exists()) {
-                statusMessage = "Model already downloaded"
-                return@withContext true
+    fun enqueueDownload(): Long {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val dm = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+
+        val request = DownloadManager.Request(Uri.parse(DOWNLOAD_URL))
+            .setTitle("Downloading Gemma 4")
+            .setDescription("2.4 GB model for on-device AI")
+            .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+            .setAllowedOverMetered(false)
+            .setAllowedOverRoaming(false)
+            .setRequiresCharging(false)
+
+        val id = dm.enqueue(request)
+        prefs.edit()
+            .putLong(PREF_DOWNLOAD_ID, id)
+            .putBoolean(PREF_DOWNLOAD_COMPLETE, false)
+            .apply()
+        statusMessage = "Download pending..."
+        Log.d(TAG, "Download enqueued: $id")
+        return id
+    }
+
+    fun getDownloadProgress(): DownloadProgress? {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val id = prefs.getLong(PREF_DOWNLOAD_ID, -1)
+        if (id == -1L) return null
+
+        val dm = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+        val cursor: Cursor = dm.query(DownloadManager.Query().setFilterById(id))
+        if (!cursor.moveToFirst()) {
+            cursor.close()
+            return null
+        }
+
+        val bytesDownloaded = cursor.getLong(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR))
+        val bytesTotal = cursor.getLong(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES))
+        val status = cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS))
+        val reason = cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_REASON))
+        cursor.close()
+
+        return DownloadProgress(bytesDownloaded, bytesTotal, status, reason)
+    }
+
+    fun isDownloadComplete(): Boolean {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getBoolean(PREF_DOWNLOAD_COMPLETE, false)
+    }
+
+    fun findActiveDownloadByUrl(): Long? {
+        val dm = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+        val cursor = dm.query(DownloadManager.Query().setFilterByStatus(
+            DownloadManager.STATUS_RUNNING or DownloadManager.STATUS_PAUSED or DownloadManager.STATUS_PENDING
+        ))
+        while (cursor.moveToNext()) {
+            val uri = cursor.getString(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_URI))
+            if (uri == DOWNLOAD_URL) {
+                val id = cursor.getLong(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_ID))
+                cursor.close()
+                context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                    .edit().putLong(PREF_DOWNLOAD_ID, id).apply()
+                return id
             }
-            destDir.mkdirs()
+        }
+        cursor.close()
+        return null
+    }
 
-            for (attempt in 1..MAX_RETRIES) {
-                try {
-                    statusMessage = "Downloading Gemma 4 (2.4GB) — attempt $attempt/$MAX_RETRIES"
-                    Log.d(TAG, "Downloading to: ${destFile.absolutePath} (attempt $attempt)")
+    fun getCurrentDownloadId(): Long {
+        return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .getLong(PREF_DOWNLOAD_ID, -1)
+    }
 
-                    val url = java.net.URL(DOWNLOAD_URL)
-                    val connection = url.openConnection() as java.net.HttpURLConnection
-                    connection.connectTimeout = 60_000
-                    connection.readTimeout = 120_000
-                    connection.setRequestProperty("Accept-Encoding", "identity")
-                    connection.connect()
-
-                    val totalBytes = connection.contentLengthLong
-                    val input = connection.inputStream
-                    val output = java.io.FileOutputStream(destFile)
-                    val buffer = ByteArray(8192)
-                    var bytesRead: Int
-                    var totalRead = 0L
-
-                    while (input.read(buffer).also { bytesRead = it } != -1) {
-                        output.write(buffer, 0, bytesRead)
-                        totalRead += bytesRead
-                        if (totalBytes > 0) {
-                            val percent = ((totalRead * 100) / totalBytes).toInt()
-                            onProgress(percent)
-                            statusMessage = "Downloading: $percent% ($attempt/$MAX_RETRIES)"
-                        }
-                    }
-                    output.close()
-                    input.close()
-                    connection.disconnect()
-
-                    if (totalBytes > 0 && totalRead < totalBytes) {
-                        throw java.io.IOException("Incomplete download: ${totalRead}/$totalBytes bytes")
-                    }
-
-                    statusMessage = "Download complete. Loading model..."
-                    Log.d(TAG, "Downloaded: ${destFile.absolutePath}")
-                    return@withContext true
-                } catch (e: Exception) {
-                    Log.w(TAG, "Download attempt $attempt failed: ${e.message}")
-                    destFile.delete()
-                    if (attempt < MAX_RETRIES) {
-                        statusMessage = "Retrying... ($attempt/$MAX_RETRIES)"
-                        delay(3000L)
-                } else {
-                        statusMessage = "Download failed after $MAX_RETRIES attempts: ${e.message}"
-                        Log.e(TAG, "Download failed", e)
-                    }
-                }
-            }
+    fun pauseDownload(): Boolean {
+        val id = getCurrentDownloadId()
+        if (id == -1L) return false
+        return try {
+            val dm = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+            val method = dm.javaClass.getMethod("pauseDownload", LongArray::class.java)
+            method.invoke(dm, longArrayOf(id))
+            true
+        } catch (e: Exception) {
+            Log.w(TAG, "pauseDownload failed: ${e.message}")
             false
         }
+    }
+
+    fun resumeDownload(): Boolean {
+        val id = getCurrentDownloadId()
+        if (id == -1L) return false
+        return try {
+            val dm = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+            val method = dm.javaClass.getMethod("resumeDownload", LongArray::class.java)
+            method.invoke(dm, longArrayOf(id))
+            true
+        } catch (e: Exception) {
+            Log.w(TAG, "resumeDownload failed: ${e.message}")
+            false
+        }
+    }
+
+    fun cancelDownload() {
+        val id = getCurrentDownloadId()
+        if (id == -1L) return
+        try {
+            val dm = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+            dm.remove(id)
+        } catch (_: Exception) {}
+        clearDownloadState()
+    }
+
+    fun clearDownloadState() {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .remove(PREF_DOWNLOAD_ID)
+            .remove(PREF_DOWNLOAD_COMPLETE)
+            .apply()
     }
 
     private fun findModelPath(): String? {

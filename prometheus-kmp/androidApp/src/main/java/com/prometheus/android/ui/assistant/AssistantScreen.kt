@@ -33,6 +33,7 @@ import com.prometheus.android.inference.InferenceManager
 import com.prometheus.android.ui.theme.PrometheusColors
 import com.prometheus.model.ChatMessage
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -111,6 +112,7 @@ fun AssistantScreen() {
     var statusMessage by remember { mutableStateOf("Initializing...") }
     var downloadProgress by remember { mutableStateOf(-1) }
     var isDownloading by remember { mutableStateOf(false) }
+    var downloadId by remember { mutableStateOf(-1L) }
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
@@ -127,9 +129,63 @@ fun AssistantScreen() {
         manager.setupGemma()
         isModelLoaded = manager.isModelLoaded
         statusMessage = manager.statusMessage
+
+        if (!isModelLoaded) {
+            var existing = manager.getDownloadProgress()
+            if (existing == null) {
+                val activeId = manager.findActiveDownloadByUrl()
+                if (activeId != null) existing = manager.getDownloadProgress()
+            }
+            if (existing != null && (existing.isRunning || existing.isPending || existing.isPaused)) {
+                isDownloading = true
+                downloadProgress = existing.percent
+                statusMessage = "Downloading: ${existing.percent}%"
+            } else if (manager.isDownloadComplete()) {
+                manager.clearDownloadState()
+                manager.setupGemma()
+                isModelLoaded = manager.isModelLoaded
+                statusMessage = manager.statusMessage
+            }
+        }
     }
 
-    val showDownload = !isModelLoaded && !isDownloading && statusMessage.startsWith("Model not found")
+    LaunchedEffect(isDownloading) {
+        if (!isDownloading) return@LaunchedEffect
+        while (true) {
+            delay(2000)
+            val progress = manager.getDownloadProgress()
+            if (progress != null) {
+                downloadProgress = progress.percent
+                downloadId = progress.hashCode().toLong()
+                statusMessage = when {
+                    progress.isComplete -> "Download complete"
+                    progress.isFailed -> "Download failed"
+                    progress.isPaused -> "Download paused"
+                    progress.isPending -> "Download pending..."
+                    progress.isRunning -> "Downloading: ${progress.percent}%"
+                    else -> "Downloading: ${progress.percent}%"
+                }
+                if (progress.isComplete) {
+                    manager.clearDownloadState()
+                    manager.setupGemma()
+                    isModelLoaded = manager.isModelLoaded
+                    isDownloading = !isModelLoaded
+                    return@LaunchedEffect
+                }
+            } else {
+                val isComplete = manager.isDownloadComplete()
+                if (isComplete) {
+                    manager.clearDownloadState()
+                    manager.setupGemma()
+                    isModelLoaded = manager.isModelLoaded
+                    isDownloading = !isModelLoaded
+                    return@LaunchedEffect
+                }
+            }
+        }
+    }
+
+    val showDownload = !isModelLoaded && downloadProgress < 0 && statusMessage.startsWith("Model not found")
 
     LaunchedEffect(chatHistory.size) {
         if (chatHistory.isNotEmpty()) {
@@ -291,39 +347,68 @@ fun AssistantScreen() {
                                 CapabilityPill(text = "\uD83D\uDCA7  water & supplies")
                                 CapabilityPill(text = "\u26A0\uFE0F  Indonesia hazards")
                             }
-                            if (showDownload) {
+                            if (showDownload || isDownloading || downloadProgress >= 0) {
                                 Spacer(Modifier.height(16.dp))
+                                val isPaused = isDownloading && downloadProgress >= 0 &&
+                                    manager.getDownloadProgress()?.isPaused == true
+                                val btnColor = when {
+                                    !isDownloading -> PrometheusColors.blue
+                                    isPaused -> Color(0xFFFFA500).copy(alpha = 0.6f)
+                                    else -> PrometheusColors.blue.copy(alpha = 0.6f)
+                                }
+                                val btnText = when {
+                                    !isDownloading -> "\u2B07\uFE0F  DOWNLOAD MODEL (2.4 GB)"
+                                    isPaused -> "\u25B6\uFE0F  Download Paused: $downloadProgress%"
+                                    downloadProgress < 0 -> "\u23F3  Starting..."
+                                    downloadProgress >= 100 -> "\u2705  Moving file..."
+                                    else -> "\u23F8\uFE0F  Downloading: $downloadProgress%"
+                                }
                                 Button(
                                     onClick = {
-                                        isDownloading = true
-                                        scope.launch {
-                                            val ok = manager.downloadModel { pct ->
-                                                downloadProgress = pct
+                                        when {
+                                            !isDownloading -> {
+                                                manager.enqueueDownload()
+                                                isDownloading = true
+                                                downloadProgress = 0
+                                                statusMessage = "Download pending..."
                                             }
-                                            isDownloading = false
-                                            if (ok) {
-                                                manager.setupGemma()
+                                            isPaused -> {
+                                                manager.resumeDownload()
+                                                statusMessage = "Downloading: $downloadProgress%"
                                             }
-                                            isModelLoaded = manager.isModelLoaded
-                                            statusMessage = manager.statusMessage
-                                            if (!ok) downloadProgress = -1
+                                            else -> {
+                                                val ok = manager.pauseDownload()
+                                                if (ok) statusMessage = "Download Paused: $downloadProgress%"
+                                                else {
+                                                    manager.cancelDownload()
+                                                    isDownloading = false
+                                                    downloadProgress = -1
+                                                    statusMessage = "Pause failed. Tap to restart."
+                                                }
+                                            }
                                         }
                                     },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(48.dp)
+                                        .padding(horizontal = 16.dp),
                                     colors = ButtonDefaults.buttonColors(
-                                        containerColor = PrometheusColors.blue,
+                                        containerColor = btnColor,
                                         contentColor = Color.Black
                                     )
                                 ) {
-                                    Text("\u2B07\uFE0F  DOWNLOAD GEMMA 4 (2.4 GB)", fontWeight = FontWeight.Bold)
+                                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                        if (isDownloading && downloadProgress in 0..99 && !isPaused) {
+                                            LinearProgressIndicator(
+                                                progress = { downloadProgress / 100f },
+                                                modifier = Modifier.fillMaxWidth().fillMaxHeight(),
+                                                color = PrometheusColors.blue.copy(alpha = 0.3f),
+                                                trackColor = Color.Transparent
+                                            )
+                                        }
+                                        Text(btnText, fontWeight = FontWeight.Bold)
+                                    }
                                 }
-                            }
-                            if (isDownloading && downloadProgress >= 0) {
-                                Spacer(Modifier.height(8.dp))
-                                Text(
-                                    text = "Downloading: $downloadProgress%",
-                                    color = PrometheusColors.blue,
-                                    style = MaterialTheme.typography.bodySmall
-                                )
                             }
                         }
                     }

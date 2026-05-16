@@ -24,6 +24,13 @@
             android:value="AIzaSyD2S0REeAlSuzkJVDAd8oW9cAk18IgmztQ" />
         <uses-native-library android:name="libvndksupport.so" android:required="false" />
         <uses-native-library android:name="libOpenCL.so" android:required="false" />
+        <receiver
+            android:name=".inference.DownloadReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.DOWNLOAD_COMPLETE" />
+            </intent-filter>
+        </receiver>
         <activity
             android:name=".MainActivity"
             android:exported="true"

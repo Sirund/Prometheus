@@ -18,7 +18,6 @@ import java.io.FileOutputStream
 
 private const val TAG = "VisionInference"
 private const val MODEL_FILENAME = "gemma4.litertlm"
-private const val MODEL_FILENAME_V2 = "gemma-4-E2B-it.litertlm"
 
 class VisionInferenceManager(private val context: Context) {
 
@@ -63,6 +62,7 @@ class VisionInferenceManager(private val context: Context) {
 
     suspend fun describeImage(
         imageBitmap: Bitmap,
+        prompt: String = "Describe what you see.",
         onToken: (String) -> Unit
     ) {
         val conv = conversation ?: run {
@@ -74,7 +74,7 @@ class VisionInferenceManager(private val context: Context) {
                 val imageFile = saveBitmapToTempFile(imageBitmap)
                 conv.sendMessageAsync(Contents.of(
                     Content.ImageFile(imageFile.absolutePath),
-                    Content.Text("Describe what you see.")
+                    Content.Text(prompt)
                 )).collect { msg ->
                     onToken(msg.toString())
                 }
