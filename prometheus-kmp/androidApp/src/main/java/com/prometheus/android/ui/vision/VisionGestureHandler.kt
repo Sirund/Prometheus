@@ -2,6 +2,7 @@ package com.prometheus.android.ui.vision
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.media.MediaActionSound
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
@@ -64,6 +65,7 @@ fun VisionGestureHandler(
                     }
 
                     if (cameraActions != null && !isCapturing) {
+                        MediaActionSound().play(MediaActionSound.SHUTTER_CLICK)
                         onCapturingChange(true)
                         cameraActions.takePhoto { bytes ->
                             onCapturingChange(false)
@@ -106,7 +108,7 @@ fun VisionGestureHandler(
                         },
                         onError = { msg ->
                             recording = false
-                            onDescriptionChange("Voice: $msg")
+                            onDescriptionChange("Voice: Please repeat again...")
                             onModeChange(VisionMode.Idle)
                         }
                     )

@@ -8,6 +8,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -48,6 +49,7 @@ fun VisionScreen() {
     var visionMode by remember { mutableStateOf(VisionMode.Idle) }
     var recordedText by remember { mutableStateOf<String?>(null) }
     var description by remember { mutableStateOf<String?>(null) }
+    var responseText by remember { mutableStateOf<String?>(null) }
     var downloadProgress by remember { mutableStateOf(-1) }
     var isDownloading by remember { mutableStateOf(false) }
     var hasCameraPermission by remember {
@@ -157,7 +159,7 @@ fun VisionScreen() {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Vision Assist", color = PrometheusColors.blue) },
+                title = { Text("Talk to Gemma", color = PrometheusColors.blue) },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = PrometheusColors.surface),
                 actions = {
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(end = 8.dp)) {
@@ -232,6 +234,12 @@ fun VisionScreen() {
                         scope.launch {
                             val text = recordedText
                             val image = capturedImage
+                            responseText = null
+                            if (text == null) {
+                                description = "Hold to speak before sending"
+                                visionMode = VisionMode.Idle
+                                return@launch
+                            }
                             visionMode = VisionMode.Sending
                             val sb = StringBuilder()
                             val prompt = when {
@@ -247,6 +255,7 @@ fun VisionScreen() {
                                 description = sb.toString()
                             }
                             if (sb.isNotEmpty()) {
+                                responseText = sb.toString()
                                 visionMode = VisionMode.Result
                                 ttsManager.speak(sb.toString())
                                 delay(3000)
@@ -267,7 +276,7 @@ fun VisionScreen() {
                     .padding(horizontal = 16.dp)
                     .background(PrometheusColors.surface)
                     .border(1.dp, PrometheusColors.blue.copy(alpha = 0.2f))
-                    .padding(12.dp)
+                    .padding(start = 12.dp, end = 4.dp, top = 4.dp, bottom = 4.dp)
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
@@ -286,29 +295,76 @@ fun VisionScreen() {
                         text = description ?: visionStatusText(visionMode, recordedText),
                         color = Color.Gray,
                         style = MaterialTheme.typography.labelSmall,
-                        maxLines = 3
+                        maxLines = 3,
+                        modifier = Modifier.weight(1f)
                     )
+
                 }
             }
 
             Spacer(Modifier.height(8.dp))
 
-            Column(
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp)
                     .background(PrometheusColors.surface.copy(alpha = 0.5f))
                     .border(1.dp, PrometheusColors.blue.copy(alpha = 0.15f))
-                    .padding(16.dp)
+                    .padding(vertical = 12.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-                Text("VISION ACCESSIBILITY MODE",
-                    color = PrometheusColors.blue,
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold)
-                Spacer(Modifier.height(6.dp))
-                Text("Hold \uD83C\uDF99\uFE0F to speak \u00B7 Tap \uD83D\uDCF7 to capture \u00B7 Double-tap \u27A1\uFE0F to send",
-                    color = Color.Gray,
-                    style = MaterialTheme.typography.labelSmall)
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = if (recordedText != null) Modifier.clickable {
+                        recordedText = null
+                        description = null
+                    } else Modifier
+                ) {
+                    Text(
+                        if (recordedText != null) "\u2716" else "\uD83C\uDF99\uFE0F",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = if (recordedText != null) PrometheusColors.blue else Color.Unspecified
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        if (recordedText != null) "Clear voice" else "Hold to speak",
+                        color = Color.Gray,
+                        style = MaterialTheme.typography.labelSmall)
+                }
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = if (capturedImage != null) Modifier.clickable {
+                        capturedImage = null
+                        freezeBitmap = null
+                    } else Modifier
+                ) {
+                    Text(
+                        if (capturedImage != null) "\u2716" else "\uD83D\uDCF7",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = if (capturedImage != null) PrometheusColors.blue else Color.Unspecified
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        if (capturedImage != null) "Clear image" else "Tap to capture",
+                        color = Color.Gray,
+                        style = MaterialTheme.typography.labelSmall)
+                }
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = if (responseText != null) Modifier.clickable {
+                        ttsManager.speak(responseText!!)
+                    } else Modifier
+                ) {
+                    Text(
+                        if (responseText != null) "\uD83D\uDD01" else "\u27A1\uFE0F",
+                        style = MaterialTheme.typography.titleLarge
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        if (responseText != null) "Replay" else "Double-tap to send",
+                        color = Color.Gray,
+                        style = MaterialTheme.typography.labelSmall)
+                }
             }
 
             Spacer(Modifier.height(8.dp))
@@ -336,7 +392,7 @@ private fun PermissionGate(
                 if (!cameraGranted) add("Camera")
                 if (!audioGranted) add("Microphone")
             }
-            Text("Grant ${missing.joinToString(" & ")} to use Vision Assist",
+            Text("Grant ${missing.joinToString(" & ")} to use Talk to Gemma",
                 color = Color.Gray, style = MaterialTheme.typography.bodySmall)
             Spacer(Modifier.height(20.dp))
             Button(

@@ -6,10 +6,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.ChatBubble
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Radio
+import androidx.compose.material.icons.filled.RecordVoiceOver
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -31,7 +31,7 @@ enum class Screen(val label: String, val icon: ImageVector) {
     Monitor("MONITOR", Icons.Filled.Radio),
     Evacuate("EVACUATE", Icons.Filled.Map),
     Survival("SURVIVAL", Icons.Filled.ChatBubble),
-    Vision("VISION", Icons.Filled.CameraAlt)
+    Vision("TALK", Icons.Filled.RecordVoiceOver)
 }
 
 @Composable
