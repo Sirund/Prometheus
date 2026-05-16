@@ -226,7 +226,7 @@ private fun HeroEventCard(
             }
             Spacer(Modifier.weight(1f))
             Column(horizontalAlignment = Alignment.End) {
-                Text(text = "TSUNAMI", style = MaterialTheme.typography.labelSmall, color = PrometheusColors.textSecondary)
+                Text(text = "TSUNAMI POTENTIAL", style = MaterialTheme.typography.labelSmall, color = PrometheusColors.textSecondary)
                 Text(text = potential, style = MaterialTheme.typography.labelLarge, color = when {
                     potential.contains("berpotensi", ignoreCase = true) || potential.contains("warning", ignoreCase = true) || potential.contains("ya", ignoreCase = true) -> PrometheusColors.danger
                     else -> PrometheusColors.textPrimary
