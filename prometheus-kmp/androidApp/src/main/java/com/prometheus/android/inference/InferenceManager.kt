@@ -32,7 +32,7 @@ class InferenceManager {
             val prompt = buildString {
                 appendLine(systemPrompt)
                 appendLine()
-                for (msg in history) {
+                for (msg in history.takeLast(6)) {
                     val role = if (msg.isUser) "User" else "Assistant"
                     appendLine("$role: ${msg.text}")
                 }
