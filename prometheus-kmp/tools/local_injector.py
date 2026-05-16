@@ -56,6 +56,7 @@ def build_gempa_json(
         "DateTime": now.strftime("%Y-%m-%d %H:%M:%S"),
         "Magnitude": str(mag),
         "Kedalaman": f"{depth_km} km",
+        "Coordinates": f"{lat_deg}, {lon_deg}",
         "Lintang": f"{abs(lat_deg):.2f} {lat_dir}",
         "Bujur": f"{abs(lon_deg):.2f} {lon_dir}",
         "Wilayah": wilayah,
