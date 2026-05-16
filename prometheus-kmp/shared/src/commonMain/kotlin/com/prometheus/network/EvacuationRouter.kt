@@ -28,7 +28,13 @@ data class PolylinePoint(val points: String = "")
 @Serializable
 data class DirectionsLeg(
     val distance: DistanceValue = DistanceValue(),
-    val duration: DurationValue = DurationValue()
+    val duration: DurationValue = DurationValue(),
+    val steps: List<DirectionsStep> = emptyList()
+)
+
+@Serializable
+data class DirectionsStep(
+    val maneuver: String? = null
 )
 
 @Serializable
@@ -155,12 +161,7 @@ class EvacuationRouter(private val googleApiKey: String = "") {
             val poly = route.overview_polyline ?: return null
             val coords = PolylineDecoder.decode(poly.points)
             if (coords.isEmpty()) return null
-            var prev = coords[0]
-            for (i in 1 until coords.size) {
-                val d = haversineKm(prev.first, prev.second, coords[i].first, coords[i].second)
-                if (d > 3.0) return null
-                prev = coords[i]
-            }
+            if (leg.steps.any { it.maneuver == "ferry" }) return null
             ModeResult(
                 mode = mode,
                 polyline = coords,
