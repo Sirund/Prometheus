@@ -2,21 +2,68 @@ package com.prometheus.android.ui.vision
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.remember
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.prometheus.android.ui.theme.PrometheusColors
 import java.io.File
 import java.util.concurrent.Executors
+
+enum class VisionMode { Idle, Recording, Transcribing, AudioCaptured, PhotoCaptured, Sending, Result }
+
+fun borderColorForMode(mode: VisionMode): Color {
+    return when (mode) {
+        VisionMode.Recording -> Color(0xFF4CAF50).copy(alpha = 0.9f)
+        VisionMode.Transcribing -> Color(0xFF4CAF50).copy(alpha = 0.6f)
+        VisionMode.Idle -> PrometheusColors.blue.copy(alpha = 0.3f)
+        VisionMode.AudioCaptured -> Color(0xFF4CAF50).copy(alpha = 0.5f)
+        VisionMode.PhotoCaptured -> PrometheusColors.blue.copy(alpha = 0.6f)
+        VisionMode.Sending -> PrometheusColors.blue.copy(alpha = 0.8f)
+        VisionMode.Result -> PrometheusColors.blue.copy(alpha = 0.3f)
+    }
+}
+
+fun visionStatusText(mode: VisionMode, audioText: String?): String {
+    return when (mode) {
+        VisionMode.Idle -> "Hold \uD83C\uDF99\uFE0F Record \u00B7 Tap \uD83D\uDCF7 Capture \u00B7 Double-Tap \u27A1\uFE0F Send"
+        VisionMode.Recording -> "\uD83C\uDF99\uFE0F Listening... release when done"
+        VisionMode.Transcribing -> "\uD83D\uDD0D Transcribing..."
+        VisionMode.AudioCaptured -> "\uD83C\uDF99\uFE0F Audio: \"${audioText?.take(50) ?: ""}\""
+        VisionMode.PhotoCaptured -> "\uD83D\uDCF8 Photo captured"
+        VisionMode.Sending -> "\u23F3 Sending to Gemma..."
+        VisionMode.Result -> "\u2705 Done"
+    }
+}
 
 @Composable
 fun rememberCameraActions(
@@ -81,5 +128,71 @@ class CameraActions(private val imageCapture: ImageCapture) {
                 onResult(null)
             }
         })
+    }
+}
+
+@Composable
+fun CameraFrame(
+    modifier: Modifier = Modifier,
+    hasPermission: Boolean,
+    freezeBitmap: Bitmap?,
+    isCapturing: Boolean,
+    borderColor: Color = PrometheusColors.blue.copy(alpha = 0.3f),
+    borderWidth: Dp = 1.dp,
+    onPermissionRequest: () -> Unit,
+    onCameraActionsReady: (CameraActions?) -> Unit
+) {
+    Box(
+        modifier = modifier
+            .background(PrometheusColors.surface)
+            .border(borderWidth, borderColor)
+    ) {
+        if (!hasPermission) {
+            Column(
+                Modifier.align(Alignment.Center),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text("\uD83D\uDCF7", style = MaterialTheme.typography.displayLarge)
+                Spacer(Modifier.height(8.dp))
+                Text("CAMERA PERMISSION REQUIRED", color = Color.White,
+                    style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(12.dp))
+                Button(
+                    onClick = onPermissionRequest,
+                    colors = ButtonDefaults.buttonColors(containerColor = PrometheusColors.blue, contentColor = Color.Black)
+                ) { Text("GRANT CAMERA PERMISSION", fontWeight = FontWeight.Bold) }
+            }
+        } else {
+            onCameraActionsReady(rememberCameraActions(
+                modifier = Modifier.fillMaxSize(),
+                enabled = freezeBitmap == null
+            ))
+
+            AnimatedVisibility(
+                visible = freezeBitmap != null,
+                enter = fadeIn(),
+                exit = fadeOut(),
+                label = "freeze_overlay"
+            ) {
+                freezeBitmap?.let {
+                    Image(
+                        bitmap = it.asImageBitmap(),
+                        contentDescription = "Captured view",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Fit
+                    )
+                }
+            }
+
+            if (isCapturing) {
+                Box(
+                    Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.5f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("CAPTURING...", color = PrometheusColors.blue,
+                        style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
     }
 }

@@ -65,6 +65,14 @@ class VisionInferenceManager(private val context: Context) {
         prompt: String = "Describe what you see.",
         onToken: (String) -> Unit
     ) {
+        sendMessage(text = prompt, imageBitmap = imageBitmap, onToken = onToken)
+    }
+
+    suspend fun sendMessage(
+        text: String,
+        imageBitmap: Bitmap? = null,
+        onToken: (String) -> Unit
+    ) {
         val conv = conversation ?: run {
             onToken("Model not loaded.")
             return
@@ -73,11 +81,14 @@ class VisionInferenceManager(private val context: Context) {
             try {
                 createConversation()
                 val freshConv = conversation ?: run { onToken("Model not loaded."); return@withContext }
-                val imageFile = saveBitmapToTempFile(imageBitmap)
-                freshConv.sendMessageAsync(Contents.of(
-                    Content.ImageFile(imageFile.absolutePath),
-                    Content.Text(prompt)
-                )).collect { msg ->
+                val contents = mutableListOf<Content>()
+                if (imageBitmap != null) {
+                    val imageFile = saveBitmapToTempFile(imageBitmap)
+                    contents.add(Content.ImageFile(imageFile.absolutePath))
+                }
+                contents.add(Content.Text(text))
+
+                freshConv.sendMessageAsync(Contents.of(contents)).collect { msg ->
                     onToken(msg.toString())
                 }
             } catch (e: Exception) {

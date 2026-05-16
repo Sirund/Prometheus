@@ -6,9 +6,6 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.Crossfade
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -19,9 +16,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -32,8 +28,6 @@ import com.prometheus.android.inference.VisionInferenceManager
 import com.prometheus.android.ui.theme.PrometheusColors
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-
-private enum class MicState { Idle, Listening, Success, Error }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -48,12 +42,12 @@ fun VisionScreen() {
     var isModelLoaded by remember { mutableStateOf(false) }
     var statusMessage by remember { mutableStateOf("Initializing...") }
     var isCapturing by remember { mutableStateOf(false) }
-    var description by remember { mutableStateOf<String?>(null) }
     var capturedImage by remember { mutableStateOf<Bitmap?>(null) }
+    var freezeBitmap by remember { mutableStateOf<Bitmap?>(null) }
     var cameraActions by remember { mutableStateOf<CameraActions?>(null) }
-    var micState by remember { mutableStateOf(MicState.Idle) }
-    var cameraError by remember { mutableStateOf(false) }
-    var sttText by remember { mutableStateOf<String?>(null) }
+    var visionMode by remember { mutableStateOf(VisionMode.Idle) }
+    var recordedText by remember { mutableStateOf<String?>(null) }
+    var description by remember { mutableStateOf<String?>(null) }
     var downloadProgress by remember { mutableStateOf(-1) }
     var isDownloading by remember { mutableStateOf(false) }
     var hasCameraPermission by remember {
@@ -69,24 +63,26 @@ fun VisionScreen() {
         )
     }
 
-    val cameraPermissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        hasCameraPermission = granted
-    }
-
-    val audioPermissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        hasAudioPermission = granted
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        hasCameraPermission = permissions[Manifest.permission.CAMERA] == true
+        hasAudioPermission = permissions[Manifest.permission.RECORD_AUDIO] == true
     }
 
     val inferManager = remember { InferenceManager(context) }
+    val longPressTimeoutMs = LocalViewConfiguration.current.longPressTimeoutMillis
 
     LaunchedEffect(Unit) {
         visionManager.setup()
         isModelLoaded = visionManager.isModelLoaded
         statusMessage = visionManager.statusMessage
+
+        if (!hasCameraPermission || !hasAudioPermission) {
+            permissionLauncher.launch(
+                arrayOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO)
+            )
+        }
 
         if (!isModelLoaded) {
             var existing = inferManager.getDownloadProgress()
@@ -149,6 +145,15 @@ fun VisionScreen() {
         }
     }
 
+    if (!hasCameraPermission || !hasAudioPermission) {
+        PermissionGate(
+            cameraGranted = hasCameraPermission,
+            audioGranted = hasAudioPermission,
+            onRequest = { permissionLauncher.launch(arrayOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO)) }
+        )
+        return
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -167,125 +172,127 @@ fun VisionScreen() {
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
 
-            // --- Download prompt + progress (unified toggle button) ---
             if (!isModelLoaded) {
-                Box(
-                    modifier = Modifier.fillMaxWidth().weight(1f).padding(32.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("\uD83E\uDD16", style = MaterialTheme.typography.displaySmall)
-                        Spacer(Modifier.height(8.dp))
-                        Text("MODEL NOT FOUND", color = Color.White,
-                            style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        Text("Download Gemma 4 (2.4 GB) to enable vision",
-                            color = Color.Gray, style = MaterialTheme.typography.bodySmall)
-                        Spacer(Modifier.height(16.dp))
-
-                        val isPaused = isDownloading && downloadProgress >= 0 &&
-                            inferManager.getDownloadProgress()?.isPaused == true
-                        val btnColor = when {
-                            !isDownloading -> PrometheusColors.blue
-                            isPaused -> Color(0xFFFFA500).copy(alpha = 0.6f)
-                            else -> PrometheusColors.blue.copy(alpha = 0.6f)
-                        }
-                        val btnText = when {
-                            !isDownloading -> "\u2B07\uFE0F  DOWNLOAD MODEL (2.4 GB)"
-                            isPaused -> "\u25B6\uFE0F  Download Paused: $downloadProgress%"
-                            downloadProgress < 0 -> "\u23F3  Starting..."
-                            downloadProgress >= 100 -> "\u2705  Moving file..."
-                            else -> "\u23F8\uFE0F  Downloading: $downloadProgress%"
-                        }
-                        Button(
-                            onClick = {
-                                when {
-                                    !isDownloading -> {
-                                        inferManager.enqueueDownload()
-                                        isDownloading = true
-                                        downloadProgress = 0
-                                        statusMessage = "Download pending..."
-                                    }
-                                    isPaused -> {
-                                        inferManager.resumeDownload()
-                                        statusMessage = "Downloading: $downloadProgress%"
-                                    }
-                                    else -> {
-                                        val ok = inferManager.pauseDownload()
-                                        if (ok) statusMessage = "Download Paused: $downloadProgress%"
-                                        else {
-                                            inferManager.cancelDownload()
-                                            isDownloading = false
-                                            downloadProgress = -1
-                                            statusMessage = "Tap to restart."
-                                        }
-                                    }
-                                }
-                            },
-                            modifier = Modifier.fillMaxWidth().height(48.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = btnColor,
-                                contentColor = Color.Black
-                            )
-                        ) {
-                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                if (isDownloading && downloadProgress in 0..99 && !isPaused) {
-                                    LinearProgressIndicator(
-                                        progress = { downloadProgress / 100f },
-                                        modifier = Modifier.fillMaxWidth().fillMaxHeight(),
-                                        color = PrometheusColors.blue.copy(alpha = 0.3f),
-                                        trackColor = Color.Transparent
-                                    )
-                                }
-                                Text(btnText, fontWeight = FontWeight.Bold)
+                Box(Modifier.weight(1f)) {
+                    DownloadPrompt(
+                        isDownloading = isDownloading,
+                        downloadProgress = downloadProgress,
+                        inferManager = inferManager,
+                        onDownloadChange = { downloading, progress, msg ->
+                            isDownloading = downloading
+                            downloadProgress = progress
+                            statusMessage = msg
+                        },
+                        onModelLoaded = {
+                            scope.launch {
+                                visionManager.setup()
+                                isModelLoaded = visionManager.isModelLoaded
                             }
                         }
-                    }
+                    )
                 }
                 return@Column
             }
 
-            // --- Camera / Captured image area ---
-            CameraFrame(
-                modifier = Modifier.fillMaxWidth().weight(1f).padding(horizontal = 16.dp, vertical = 8.dp),
-                hasPermission = hasCameraPermission,
-                capturedImage = capturedImage,
-                isCapturing = isCapturing,
-                borderColor = if (cameraError) Color.Red else PrometheusColors.blue.copy(alpha = 0.3f),
-                onPermissionRequest = { cameraPermissionLauncher.launch(Manifest.permission.CAMERA) },
-                onCameraActionsReady = { cameraActions = it }
-            )
+            // --- Camera area with gestures ---
+            val borderWidth = if (visionMode == VisionMode.Recording) 3.dp else 1.dp
 
-            // --- Description row ---
-            Row(
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .clip(RoundedCornerShape(12.dp))
+            ) {
+                CameraFrame(
+                    modifier = Modifier.fillMaxSize(),
+                    hasPermission = hasCameraPermission,
+                    freezeBitmap = freezeBitmap,
+                    isCapturing = isCapturing,
+                    borderColor = borderColorForMode(visionMode),
+                    borderWidth = borderWidth,
+                    onPermissionRequest = { permissionLauncher.launch(arrayOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO)) },
+                    onCameraActionsReady = { cameraActions = it }
+                )
+
+                VisionGestureHandler(
+                    visionMode = visionMode,
+                    isCapturing = isCapturing,
+                    isModelLoaded = isModelLoaded,
+                    cameraActions = cameraActions,
+                    sttManager = sttManager,
+                    longPressTimeoutMs = longPressTimeoutMs,
+                    onModeChange = { visionMode = it },
+                    onRecordedTextChange = { recordedText = it },
+                    onDescriptionChange = { description = it },
+                    onFreezeChange = { freezeBitmap = it },
+                    onCapturedImageChange = { capturedImage = it },
+                    onCapturingChange = { isCapturing = it },
+                    onSend = {
+                        scope.launch {
+                            val text = recordedText
+                            val image = capturedImage
+                            visionMode = VisionMode.Sending
+                            val sb = StringBuilder()
+                            val prompt = when {
+                                text != null && image == null -> "Only use the following voice input, no image provided: $text"
+                                text != null -> "Describe what you see based on the image. Additional context from user: $text"
+                                else -> "Describe what you see."
+                            }
+                            visionManager.sendMessage(
+                                text = prompt,
+                                imageBitmap = image
+                            ) { token ->
+                                sb.append(token)
+                                description = sb.toString()
+                            }
+                            if (sb.isNotEmpty()) {
+                                visionMode = VisionMode.Result
+                                ttsManager.speak(sb.toString())
+                                delay(3000)
+                            }
+                            capturedImage = null
+                            freezeBitmap = null
+                            recordedText = null
+                            visionMode = VisionMode.Idle
+                        }
+                    }
+                )
+            }
+
+            // --- Description / Status row ---
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp)
                     .background(PrometheusColors.surface)
                     .border(1.dp, PrometheusColors.blue.copy(alpha = 0.2f))
-                    .padding(12.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    .padding(12.dp)
             ) {
-                Text(
-                    text = when {
-                        isCapturing -> "\u23F3"
-                        capturedImage != null -> "\uD83D\uDCF8"
-                        else -> "\uD83D\uDD0A"
-                    },
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = PrometheusColors.blue.copy(alpha = 0.5f)
-                )
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    text = description ?: "Point camera and tap Describe to hear surroundings",
-                    color = Color.Gray,
-                    style = MaterialTheme.typography.labelSmall,
-                    maxLines = 3
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = when {
+                            visionMode == VisionMode.Sending -> "\u23F3"
+                            visionMode == VisionMode.Result -> "\u2705"
+                            recordedText != null -> "\uD83C\uDF99\uFE0F"
+                            capturedImage != null -> "\uD83D\uDCF8"
+                            else -> "\u2139\uFE0F"
+                        },
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = PrometheusColors.blue.copy(alpha = 0.5f)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = description ?: visionStatusText(visionMode, recordedText),
+                        color = Color.Gray,
+                        style = MaterialTheme.typography.labelSmall,
+                        maxLines = 3
+                    )
+                }
             }
 
             Spacer(Modifier.height(8.dp))
 
-            // --- Info card ---
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -299,264 +306,121 @@ fun VisionScreen() {
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(6.dp))
-                Text("Point the camera at surroundings, signage, or injuries. Gemma 4 describes what it sees in calm spoken language.",
+                Text("Hold \uD83C\uDF99\uFE0F to speak \u00B7 Tap \uD83D\uDCF7 to capture \u00B7 Double-tap \u27A1\uFE0F to send",
                     color = Color.Gray,
                     style = MaterialTheme.typography.labelSmall)
             }
 
             Spacer(Modifier.height(8.dp))
-
-            // --- Camera button ---
-            Button(
-                onClick = {
-                    if (!hasCameraPermission) {
-                        cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
-                        return@Button
-                    }
-                    if (isCapturing || !isModelLoaded) return@Button
-
-                    if (capturedImage != null) {
-                        capturedImage = null
-                        description = null
-                        sttText = null
-                        cameraError = false
-                        micState = MicState.Idle
-                        return@Button
-                    }
-
-                    isCapturing = true
-                    description = null
-                    cameraError = false
-
-                    cameraActions?.takePhoto { bytes ->
-                        if (bytes == null) {
-                            isCapturing = false
-                            cameraError = true
-                            description = "Camera error. Try again."
-                            return@takePhoto
-                        }
-                        val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-                        if (bitmap == null) {
-                            isCapturing = false
-                            cameraError = true
-                            description = "Failed to decode image."
-                            return@takePhoto
-                        }
-                        capturedImage = bitmap
-                        isCapturing = false
-                        val prompt = sttText?.takeIf { it.isNotBlank() } ?: "Describe what you see."
-                        scope.launch {
-                            val sb = StringBuilder()
-                            visionManager.describeImage(bitmap, prompt = prompt) { token ->
-                                sb.append(token); description = sb.toString()
-                            }
-                            if (sb.isNotEmpty()) {
-                                micState = MicState.Success
-                                ttsManager.speak(sb.toString())
-                                delay(2000)
-                                micState = MicState.Idle
-                            }
-                        }
-                    }
-                },
-                enabled = hasCameraPermission,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = PrometheusColors.blue.copy(alpha = 0.12f),
-                    contentColor = PrometheusColors.blue,
-                    disabledContainerColor = PrometheusColors.blue.copy(alpha = 0.05f),
-                    disabledContentColor = PrometheusColors.blue.copy(alpha = 0.3f)
-                )
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = when { isCapturing -> "\u23F3"; capturedImage != null -> "\uD83D\uDDBC\uFE0F"; else -> "\uD83D\uDCF7" },
-                        style = MaterialTheme.typography.displaySmall)
-                    Text(
-                        text = when { isCapturing -> "DESCRIBING..."; capturedImage != null -> "TAP FOR NEW CAPTURE"; else -> "TAP TO DESCRIBE" },
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold)
-                }
-            }
-
-            Spacer(Modifier.height(8.dp))
-
-            // --- Mic button ---
-            val micColor = when (micState) {
-                MicState.Idle -> PrometheusColors.blue
-                MicState.Listening -> PrometheusColors.blue.copy(alpha = 0.4f)
-                MicState.Success -> Color.Green
-                MicState.Error -> Color.Red
-            }
-            Button(
-                onClick = {
-                    if (!hasAudioPermission) {
-                        audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                        return@Button
-                    }
-                    if (!hasCameraPermission) {
-                        cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
-                        return@Button
-                    }
-                    if (!isModelLoaded || isCapturing || micState == MicState.Listening) return@Button
-
-                    micState = MicState.Listening
-                    description = null
-                    sttText = null
-                    cameraError = false
-
-                    sttManager.startListening(
-                        onResult = { text ->
-                            sttText = text
-                            description = "You said: \"$text\""
-                            micState = MicState.Idle
-
-                            // Auto-capture after STT
-                            isCapturing = true
-                            cameraActions?.takePhoto { bytes ->
-                                if (bytes == null) {
-                                    isCapturing = false
-                                    cameraError = true
-                                    description = "Camera error. Say it again."
-                                    micState = MicState.Error
-                                    scope.launch { delay(2000); micState = MicState.Idle }
-                                    return@takePhoto
-                                }
-                                val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-                                if (bitmap == null) {
-                                    isCapturing = false
-                                    cameraError = true
-                                    micState = MicState.Error
-                                    scope.launch { delay(2000); micState = MicState.Idle }
-                                    return@takePhoto
-                                }
-                                capturedImage = bitmap
-                                isCapturing = false
-                                scope.launch {
-                                    val sb = StringBuilder()
-                                    visionManager.describeImage(bitmap, prompt = sttText ?: "Describe what you see.") { token ->
-                                        sb.append(token); description = sb.toString()
-                                    }
-                                    if (sb.isNotEmpty()) {
-                                        micState = MicState.Success
-                                        ttsManager.speak(sb.toString())
-                                        delay(2000)
-                                        micState = MicState.Idle
-                                    }
-                                }
-                            }
-                        },
-                        onError = { errorMsg ->
-                            description = "Voice: $errorMsg"
-                            micState = MicState.Error
-                            capturedImage = null
-                            scope.launch {
-                                delay(2000)
-                                micState = MicState.Idle
-                                if (errorMsg == "No speech detected") {
-                                    description = "Tap mic and speak, or use camera button"
-                                }
-                            }
-                        }
-                    )
-                },
-                enabled = hasAudioPermission,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-                    .padding(bottom = 8.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = micColor.copy(alpha = 0.12f),
-                    contentColor = micColor,
-                    disabledContainerColor = PrometheusColors.blue.copy(alpha = 0.05f),
-                    disabledContentColor = PrometheusColors.blue.copy(alpha = 0.3f)
-                )
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = when (micState) {
-                            MicState.Listening -> "\uD83C\uDF99\uFE0F"
-                            MicState.Success -> "\u2705"
-                            MicState.Error -> "\u274C"
-                            MicState.Idle -> "\uD83C\uDF99\uFE0F"
-                        },
-                        style = MaterialTheme.typography.displaySmall)
-                    Text(
-                        text = when (micState) {
-                            MicState.Listening -> "LISTENING..."
-                            MicState.Success -> "DONE"
-                            MicState.Error -> "ERROR"
-                            MicState.Idle -> "ASK WITH VOICE"
-                        },
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold)
-                }
-            }
         }
     }
 }
 
 @Composable
-private fun CameraFrame(
-    modifier: Modifier = Modifier,
-    hasPermission: Boolean,
-    capturedImage: Bitmap?,
-    isCapturing: Boolean,
-    borderColor: Color = PrometheusColors.blue.copy(alpha = 0.3f),
-    onPermissionRequest: () -> Unit,
-    onCameraActionsReady: (CameraActions?) -> Unit
+private fun PermissionGate(
+    cameraGranted: Boolean,
+    audioGranted: Boolean,
+    onRequest: () -> Unit
 ) {
     Box(
-        modifier = modifier
-            .background(PrometheusColors.surface)
-            .border(1.dp, borderColor)
+        modifier = Modifier.fillMaxSize().padding(32.dp),
+        contentAlignment = Alignment.Center
     ) {
-        if (!hasPermission) {
-            Column(
-                Modifier.align(Alignment.Center),
-                horizontalAlignment = Alignment.CenterHorizontally
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("\uD83D\uDCF7\uD83C\uDF99\uFE0F", style = MaterialTheme.typography.displaySmall)
+            Spacer(Modifier.height(12.dp))
+            Text("PERMISSIONS REQUIRED", color = Color.White,
+                style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(6.dp))
+            val missing = buildList {
+                if (!cameraGranted) add("Camera")
+                if (!audioGranted) add("Microphone")
+            }
+            Text("Grant ${missing.joinToString(" & ")} to use Vision Assist",
+                color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+            Spacer(Modifier.height(20.dp))
+            Button(
+                onClick = onRequest,
+                modifier = Modifier.fillMaxWidth().height(48.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = PrometheusColors.blue, contentColor = Color.Black)
+            ) { Text("GRANT PERMISSIONS", fontWeight = FontWeight.Bold) }
+        }
+    }
+}
+
+@Composable
+private fun DownloadPrompt(
+    isDownloading: Boolean,
+    downloadProgress: Int,
+    inferManager: InferenceManager,
+    onDownloadChange: (Boolean, Int, String) -> Unit,
+    onModelLoaded: () -> Unit
+) {
+    Box(
+        modifier = Modifier.fillMaxWidth().fillMaxHeight().padding(32.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("\uD83E\uDD16", style = MaterialTheme.typography.displaySmall)
+            Spacer(Modifier.height(8.dp))
+            Text("MODEL NOT FOUND", color = Color.White,
+                style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text("Download Gemma 4 (2.4 GB) to enable vision",
+                color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+            Spacer(Modifier.height(16.dp))
+
+            val isPaused = isDownloading && downloadProgress >= 0 &&
+                inferManager.getDownloadProgress()?.isPaused == true
+            val btnColor = when {
+                !isDownloading -> PrometheusColors.blue
+                isPaused -> Color(0xFFFFA500).copy(alpha = 0.6f)
+                else -> PrometheusColors.blue.copy(alpha = 0.6f)
+            }
+            val btnText = when {
+                !isDownloading -> "\u2B07\uFE0F  DOWNLOAD MODEL (2.4 GB)"
+                isPaused -> "\u25B6\uFE0F  Download Paused: $downloadProgress%"
+                downloadProgress < 0 -> "\u23F3  Starting..."
+                downloadProgress >= 100 -> "\u2705  Moving file..."
+                else -> "\u23F8\uFE0F  Downloading: $downloadProgress%"
+            }
+            Button(
+                onClick = {
+                    when {
+                        !isDownloading -> {
+                            inferManager.enqueueDownload()
+                            onDownloadChange(true, 0, "Download pending...")
+                        }
+                        isPaused -> {
+                            inferManager.resumeDownload()
+                            onDownloadChange(true, downloadProgress, "Downloading: $downloadProgress%")
+                        }
+                        else -> {
+                            val ok = inferManager.pauseDownload()
+                            if (ok) {
+                                onDownloadChange(true, downloadProgress, "Download Paused: $downloadProgress%")
+                            } else {
+                                inferManager.cancelDownload()
+                                onDownloadChange(false, -1, "Tap to restart.")
+                            }
+                        }
+                    }
+                },
+                modifier = Modifier.fillMaxWidth().height(48.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = btnColor,
+                    contentColor = Color.Black
+                )
             ) {
-                Text("\uD83D\uDCF7", style = MaterialTheme.typography.displayLarge)
-                Spacer(Modifier.height(8.dp))
-                Text("CAMERA PERMISSION REQUIRED", color = Color.White,
-                    style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
-                Spacer(Modifier.height(12.dp))
-                Button(
-                    onClick = onPermissionRequest,
-                    colors = ButtonDefaults.buttonColors(containerColor = PrometheusColors.blue, contentColor = Color.Black)
-                ) { Text("GRANT CAMERA PERMISSION", fontWeight = FontWeight.Bold) }
-            }
-        } else {
-            onCameraActionsReady(rememberCameraActions(
-                modifier = Modifier.fillMaxSize(),
-                enabled = capturedImage == null
-            ))
-
-            Crossfade(
-                targetState = if (capturedImage != null) 1 else 0,
-                animationSpec = tween(400),
-                label = "camera_crossfade"
-            ) { showCapture ->
-                when {
-                    showCapture == 1 -> Image(
-                        bitmap = capturedImage!!.asImageBitmap(),
-                        contentDescription = "Captured view",
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Fit
-                    )
-                    else -> Box(Modifier.fillMaxSize())
-                }
-            }
-
-            if (isCapturing) {
-                Box(
-                    Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.5f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("CAPTURING...", color = PrometheusColors.blue,
-                        style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    if (isDownloading && downloadProgress in 0..99 && !isPaused) {
+                        LinearProgressIndicator(
+                            progress = { downloadProgress / 100f },
+                            modifier = Modifier.fillMaxWidth().fillMaxHeight(),
+                            color = PrometheusColors.blue.copy(alpha = 0.3f),
+                            trackColor = Color.Transparent
+                        )
+                    }
+                    Text(btnText, fontWeight = FontWeight.Bold)
                 }
             }
         }
