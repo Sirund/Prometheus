@@ -3,6 +3,7 @@ import shared
 
 struct MonitorView: View {
     @Environment(BMKGPollingService.self) private var pollingService
+    @State private var showInjectionSheet = false
 
     var body: some View {
         NavigationStack {
@@ -63,6 +64,14 @@ struct MonitorView: View {
                             .foregroundColor(.prometheusBlue)
                         }
                         .buttonStyle(.plain)
+
+                        SectionHeader(title: "LOCAL INJECTION")
+                        InjectionStatusCard(
+                            enabled: pollingService.injectionEnabled,
+                            ip: pollingService.injectionIp,
+                            port: pollingService.injectionPort
+                        )
+                        .onTapGesture { showInjectionSheet = true }
                     }
                     .padding()
                 }
@@ -76,6 +85,17 @@ struct MonitorView: View {
                     Label("BMKG", systemImage: "checkmark.shield")
                         .font(.caption.monospaced())
                         .foregroundColor(.prometheusBlue)
+                }
+            }
+            .sheet(isPresented: $showInjectionSheet) {
+                InjectionSettingsView(
+                    enabled: pollingService.injectionEnabled,
+                    ip: pollingService.injectionIp,
+                    port: pollingService.injectionPort
+                ) { enabled, ip, port in
+                    pollingService.injectionEnabled = enabled
+                    pollingService.injectionIp = ip
+                    pollingService.injectionPort = port
                 }
             }
         }
@@ -157,6 +177,102 @@ struct BMKGEventCard: View {
         .padding()
         .background(Color.cardBackground)
         .overlay(Rectangle().stroke(Color.prometheusBlue.opacity(0.3), lineWidth: 1))
+    }
+}
+
+struct InjectionStatusCard: View {
+    let enabled: Bool
+    let ip: String
+    let port: Int
+
+    var body: some View {
+        let statusColor: Color = enabled && !ip.isEmpty ? .green : .gray
+        let statusText: String = enabled && !ip.isEmpty ? "ACTIVE — \(ip):\(port)" : "DISABLED"
+
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text("INJECTION")
+                    .font(.caption2.monospaced())
+                    .foregroundColor(.gray)
+                Spacer()
+                Text(statusText)
+                    .font(.caption2.bold().monospaced())
+                    .foregroundColor(statusColor)
+            }
+            Text("Tap to configure local earthquake data injection")
+                .font(.caption2.monospaced())
+                .foregroundColor(.gray)
+        }
+        .padding()
+        .background(Color.cardBackground)
+        .overlay(Rectangle().stroke(Color.prometheusBlue.opacity(0.3), lineWidth: 1))
+    }
+}
+
+struct InjectionSettingsView: View {
+    @State var enabled: Bool
+    @State var ip: String
+    @State var port: Int
+    let onApply: (Bool, String, Int) -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color.darkBackground.ignoresSafeArea()
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Run 'python3 tools/local_injector.py' on your PC, then enter its IP and port below.")
+                        .font(.caption.monospaced())
+                        .foregroundColor(.gray)
+
+                    Toggle("Enable Injection", isOn: $enabled)
+                        .tint(.prometheusBlue)
+                        .foregroundColor(.white)
+                        .font(.caption.monospaced())
+
+                    TextField("PC IP Address (e.g. 192.168.1.42)", text: $ip)
+                        .textFieldStyle(.plain)
+                        .padding()
+                        .background(Color.cardBackground)
+                        .overlay(Rectangle().stroke(Color.prometheusBlue.opacity(0.3), lineWidth: 1))
+                        .foregroundColor(.white)
+                        .font(.caption.monospaced())
+                        .disabled(!enabled)
+
+                    TextField("Port", value: $port, format: .number)
+                        .textFieldStyle(.plain)
+                        .padding()
+                        .background(Color.cardBackground)
+                        .overlay(Rectangle().stroke(Color.prometheusBlue.opacity(0.3), lineWidth: 1))
+                        .foregroundColor(.white)
+                        .font(.caption.monospaced())
+                        .disabled(!enabled)
+
+                    Spacer()
+                }
+                .padding()
+            }
+            .navigationTitle("LOCAL INJECTION")
+            .toolbarBackground(Color.cardBackground, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("APPLY") {
+                        onApply(enabled, ip, port)
+                        dismiss()
+                    }
+                    .font(.caption.bold().monospaced())
+                    .foregroundColor(.prometheusBlue)
+                }
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("CANCEL") {
+                        dismiss()
+                    }
+                    .font(.caption.monospaced())
+                    .foregroundColor(.gray)
+                }
+            }
+        }
     }
 }
 

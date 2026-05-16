@@ -31,7 +31,11 @@ fun PrometheusApp(
     onRefreshBmkg: (() -> Unit)? = null,
     latestEvent: String? = null,
     currentEvent: EarthquakeEvent? = null,
-    currentLocation: UserLocation? = null
+    currentLocation: UserLocation? = null,
+    injectionEnabled: Boolean = false,
+    injectionIp: String = "",
+    injectionPort: Int = 8080,
+    onApplyInjection: ((Boolean, String, Int) -> Unit)? = null
 ) {
     var selectedScreen by remember { mutableStateOf(Screen.Monitor) }
 
@@ -62,7 +66,11 @@ fun PrometheusApp(
                 Screen.Monitor -> MonitorScreen(
                     onRefresh = onRefreshBmkg,
                     event = currentEvent,
-                    latestEvent = latestEvent
+                    latestEvent = latestEvent,
+                    injectionEnabled = injectionEnabled,
+                    injectionIp = injectionIp,
+                    injectionPort = injectionPort,
+                    onApplyInjection = onApplyInjection
                 )
                 Screen.Evacuate -> MapScreen(
                     event = currentEvent,

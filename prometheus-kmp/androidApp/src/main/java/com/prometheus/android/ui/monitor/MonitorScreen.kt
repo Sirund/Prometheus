@@ -2,8 +2,10 @@ package com.prometheus.android.ui.monitor
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -11,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.prometheus.android.ui.theme.PrometheusColors
 import com.prometheus.model.EarthquakeEvent
@@ -21,7 +24,11 @@ private enum class DangerLevel { None, Watch, Medium, Danger }
 fun MonitorScreen(
     onRefresh: (() -> Unit)? = null,
     event: EarthquakeEvent? = null,
-    latestEvent: String? = null
+    latestEvent: String? = null,
+    injectionEnabled: Boolean = false,
+    injectionIp: String = "",
+    injectionPort: Int = 8080,
+    onApplyInjection: ((Boolean, String, Int) -> Unit)? = null
 ) {
     val dangerLevel = when {
         event == null -> DangerLevel.None
@@ -36,6 +43,20 @@ fun MonitorScreen(
         }
     }
     var lastRefresh by remember { mutableStateOf("Not yet refreshed") }
+    var showInjectionDialog by remember { mutableStateOf(false) }
+
+    if (showInjectionDialog) {
+        InjectionDialog(
+            currentEnabled = injectionEnabled,
+            currentIp = injectionIp,
+            currentPort = injectionPort,
+            onDismiss = { showInjectionDialog = false },
+            onApply = { enabled, ip, port ->
+                onApplyInjection?.invoke(enabled, ip, port)
+                showInjectionDialog = false
+            }
+        )
+    }
 
     Column(
         modifier = Modifier
@@ -94,6 +115,17 @@ fun MonitorScreen(
                 fontWeight = FontWeight.Bold
             )
         }
+
+        Spacer(Modifier.height(20.dp))
+
+        SectionHeader(title = "LOCAL INJECTION")
+        Spacer(Modifier.height(8.dp))
+        InjectionStatusCard(
+            enabled = injectionEnabled,
+            ip = injectionIp,
+            port = injectionPort,
+            onClick = { showInjectionDialog = true }
+        )
     }
 }
 
@@ -249,4 +281,145 @@ private fun AlarmIndicatorRow(icon: String, label: String, status: String, statu
             fontWeight = FontWeight.Bold
         )
     }
+}
+
+@Composable
+private fun InjectionStatusCard(
+    enabled: Boolean,
+    ip: String,
+    port: Int,
+    onClick: () -> Unit
+) {
+    val statusColor = if (enabled && ip.isNotBlank()) Color(0xFF4CAF50) else Color.Gray
+    val statusText = if (enabled && ip.isNotBlank()) "ACTIVE — $ip:$port" else "DISABLED"
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(PrometheusColors.cardBackground)
+            .border(1.dp, PrometheusColors.blue.copy(alpha = 0.3f))
+            .clickable(onClick = onClick)
+            .padding(16.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "INJECTION",
+                color = Color.Gray,
+                style = MaterialTheme.typography.labelSmall
+            )
+            Spacer(Modifier.weight(1f))
+            Text(
+                text = statusText,
+                color = statusColor,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold
+            )
+        }
+        Spacer(Modifier.height(4.dp))
+        Text(
+            text = "Tap to configure local earthquake data injection",
+            color = Color.Gray,
+            style = MaterialTheme.typography.labelSmall
+        )
+    }
+}
+
+@Composable
+private fun InjectionDialog(
+    currentEnabled: Boolean,
+    currentIp: String,
+    currentPort: Int,
+    onDismiss: () -> Unit,
+    onApply: (Boolean, String, Int) -> Unit
+) {
+    var enabled by remember { mutableStateOf(currentEnabled) }
+    var ip by remember { mutableStateOf(currentIp) }
+    var port by remember { mutableStateOf(currentPort.toString()) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = PrometheusColors.cardBackground,
+        title = {
+            Text(
+                text = "LOCAL INJECTION",
+                color = PrometheusColors.blue,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column {
+                Text(
+                    text = "Run 'python3 tools/local_injector.py' on your PC, then enter its IP and port below.",
+                    color = Color.Gray,
+                    style = MaterialTheme.typography.labelSmall
+                )
+                Spacer(Modifier.height(12.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "Enable",
+                        color = Color.White,
+                        style = MaterialTheme.typography.labelSmall
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Switch(
+                        checked = enabled,
+                        onCheckedChange = { enabled = it },
+                        colors = SwitchDefaults.colors(
+                            checkedTrackColor = PrometheusColors.blue,
+                            checkedThumbColor = Color.White
+                        )
+                    )
+                }
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = ip,
+                    onValueChange = { ip = it },
+                    label = { Text("PC IP Address", color = Color.Gray) },
+                    placeholder = { Text("192.168.1.42", color = Color.Gray.copy(alpha = 0.5f)) },
+                    enabled = enabled,
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        focusedBorderColor = PrometheusColors.blue,
+                        unfocusedBorderColor = PrometheusColors.blue.copy(alpha = 0.3f),
+                        cursorColor = PrometheusColors.blue
+                    ),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri)
+                )
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = port,
+                    onValueChange = { port = it.filter { c -> c.isDigit() } },
+                    label = { Text("Port", color = Color.Gray) },
+                    enabled = enabled,
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        focusedBorderColor = PrometheusColors.blue,
+                        unfocusedBorderColor = PrometheusColors.blue.copy(alpha = 0.3f),
+                        cursorColor = PrometheusColors.blue
+                    ),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onApply(enabled, ip, port.toIntOrNull() ?: 8080) }) {
+                Text("APPLY", color = PrometheusColors.blue)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("CANCEL", color = Color.Gray)
+            }
+        }
+    )
 }

@@ -18,6 +18,15 @@ class BMKGPollingService: NSObject, CLLocationManagerDelegate {
     var lastChecked: String?
     var dangerLevel: Int = 0
 
+    var injectionEnabled = false
+    var injectionIp = ""
+    var injectionPort = 8080
+
+    private var injectionBaseUrl: String? {
+        guard injectionEnabled, !injectionIp.isEmpty else { return nil }
+        return "http://\(injectionIp):\(injectionPort)"
+    }
+
     override init() {
         super.init()
         locationManager.delegate = self
@@ -53,7 +62,8 @@ class BMKGPollingService: NSObject, CLLocationManagerDelegate {
 
         Task {
             do {
-                let client = BMKGClient()
+                let baseUrl = injectionBaseUrl as NSString?
+                let client = BMKGClient(baseUrlOverride: baseUrl)
                 let events = try await client.fetchAutogempa()
                 if let latest = events.first {
                     await handleEvent(latest)

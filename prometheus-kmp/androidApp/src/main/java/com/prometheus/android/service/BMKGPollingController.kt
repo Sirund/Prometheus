@@ -7,10 +7,10 @@ import com.prometheus.model.EarthquakeEvent
 import com.prometheus.monitor.BMKGPollingManager
 import kotlinx.coroutines.*
 
-class BMKGPollingController(context: Context) {
+class BMKGPollingController(context: Context, baseUrlOverride: String? = null) {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    private val pollingManager = BMKGPollingManager()
+    private var pollingManager = createPollingManager(baseUrlOverride)
     private val alarmManager = PrometheusAlarmManager(context)
     private val emergencyInference = EmergencyInferenceManager(context)
     private val locationProvider = LocationProvider(context)
@@ -18,26 +18,38 @@ class BMKGPollingController(context: Context) {
     var onNewEvent: ((EarthquakeEvent) -> Unit)? = null
     var onPoll: ((EarthquakeEvent) -> Unit)? = null
 
+    private fun createPollingManager(baseUrlOverride: String?): BMKGPollingManager {
+        return BMKGPollingManager(baseUrlOverride = baseUrlOverride).apply {
+            userLocation = locationProvider.getLastKnownLocation()
+            onPoll = { events ->
+                if (events.isNotEmpty()) onPoll?.invoke(events.first())
+                userLocation = locationProvider.getLastKnownLocation()
+            }
+            onDangerousEvent = { event ->
+                onNewEvent?.invoke(event)
+                generateAndAnnounceBriefing(event)
+            }
+            onMediumEvent = { event ->
+                onNewEvent?.invoke(event)
+                alarmManager.triggerMediumAlert(event)
+            }
+            onNewEvent = { event ->
+                onNewEvent?.invoke(event)
+            }
+            onError = { error ->
+                Log.e("BMKGPolling", "Poll error", error)
+            }
+        }
+    }
+
+    fun updateInjectionUrl(url: String?) {
+        pollingManager.stop()
+        pollingManager = createPollingManager(url)
+        pollingManager.start(scope)
+        Log.d("BMKGPolling", "Injection URL updated: ${url ?: "none (using BMKG)"}")
+    }
+
     fun start() {
-        pollingManager.userLocation = locationProvider.getLastKnownLocation()
-        pollingManager.onPoll = { events ->
-            if (events.isNotEmpty()) onPoll?.invoke(events.first())
-            pollingManager.userLocation = locationProvider.getLastKnownLocation()
-        }
-        pollingManager.onDangerousEvent = { event ->
-            onNewEvent?.invoke(event)
-            generateAndAnnounceBriefing(event)
-        }
-        pollingManager.onMediumEvent = { event ->
-            onNewEvent?.invoke(event)
-            alarmManager.triggerMediumAlert(event)
-        }
-        pollingManager.onNewEvent = { event ->
-            onNewEvent?.invoke(event)
-        }
-        pollingManager.onError = { error ->
-            Log.e("BMKGPolling", "Poll error", error)
-        }
         pollingManager.start(scope)
         alarmManager.showStatus(true)
     }

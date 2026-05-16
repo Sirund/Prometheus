@@ -15,6 +15,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import com.prometheus.android.service.BMKGPollingController
+import com.prometheus.android.service.InjectionSettings
 import com.prometheus.android.service.LocationProvider
 import com.prometheus.android.ui.theme.PrometheusColors
 import com.prometheus.android.ui.theme.PrometheusTheme
@@ -28,6 +29,9 @@ class MainActivity : ComponentActivity() {
     private var latestEvent by mutableStateOf<String?>(null)
     private var currentEvent by mutableStateOf<EarthquakeEvent?>(null)
     private var currentLocation by mutableStateOf<UserLocation?>(null)
+    private var injectionEnabled by mutableStateOf(false)
+    private var injectionIp by mutableStateOf("")
+    private var injectionPort by mutableStateOf(8080)
 
     private val notificationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -44,6 +48,10 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        InjectionSettings.init(this)
+        injectionEnabled = InjectionSettings.enabled
+        injectionIp = InjectionSettings.ip
+        injectionPort = InjectionSettings.port
 
         setContent {
             PrometheusTheme {
@@ -55,7 +63,19 @@ class MainActivity : ComponentActivity() {
                         onRefreshBmkg = { pollingController?.forceCheck() },
                         latestEvent = latestEvent,
                         currentEvent = currentEvent,
-                        currentLocation = currentLocation
+                        currentLocation = currentLocation,
+                        injectionEnabled = injectionEnabled,
+                        injectionIp = injectionIp,
+                        injectionPort = injectionPort,
+                        onApplyInjection = { enabled, ip, port ->
+                            injectionEnabled = enabled
+                            injectionIp = ip
+                            injectionPort = port
+                            InjectionSettings.enabled = enabled
+                            InjectionSettings.ip = ip
+                            InjectionSettings.port = port
+                            applyInjectionUrl()
+                        }
                     )
                 }
             }
@@ -98,7 +118,10 @@ class MainActivity : ComponentActivity() {
         if (pollingController == null) {
             val locProvider = LocationProvider(this)
             currentLocation = locProvider.getLastKnownLocation()
-            pollingController = BMKGPollingController(this).apply {
+            pollingController = BMKGPollingController(
+                this,
+                baseUrlOverride = InjectionSettings.baseUrl
+            ).apply {
                 onPoll = { event ->
                     currentEvent = event
                     currentLocation = locProvider.getLastKnownLocation()
@@ -114,5 +137,9 @@ class MainActivity : ComponentActivity() {
                 start()
             }
         }
+    }
+
+    private fun applyInjectionUrl() {
+        pollingController?.updateInjectionUrl(InjectionSettings.baseUrl)
     }
 }
