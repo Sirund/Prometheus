@@ -28,13 +28,7 @@ data class PolylinePoint(val points: String = "")
 @Serializable
 data class DirectionsLeg(
     val distance: DistanceValue = DistanceValue(),
-    val duration: DurationValue = DurationValue(),
-    val steps: List<DirectionsStep> = emptyList()
-)
-
-@Serializable
-data class DirectionsStep(
-    val travel_mode: String = "DRIVING"
+    val duration: DurationValue = DurationValue()
 )
 
 @Serializable
@@ -158,10 +152,15 @@ class EvacuationRouter(private val googleApiKey: String = "") {
             if (response.status != "OK") return null
             val route = response.routes.firstOrNull() ?: return null
             val leg = route.legs.firstOrNull() ?: return null
-            if (leg.steps.any { it.travel_mode == "FERRY" }) return null
             val poly = route.overview_polyline ?: return null
             val coords = PolylineDecoder.decode(poly.points)
             if (coords.isEmpty()) return null
+            var prev = coords[0]
+            for (i in 1 until coords.size) {
+                val d = haversineKm(prev.first, prev.second, coords[i].first, coords[i].second)
+                if (d > 3.0) return null
+                prev = coords[i]
+            }
             ModeResult(
                 mode = mode,
                 polyline = coords,
