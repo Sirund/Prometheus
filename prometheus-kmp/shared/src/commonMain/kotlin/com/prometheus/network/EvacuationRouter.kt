@@ -108,7 +108,7 @@ class EvacuationRouter(private val googleApiKey: String = "") {
                     sin(Math.toRadians(epicenterLat)) * cos(Math.toRadians(userLat)) * cos(Math.toRadians(userLon - epicenterLon))
         )
         val away = Math.toDegrees(bearing + PI)
-        val exitDistanceKm = dangerRadiusKm * 3.0
+        val exitDistanceKm = dangerRadiusKm * 1.1
         val angularDist = exitDistanceKm / 6371.0
 
         fun destAtAngle(angleDeg: Double): Pair<Double, Double> {

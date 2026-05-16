@@ -71,8 +71,10 @@ class VisionInferenceManager(private val context: Context) {
         }
         withContext(Dispatchers.IO) {
             try {
+                createConversation()
+                val freshConv = conversation ?: run { onToken("Model not loaded."); return@withContext }
                 val imageFile = saveBitmapToTempFile(imageBitmap)
-                conv.sendMessageAsync(Contents.of(
+                freshConv.sendMessageAsync(Contents.of(
                     Content.ImageFile(imageFile.absolutePath),
                     Content.Text(prompt)
                 )).collect { msg ->

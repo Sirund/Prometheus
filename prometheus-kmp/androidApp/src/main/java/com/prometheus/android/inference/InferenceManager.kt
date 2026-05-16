@@ -90,14 +90,14 @@ class InferenceManager(private val context: Context) {
         }
     }
 
-    suspend fun sendMessage(text: String, history: List<ChatMessage> = emptyList(), onToken: (String) -> Unit) = withContext(Dispatchers.IO) {
+    suspend fun sendMessage(text: String, history: List<ChatMessage> = emptyList(), systemPrompt: String = SystemPrompts.SURVIVAL_CHATBOT, onToken: (String) -> Unit) = withContext(Dispatchers.IO) {
         val eng = engine ?: run {
             onToken("Model not loaded.")
             return@withContext
         }
         try {
             val prompt = buildString {
-                appendLine(SystemPrompts.SURVIVAL_CHATBOT)
+                appendLine(systemPrompt)
                 appendLine()
                 for (msg in history) {
                     val role = if (msg.isUser) "User" else "Assistant"
@@ -109,7 +109,7 @@ class InferenceManager(private val context: Context) {
 
             try { conversation?.close() } catch (_: Exception) {}
             val systemInstruction = Contents.of(
-                listOf(Content.Text(SystemPrompts.SURVIVAL_CHATBOT))
+                listOf(Content.Text(systemPrompt))
             )
             val conv = eng.createConversation(
                 ConversationConfig(systemInstruction = systemInstruction)
@@ -137,10 +137,10 @@ class InferenceManager(private val context: Context) {
         conversation = null
     }
 
-    fun createNewConversation() {
+    fun createNewConversation(systemPrompt: String = SystemPrompts.SURVIVAL_CHATBOT) {
         try {
             val systemInstruction = Contents.of(
-                listOf(Content.Text(SystemPrompts.SURVIVAL_CHATBOT))
+                listOf(Content.Text(systemPrompt))
             )
             conversation = engine?.createConversation(
                 ConversationConfig(systemInstruction = systemInstruction)

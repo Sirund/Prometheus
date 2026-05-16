@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import com.prometheus.android.inference.InferenceManager
 import com.prometheus.android.ui.theme.PrometheusColors
 import com.prometheus.model.ChatMessage
+import com.prometheus.prompt.SystemPrompts
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -113,6 +114,7 @@ fun AssistantScreen() {
     var downloadProgress by remember { mutableStateOf(-1) }
     var isDownloading by remember { mutableStateOf(false) }
     var downloadId by remember { mutableStateOf(-1L) }
+    var chatMode by remember { mutableStateOf("SURVIVAL_CHAT") }
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
@@ -314,7 +316,10 @@ fun AssistantScreen() {
                     .fillMaxSize()
                     .padding(padding)
             ) {
-                ModeIndicatorBar()
+                ModeIndicatorBar(
+                    currentMode = chatMode,
+                    onModeChange = { chatMode = it }
+                )
 
                 if (chatHistory.isEmpty()) {
                     Box(
@@ -438,7 +443,10 @@ fun AssistantScreen() {
                         onValueChange = { query = it },
                         placeholder = {
                             Text(
-                                "Ask anything about survival...",
+                                when (chatMode) {
+                                    "EMERGENCY_BRIEF" -> "Paste earthquake data for briefing..."
+                                    else -> "Ask anything about survival..."
+                                },
                                 color = PrometheusColors.blue.copy(alpha = 0.5f)
                             )
                         },
@@ -471,6 +479,10 @@ fun AssistantScreen() {
                     TextButton(
                         onClick = {
                             val userText = query
+                            val sysPrompt = when (chatMode) {
+                                "EMERGENCY_BRIEF" -> SystemPrompts.EMERGENCY_BRIEFING
+                                else -> SystemPrompts.SURVIVAL_CHATBOT
+                            }
                             query = ""
                             val history = chatHistory
                             val oldSize = history.size
@@ -481,7 +493,7 @@ fun AssistantScreen() {
                                 )
                             }
                             scope.launch {
-                                manager.sendMessage(userText, history) { response ->
+                                manager.sendMessage(userText, history, sysPrompt) { response ->
                                     conversations = conversations.toMutableList().also { list ->
                                         val msgs = list[activeIndex].messages.toMutableList()
                                         if (aiIndex < msgs.size) {
@@ -513,7 +525,10 @@ fun AssistantScreen() {
 }
 
 @Composable
-private fun ModeIndicatorBar() {
+private fun ModeIndicatorBar(
+    currentMode: String,
+    onModeChange: (String) -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -522,20 +537,21 @@ private fun ModeIndicatorBar() {
             .padding(vertical = 8.dp),
         horizontalArrangement = Arrangement.Center
     ) {
-        ModeChip(label = "SURVIVAL CHAT", active = true)
+        ModeChip(label = "SURVIVAL CHAT", active = currentMode == "SURVIVAL_CHAT", onClick = { onModeChange("SURVIVAL_CHAT") })
         Spacer(Modifier.width(8.dp))
-        ModeChip(label = "EMERGENCY BRIEF", active = false)
+        ModeChip(label = "EMERGENCY BRIEF", active = currentMode == "EMERGENCY_BRIEF", onClick = { onModeChange("EMERGENCY_BRIEF") })
     }
 }
 
 @Composable
-private fun ModeChip(label: String, active: Boolean) {
+private fun ModeChip(label: String, active: Boolean, onClick: () -> Unit) {
     Text(
         text = label,
         color = if (active) PrometheusColors.blue else Color.Gray,
         style = MaterialTheme.typography.labelSmall,
         fontWeight = FontWeight.Bold,
         modifier = Modifier
+            .clickable(onClick = onClick)
             .background(
                 if (active) PrometheusColors.blue.copy(alpha = 0.2f) else Color.Transparent
             )
