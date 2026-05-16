@@ -105,7 +105,7 @@ fun MonitorScreen(
             GemmaStatusCard()
         }
 
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(28.dp))
 
         EntranceAnimation(visible = true, index = 3) {
             SectionHeader(text = "RECENT EVENTS")
@@ -128,7 +128,7 @@ fun MonitorScreen(
                 modifier = Modifier.fillMaxWidth(),
                 shape = MaterialTheme.shapes.small,
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = PrometheusColors.surfaceElevated,
+                    containerColor = Color(0xFF2C2C2C),
                     contentColor = PrometheusColors.blue
                 )
             ) {
@@ -184,7 +184,7 @@ private fun HeroEventCard(
     }
 
     PrometheusCard(elevated = true) {
-        Row(verticalAlignment = Alignment.Bottom) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 text = magnitude.let { if (it.startsWith("M ")) it else "M $it" },
                 style = MaterialTheme.typography.displayLarge,
@@ -231,7 +231,7 @@ private fun HeroEventCard(
         Text(
             text = "Updated $timestamp",
             style = MaterialTheme.typography.labelSmall,
-            color = PrometheusColors.textSecondary.copy(alpha = 0.6f)
+            color = PrometheusColors.textSecondary
         )
     }
 }

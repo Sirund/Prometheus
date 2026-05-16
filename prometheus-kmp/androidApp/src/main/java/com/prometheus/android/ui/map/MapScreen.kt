@@ -395,7 +395,7 @@ private fun RoutingDetailsCard(
         val radiusStr = dangerRadiusKm?.let { "${it.toInt()} km" } ?: "--"
         val dirStr = if (isDangerous && evacDirection != null) {
             "Evacuate ${evacDirection.second} (${"%.0f".format(evacDirection.first)}° from epicenter)"
-        } else if (isDangerous) "Calculating..." else "No active event"
+        } else if (isDangerous && routeLoading) "Calculating..." else if (isDangerous) "Pending..." else "No active event"
         val magStr = event?.magnitudeValue?.let { "M ${"%.1f".format(it)}" } ?: "--"
         val depthStr = event?._kedalaman ?: "--"
 
