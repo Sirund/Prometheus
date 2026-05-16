@@ -75,7 +75,7 @@ fun VisionScreen() {
         topBar = {
             TopAppBar(
                 title = { Text("Vision Assist", color = PrometheusColors.blue) },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = PrometheusColors.cardBackground),
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = PrometheusColors.surface),
                 actions = {
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(end = 8.dp)) {
                         Box(Modifier.size(6.dp).clip(RoundedCornerShape(3.dp)).background(if (isModelLoaded) Color.Green else Color(0xFFFFA500)))
@@ -85,7 +85,7 @@ fun VisionScreen() {
                 }
             )
         },
-        containerColor = PrometheusColors.darkBackground
+        containerColor = PrometheusColors.background
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
 
@@ -104,7 +104,7 @@ fun VisionScreen() {
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp)
-                    .background(PrometheusColors.cardBackground)
+                    .background(PrometheusColors.surface)
                     .border(1.dp, PrometheusColors.blue.copy(alpha = 0.2f))
                     .padding(12.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -134,7 +134,7 @@ fun VisionScreen() {
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp)
-                    .background(PrometheusColors.cardBackground.copy(alpha = 0.5f))
+                    .background(PrometheusColors.surface.copy(alpha = 0.5f))
                     .border(1.dp, PrometheusColors.blue.copy(alpha = 0.15f))
                     .padding(16.dp)
             ) {
@@ -223,7 +223,7 @@ private fun CameraFrame(
 ) {
     Box(
         modifier = modifier
-            .background(PrometheusColors.cardBackground)
+            .background(PrometheusColors.surface)
             .border(1.dp, PrometheusColors.blue.copy(alpha = 0.3f))
     ) {
         if (!hasPermission) {

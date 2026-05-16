@@ -57,7 +57,7 @@ class MainActivity : ComponentActivity() {
             PrometheusTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
-                    color = PrometheusColors.darkBackground
+                    color = PrometheusColors.background
                 ) {
                     PrometheusApp(
                         onRefreshBmkg = { pollingController?.forceCheck() },

@@ -36,7 +36,7 @@ struct MapView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color.darkBackground.ignoresSafeArea()
+                Color.background.ignoresSafeArea()
 
                 VStack(spacing: 0) {
                     EvacuationStatusBanner(isDangerous: isDangerous)
@@ -76,7 +76,7 @@ struct MapView: View {
                 }
             }
             .navigationTitle("Evacuation")
-            .toolbarBackground(Color.cardBackground, for: .navigationBar)
+            .toolbarBackground(Color.surface, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -177,7 +177,7 @@ private struct EvacuationStatusBanner: View {
 private struct MapPlaceholder: View {
     var body: some View {
         ZStack {
-            Color.cardBackground
+            Color.surface
             VStack(spacing: 14) {
                 Image(systemName: "map.fill")
                     .font(.system(size: 52))
@@ -254,7 +254,7 @@ private struct RoutingDetailsCard: View {
             }
         }
         .padding()
-        .background(Color.cardBackground)
+        .background(Color.surface)
         .overlay(Rectangle().stroke(Color.prometheusBlue.opacity(0.3), lineWidth: 1))
     }
 }

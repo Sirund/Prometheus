@@ -1,17 +1,13 @@
 import SwiftUI
 
 extension Color {
-    static let prometheusBlue = Color(red: 0.0, green: 0.75, blue: 1.0)
-    static let darkBackground = Color.black
-    static let cardBackground = Color(white: 0.1)
-}
-
-struct TacticalButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .padding()
-            .background(configuration.isPressed ? Color.prometheusBlue.opacity(0.3) : Color.cardBackground)
-            .contentShape(Rectangle())
-            .border(Color.prometheusBlue.opacity(0.5), width: 1)
-    }
+    static let prometheusBlue = Color(red: 0.31, green: 0.76, blue: 0.97)
+    static let background = Color(white: 0.07)
+    static let surface = Color(white: 0.12)
+    static let surfaceElevated = Color(white: 0.17)
+    static let danger = Color(red: 0.96, green: 0.26, blue: 0.21)
+    static let warning = Color(red: 1.0, green: 0.6, blue: 0.0)
+    static let success = Color(red: 0.4, green: 0.73, blue: 0.42)
+    static let textPrimary = Color(white: 0.88)
+    static let textSecondary = Color(white: 0.62)
 }

@@ -41,6 +41,7 @@ import com.google.maps.android.compose.Polyline
 import com.google.maps.android.compose.rememberCameraPositionState
 import com.prometheus.android.service.LocationProvider
 import com.prometheus.android.ui.shared.LoadingOverlay
+import com.prometheus.android.ui.shared.ThreatLevelBanner
 import com.prometheus.android.ui.theme.PrometheusColors
 import com.prometheus.model.DangerClassifier
 import com.prometheus.model.EarthquakeEvent
@@ -182,7 +183,7 @@ fun MapScreen(
             TopAppBar(
                 title = { Text("Evacuation", color = PrometheusColors.blue) },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = PrometheusColors.cardBackground
+                    containerColor = PrometheusColors.surface
                 ),
                 actions = {
                     Text(
@@ -193,7 +194,7 @@ fun MapScreen(
                 }
             )
         },
-        containerColor = PrometheusColors.darkBackground
+        containerColor = PrometheusColors.background
     ) { padding ->
         val mapsAvailable = remember {
             GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(context)
@@ -231,7 +232,7 @@ fun MapScreen(
                     GoogleMap(
                         modifier = Modifier
                             .fillMaxSize()
-                            .border(1.dp, PrometheusColors.blue.copy(alpha = 0.3f)),
+                            .border(1.dp, PrometheusColors.surfaceElevated),
                         cameraPositionState = cameraState,
                         properties = MapProperties(
                             isMyLocationEnabled = hasLocationPermission,
@@ -295,24 +296,23 @@ fun MapScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(PrometheusColors.cardBackground)
-                            .border(1.dp, PrometheusColors.blue.copy(alpha = 0.3f))
+                            .background(PrometheusColors.surface)
                             .clickable { showDetails = !showDetails }
-                            .padding(horizontal = 16.dp, vertical = 10.dp),
+                            .padding(horizontal = 20.dp, vertical = 14.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
                                 text = "ROUTING DETAILS",
                                 color = PrometheusColors.blue,
-                                style = MaterialTheme.typography.labelSmall,
+                                style = MaterialTheme.typography.labelMedium,
                                 fontWeight = FontWeight.Bold
                             )
                             Spacer(Modifier.weight(1f))
                             Text(
                                 text = if (showDetails) "\u25BC" else "\u25B2",
                                 color = PrometheusColors.blue,
-                                style = MaterialTheme.typography.labelSmall
+                                style = MaterialTheme.typography.labelMedium
                             )
                         }
                     }
@@ -346,7 +346,7 @@ private fun EvacuationStatusBanner(isDangerous: Boolean, severity: com.prometheu
     val targetColor = when {
         isDangerous -> PrometheusColors.danger
         severity == com.prometheus.model.DangerSeverity.MEDIUM -> PrometheusColors.warning
-        else -> PrometheusColors.blue
+        else -> PrometheusColors.success
     }
     val color by animateColorAsState(targetColor, animationSpec = tween(400), label = "banner_color")
     val label = when {
@@ -355,26 +355,11 @@ private fun EvacuationStatusBanner(isDangerous: Boolean, severity: com.prometheu
         else -> "EVACUATION ROUTING — STANDBY"
     }
 
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(color.copy(alpha = 0.1f))
-            .border(1.dp, color.copy(alpha = 0.4f))
-            .padding(12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = if (isDangerous) "\u26A0\uFE0F" else "\uD83D\uDEE1\uFE0F",
-            style = MaterialTheme.typography.bodyLarge
-        )
-        Spacer(Modifier.width(8.dp))
-        Text(
-            text = label,
-            color = color,
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.Bold
-        )
-    }
+    ThreatLevelBanner(
+        color = color.copy(alpha = 0.85f),
+        label = label,
+        icon = if (isDangerous) "\u26A0\uFE0F" else "\uD83D\uDEE1\uFE0F"
+    )
 }
 
 @Composable
@@ -392,9 +377,8 @@ private fun RoutingDetailsCard(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
-            .background(PrometheusColors.cardBackground)
-            .border(1.dp, PrometheusColors.blue.copy(alpha = 0.3f))
-            .padding(16.dp)
+            .background(PrometheusColors.surface)
+            .padding(20.dp)
     ) {
         val epicenterStr = buildString {
             val loc = event?._wilayah ?: "No event"
@@ -416,18 +400,18 @@ private fun RoutingDetailsCard(
         val depthStr = event?._kedalaman ?: "--"
 
         RouteInfoRow(label = "RULE", value = ruleNameStr)
-        HorizontalDivider(color = PrometheusColors.blue.copy(alpha = 0.15f))
+        HorizontalDivider(color = PrometheusColors.surfaceElevated)
         RouteInfoRow(label = "MAGNITUDE", value = magStr)
-        HorizontalDivider(color = PrometheusColors.blue.copy(alpha = 0.15f))
+        HorizontalDivider(color = PrometheusColors.surfaceElevated)
         RouteInfoRow(label = "USER LOCATION", value = userLocStr)
-        HorizontalDivider(color = PrometheusColors.blue.copy(alpha = 0.15f))
+        HorizontalDivider(color = PrometheusColors.surfaceElevated)
         RouteInfoRow(label = "DANGER RADIUS", value = radiusStr)
-        HorizontalDivider(color = PrometheusColors.blue.copy(alpha = 0.15f))
+        HorizontalDivider(color = PrometheusColors.surfaceElevated)
         RouteInfoRow(label = "DIRECTION", value = dirStr)
-        HorizontalDivider(color = PrometheusColors.blue.copy(alpha = 0.15f))
+        HorizontalDivider(color = PrometheusColors.surfaceElevated)
         RouteInfoRow(label = "DISTANCE", value = if (evacuationRoute != null) "${"%.1f".format(evacuationRoute.distanceKm)} km" else if (isDangerous && !routeLoading) "Unavailable" else "--")
         if (evacuationRoute != null) {
-            HorizontalDivider(color = PrometheusColors.blue.copy(alpha = 0.15f))
+            HorizontalDivider(color = PrometheusColors.surfaceElevated)
             Text(
                 text = "ESTIMATED TIME",
                 color = Color.Gray,
@@ -457,7 +441,7 @@ private fun MapUnavailableFallback(epicenter: LatLng?) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(PrometheusColors.cardBackground)
+            .background(PrometheusColors.surface)
             .border(1.dp, PrometheusColors.blue.copy(alpha = 0.3f)),
         contentAlignment = Alignment.Center
     ) {
@@ -515,21 +499,21 @@ private fun TransportTimeRow(icon: String, label: String, minutes: Double) {
         }
     }
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(text = icon, style = MaterialTheme.typography.labelSmall)
-        Spacer(Modifier.width(6.dp))
+        Spacer(Modifier.width(8.dp))
         Text(
             text = label,
-            color = Color.Gray,
+            color = PrometheusColors.textSecondary,
             style = MaterialTheme.typography.labelSmall,
             modifier = Modifier.width(56.dp)
         )
         Spacer(Modifier.weight(1f))
         Text(
             text = display,
-            color = Color.White,
+            color = PrometheusColors.textPrimary,
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.Bold
         )
@@ -546,13 +530,13 @@ private fun RouteInfoRow(label: String, value: String) {
     ) {
         Text(
             text = label,
-            color = Color.Gray,
+            color = PrometheusColors.textSecondary,
             style = MaterialTheme.typography.labelSmall,
             modifier = Modifier.width(128.dp)
         )
         Text(
             text = value,
-            color = Color.White,
+            color = PrometheusColors.textPrimary,
             style = MaterialTheme.typography.bodySmall
         )
     }

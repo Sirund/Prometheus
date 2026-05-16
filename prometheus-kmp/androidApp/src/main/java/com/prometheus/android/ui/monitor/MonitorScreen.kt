@@ -3,7 +3,6 @@ package com.prometheus.android.ui.monitor
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -16,12 +15,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.prometheus.android.ui.shared.EntranceAnimation
 import com.prometheus.android.ui.shared.PrometheusCard
 import com.prometheus.android.ui.shared.SectionHeader
+import com.prometheus.android.ui.shared.StatusDot
+import com.prometheus.android.ui.shared.ThreatLevelBanner
 import com.prometheus.android.ui.theme.PrometheusColors
 import com.prometheus.model.EarthquakeEvent
 
@@ -68,23 +71,22 @@ fun MonitorScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(PrometheusColors.darkBackground)
+            .background(PrometheusColors.background)
             .padding(16.dp)
             .verticalScroll(rememberScrollState())
     ) {
-        DangerStatusBanner(level = dangerLevel)
+        DangerBanner(level = dangerLevel)
 
         Spacer(Modifier.height(20.dp))
 
         EntranceAnimation(visible = true, index = 0) {
-            SectionHeader(text = "LATEST BMKG EVENT")
-            Spacer(Modifier.height(8.dp))
-            BMKGEventCard(
+            HeroEventCard(
                 magnitude = event?._magnitude ?: "--",
                 location = event?._wilayah ?: if (event != null) "Unknown location" else "Waiting for data...",
                 depth = event?._kedalaman ?: "--",
                 felt = event?._dirasakan ?: "--",
                 potential = event?._potensi ?: "--",
+                level = dangerLevel,
                 timestamp = lastRefresh
             )
         }
@@ -92,40 +94,47 @@ fun MonitorScreen(
         Spacer(Modifier.height(20.dp))
 
         EntranceAnimation(visible = true, index = 1) {
-            SectionHeader(text = "ALARM & BRIEFING")
+            SectionHeader(text = "SYSTEM STATUS")
             Spacer(Modifier.height(8.dp))
-            AlarmStatusCard()
+            SystemStatusCard()
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        EntranceAnimation(visible = true, index = 2) {
+            GemmaStatusCard()
         }
 
         Spacer(Modifier.height(20.dp))
 
-        EntranceAnimation(visible = true, index = 2) {
+        EntranceAnimation(visible = true, index = 3) {
             SectionHeader(text = "RECENT EVENTS")
             Spacer(Modifier.height(4.dp))
             Text(
                 text = latestEvent ?: "No data loaded. Tap refresh to poll BMKG.",
-                color = Color.Gray,
-                style = MaterialTheme.typography.labelSmall
+                color = PrometheusColors.textSecondary,
+                style = MaterialTheme.typography.bodySmall
             )
         }
 
         Spacer(Modifier.height(16.dp))
 
-        EntranceAnimation(visible = true, index = 3) {
+        EntranceAnimation(visible = true, index = 4) {
             Button(
                 onClick = {
                     lastRefresh = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date())
                     onRefresh?.invoke()
                 },
                 modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.small,
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = PrometheusColors.blue.copy(alpha = 0.15f),
+                    containerColor = PrometheusColors.surfaceElevated,
                     contentColor = PrometheusColors.blue
                 )
             ) {
                 Text(
                     text = "REFRESH BMKG",
-                    style = MaterialTheme.typography.labelSmall,
+                    style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold
                 )
             }
@@ -133,7 +142,7 @@ fun MonitorScreen(
 
         Spacer(Modifier.height(20.dp))
 
-        EntranceAnimation(visible = true, index = 4) {
+        EntranceAnimation(visible = true, index = 5) {
             SectionHeader(text = "LOCAL INJECTION")
             Spacer(Modifier.height(8.dp))
             InjectionStatusCard(
@@ -147,163 +156,160 @@ fun MonitorScreen(
 }
 
 @Composable
-private fun DangerStatusBanner(level: DangerLevel) {
-    val targetColor = when (level) {
-        DangerLevel.None -> PrometheusColors.blue
-        DangerLevel.Watch -> PrometheusColors.warning
-        DangerLevel.Medium -> Color(0xFFFF8C00)
-        DangerLevel.Danger -> PrometheusColors.danger
+private fun DangerBanner(level: DangerLevel) {
+    val (color, icon, label) = when (level) {
+        DangerLevel.None -> Triple(PrometheusColors.success, "\u2705", "ALL CLEAR — No active alerts")
+        DangerLevel.Watch -> Triple(PrometheusColors.warning, "\u26A0\uFE0F", "WATCH — Monitor closely")
+        DangerLevel.Medium -> Triple(Color(0xFFFF8C00), "\u26A0\uFE0F", "MEDIUM ALERT — Notified")
+        DangerLevel.Danger -> Triple(PrometheusColors.danger, "\u26A0\uFE0F", "DANGER — Take action now")
     }
-    val color by animateColorAsState(targetColor, animationSpec = tween(400), label = "danger_banner")
-    val label = when (level) {
-        DangerLevel.None -> "NO ACTIVE ALERTS"
-        DangerLevel.Watch -> "WATCH — MONITOR CLOSELY"
-        DangerLevel.Medium -> "MEDIUM — NOTIFIED"
-        DangerLevel.Danger -> "DANGER — TAKE ACTION NOW"
-    }
-
-    val infinite = rememberInfiniteTransition(label = "pulse")
-    val pulseAlpha by infinite.animateFloat(
-        initialValue = 0.6f, targetValue = 0.3f,
-        animationSpec = infiniteRepeatable(tween(800), RepeatMode.Reverse),
-        label = "pulse_alpha"
-    )
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(if (level == DangerLevel.Danger) color.copy(alpha = pulseAlpha) else color.copy(alpha = 0.15f))
-            .border(1.dp, if (level == DangerLevel.Danger) color.copy(alpha = 0.6f) else color.copy(alpha = 0.6f))
-            .padding(12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        if (level == DangerLevel.Danger) {
-            Text(text = "\u26A0\uFE0F", style = MaterialTheme.typography.bodyLarge)
-            Spacer(Modifier.width(8.dp))
-        }
-        Text(
-            text = label,
-            color = color,
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.Bold
-        )
-    }
+    ThreatLevelBanner(color = color, label = label, icon = icon)
 }
 
 @Composable
-private fun BMKGEventCard(
+private fun HeroEventCard(
     magnitude: String,
     location: String,
     depth: String,
     felt: String,
     potential: String,
+    level: DangerLevel,
     timestamp: String
 ) {
-    PrometheusCard {
-        Row(modifier = Modifier.fillMaxWidth()) {
-            Column {
+    val accentColor = when (level) {
+        DangerLevel.None -> PrometheusColors.blue
+        DangerLevel.Watch -> PrometheusColors.warning
+        DangerLevel.Medium -> Color(0xFFFF8C00)
+        DangerLevel.Danger -> PrometheusColors.danger
+    }
+
+    PrometheusCard(elevated = true) {
+        Row(verticalAlignment = Alignment.Bottom) {
+            Text(
+                text = magnitude.let { if (it.startsWith("M ")) it else "M $it" },
+                style = MaterialTheme.typography.displayLarge,
+                color = accentColor,
+                fontSize = 52.sp
+            )
+            Spacer(Modifier.width(12.dp))
+            Column(modifier = Modifier.padding(bottom = 4.dp)) {
                 Text(
-                    text = "M $magnitude",
-                    color = PrometheusColors.blue,
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold
+                    text = "DEPTH",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = PrometheusColors.textSecondary
                 )
                 Text(
-                    text = location,
-                    color = Color.White,
-                    style = MaterialTheme.typography.bodySmall
+                    text = depth,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = PrometheusColors.textPrimary
                 )
-            }
-            Spacer(Modifier.weight(1f))
-            Column(horizontalAlignment = Alignment.End) {
-                EventField(label = "DEPTH", value = depth)
-                EventField(label = "FELT", value = felt)
             }
         }
         Spacer(Modifier.height(8.dp))
-        HorizontalDivider(color = PrometheusColors.blue.copy(alpha = 0.3f))
-        Spacer(Modifier.height(8.dp))
+        Text(
+            text = location,
+            style = MaterialTheme.typography.headlineMedium,
+            color = Color.White,
+            fontWeight = FontWeight.Normal
+        )
+        Spacer(Modifier.height(16.dp))
         Row(modifier = Modifier.fillMaxWidth()) {
-            EventField(label = "TSUNAMI POTENTIAL", value = potential)
+            Column {
+                Text(text = "FELT", style = MaterialTheme.typography.labelSmall, color = PrometheusColors.textSecondary)
+                Text(text = felt, style = MaterialTheme.typography.labelLarge, color = PrometheusColors.textPrimary)
+            }
             Spacer(Modifier.weight(1f))
+            Column(horizontalAlignment = Alignment.End) {
+                Text(text = "TSUNAMI", style = MaterialTheme.typography.labelSmall, color = PrometheusColors.textSecondary)
+                Text(text = potential, style = MaterialTheme.typography.labelLarge, color = when {
+                    potential.contains("berpotensi", ignoreCase = true) || potential.contains("warning", ignoreCase = true) || potential.contains("ya", ignoreCase = true) -> PrometheusColors.danger
+                    else -> PrometheusColors.textPrimary
+                })
+            }
+        }
+        Spacer(Modifier.height(12.dp))
+        Text(
+            text = "Updated $timestamp",
+            style = MaterialTheme.typography.labelSmall,
+            color = PrometheusColors.textSecondary.copy(alpha = 0.6f)
+        )
+    }
+}
+
+@Composable
+private fun SystemStatusCard() {
+    PrometheusCard {
+        AlarmIndicatorRow(isActive = true, label = "AUDIBLE ALARM", status = "ARMED")
+        Spacer(Modifier.height(12.dp))
+        HorizontalDivider(color = PrometheusColors.surfaceElevated)
+        Spacer(Modifier.height(12.dp))
+        AlarmIndicatorRow(isActive = true, label = "TTS BRIEFING", status = "READY")
+    }
+}
+
+@Composable
+private fun GemmaStatusCard() {
+    val infinite = rememberInfiniteTransition(label = "gemma_pulse")
+    val alpha by infinite.animateFloat(
+        initialValue = 0.4f, targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(1400), RepeatMode.Reverse),
+        label = "gemma_alpha"
+    )
+
+    PrometheusCard(elevated = true) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .size(10.dp)
+                    .clip(CircleShape)
+                    .background(PrometheusColors.success.copy(alpha = alpha))
+            )
+            Spacer(Modifier.width(10.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "GEMMA 4",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+                Text(
+                    text = "On-device AI emergency assistant ready when networks go down",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = PrometheusColors.textSecondary,
+                    lineHeight = 18.sp
+                )
+            }
+            Spacer(Modifier.width(8.dp))
             Text(
-                text = timestamp,
-                color = Color.Gray,
-                style = MaterialTheme.typography.labelSmall
+                text = "STANDBY",
+                style = MaterialTheme.typography.labelSmall,
+                color = PrometheusColors.success.copy(alpha = alpha),
+                fontWeight = FontWeight.Bold
             )
         }
     }
 }
 
 @Composable
-private fun EventField(label: String, value: String) {
-    Column {
-        Text(
-            text = label,
-            color = Color.Gray,
-            style = MaterialTheme.typography.labelSmall
-        )
-        Text(
-            text = value,
-            color = Color.White,
-            style = MaterialTheme.typography.bodySmall,
-            fontWeight = FontWeight.Bold
-        )
-    }
-}
-
-@Composable
-private fun AlarmStatusCard() {
-    val infinite = rememberInfiniteTransition(label = "alarm_pulse")
-    val gemmaAlpha by infinite.animateFloat(
-        initialValue = 0.3f, targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(1200), RepeatMode.Reverse),
-        label = "gemma_alpha"
-    )
-
-    PrometheusCard {
-        AlarmIndicatorRow(isActive = true, label = "AUDIBLE ALARM", status = "ARMED")
-        Spacer(Modifier.height(8.dp))
-        HorizontalDivider(color = PrometheusColors.blue.copy(alpha = 0.15f))
-        Spacer(Modifier.height(8.dp))
-        AlarmIndicatorRow(isActive = true, label = "TTS BRIEFING", status = "READY")
-        Spacer(Modifier.height(8.dp))
-        HorizontalDivider(color = PrometheusColors.blue.copy(alpha = 0.15f))
-        Spacer(Modifier.height(8.dp))
-        AlarmIndicatorRow(isActive = false, label = "GEMMA 4 EMERGENCY PROMPT", status = "NOT LOADED", statusAlpha = gemmaAlpha)
-    }
-}
-
-@Composable
-private fun AlarmIndicatorRow(
-    isActive: Boolean,
-    label: String,
-    status: String,
-    statusAlpha: Float = 1f
-) {
-    val statusColor = if (isActive) PrometheusColors.success else Color.Gray
+private fun AlarmIndicatorRow(isActive: Boolean, label: String, status: String) {
+    val statusColor = if (isActive) PrometheusColors.success else PrometheusColors.textSecondary
 
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            modifier = Modifier
-                .size(8.dp)
-                .clip(CircleShape)
-                .background(statusColor.copy(alpha = statusAlpha))
-        )
-        Spacer(Modifier.width(8.dp))
+        StatusDot(isActive = isActive)
+        Spacer(Modifier.width(10.dp))
         Text(
             text = label,
-            color = Color.Gray,
-            style = MaterialTheme.typography.labelSmall
+            style = MaterialTheme.typography.bodySmall,
+            color = PrometheusColors.textPrimary
         )
         Spacer(Modifier.weight(1f))
         Text(
             text = status,
-            color = statusColor.copy(alpha = statusAlpha),
             style = MaterialTheme.typography.labelSmall,
+            color = statusColor,
             fontWeight = FontWeight.Bold
         )
     }
@@ -316,39 +322,36 @@ private fun InjectionStatusCard(
     port: Int,
     onClick: () -> Unit
 ) {
-    val statusColor = if (enabled && ip.isNotBlank()) Color(0xFF4CAF50) else Color.Gray
+    val statusColor = if (enabled && ip.isNotBlank()) PrometheusColors.success else PrometheusColors.textSecondary
     val statusText = if (enabled && ip.isNotBlank()) "ACTIVE — $ip:$port" else "DISABLED"
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(PrometheusColors.cardBackground)
-            .border(1.dp, PrometheusColors.blue.copy(alpha = 0.3f))
-            .clickable(onClick = onClick)
-            .padding(16.dp)
+    PrometheusCard(
+        modifier = Modifier.clickable(onClick = onClick)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            StatusDot(isActive = enabled && ip.isNotBlank())
+            Spacer(Modifier.width(10.dp))
             Text(
-                text = "INJECTION",
-                color = Color.Gray,
-                style = MaterialTheme.typography.labelSmall
+                text = "LOCAL INJECTION",
+                style = MaterialTheme.typography.bodySmall,
+                color = PrometheusColors.textPrimary,
+                modifier = Modifier.weight(1f)
             )
-            Spacer(Modifier.weight(1f))
             Text(
                 text = statusText,
-                color = statusColor,
                 style = MaterialTheme.typography.labelSmall,
+                color = statusColor,
                 fontWeight = FontWeight.Bold
             )
         }
         Spacer(Modifier.height(4.dp))
         Text(
             text = "Tap to configure local earthquake data injection",
-            color = Color.Gray,
-            style = MaterialTheme.typography.labelSmall
+            style = MaterialTheme.typography.bodySmall,
+            color = PrometheusColors.textSecondary
         )
     }
 }
@@ -367,28 +370,27 @@ private fun InjectionDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = PrometheusColors.cardBackground,
+        containerColor = PrometheusColors.surface,
         title = {
             Text(
                 text = "LOCAL INJECTION",
-                color = PrometheusColors.blue,
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Bold
+                style = MaterialTheme.typography.labelLarge,
+                color = PrometheusColors.blue
             )
         },
         text = {
             Column {
                 Text(
                     text = "Run 'python3 tools/local_injector.py' on your PC, then enter its IP and port below.",
-                    color = Color.Gray,
-                    style = MaterialTheme.typography.labelSmall
+                    style = MaterialTheme.typography.bodySmall,
+                    color = PrometheusColors.textSecondary
                 )
                 Spacer(Modifier.height(12.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = "Enable",
-                        color = Color.White,
-                        style = MaterialTheme.typography.labelSmall
+                        style = MaterialTheme.typography.bodySmall,
+                        color = PrometheusColors.textPrimary
                     )
                     Spacer(Modifier.width(8.dp))
                     Switch(
@@ -404,16 +406,16 @@ private fun InjectionDialog(
                 OutlinedTextField(
                     value = ip,
                     onValueChange = { ip = it },
-                    label = { Text("PC IP Address", color = Color.Gray) },
-                    placeholder = { Text("192.168.1.42", color = Color.Gray.copy(alpha = 0.5f)) },
+                    label = { Text("PC IP Address") },
+                    placeholder = { Text("192.168.1.42") },
                     enabled = enabled,
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
+                        focusedTextColor = PrometheusColors.textPrimary,
+                        unfocusedTextColor = PrometheusColors.textPrimary,
                         focusedBorderColor = PrometheusColors.blue,
-                        unfocusedBorderColor = PrometheusColors.blue.copy(alpha = 0.3f),
+                        unfocusedBorderColor = PrometheusColors.surfaceElevated,
                         cursorColor = PrometheusColors.blue
                     ),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri)
@@ -422,15 +424,15 @@ private fun InjectionDialog(
                 OutlinedTextField(
                     value = port,
                     onValueChange = { port = it.filter { c -> c.isDigit() } },
-                    label = { Text("Port", color = Color.Gray) },
+                    label = { Text("Port") },
                     enabled = enabled,
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
+                        focusedTextColor = PrometheusColors.textPrimary,
+                        unfocusedTextColor = PrometheusColors.textPrimary,
                         focusedBorderColor = PrometheusColors.blue,
-                        unfocusedBorderColor = PrometheusColors.blue.copy(alpha = 0.3f),
+                        unfocusedBorderColor = PrometheusColors.surfaceElevated,
                         cursorColor = PrometheusColors.blue
                     ),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
@@ -444,7 +446,7 @@ private fun InjectionDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("CANCEL", color = Color.Gray)
+                Text("CANCEL", color = PrometheusColors.textSecondary)
             }
         }
     )

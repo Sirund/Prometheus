@@ -3,7 +3,6 @@ package com.prometheus.android.ui.shared
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -17,18 +16,19 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.prometheus.android.ui.theme.PrometheusColors
+import com.prometheus.android.ui.theme.PrometheusShapes
 
 @Composable
 fun PrometheusCard(
     modifier: Modifier = Modifier,
-    shape: RoundedCornerShape = RoundedCornerShape(12.dp),
+    elevated: Boolean = false,
+    shape: androidx.compose.ui.graphics.Shape = PrometheusShapes.medium,
     content: @Composable ColumnScope.() -> Unit
 ) {
     Column(
         modifier = modifier
-            .background(PrometheusColors.cardBackground, shape = shape)
-            .border(1.dp, PrometheusColors.blue.copy(alpha = 0.3f), shape = shape)
-            .padding(16.dp),
+            .background(if (elevated) PrometheusColors.surfaceElevated else PrometheusColors.surface, shape = shape)
+            .padding(20.dp),
         content = content
     )
 }
@@ -36,9 +36,9 @@ fun PrometheusCard(
 @Composable
 fun StatusDot(
     isActive: Boolean,
-    activeColor: Color = Color(0xFF4CAF50),
-    inactiveColor: Color = Color(0xFFFF9800),
-    size: Dp = 6.dp
+    activeColor: Color = PrometheusColors.success,
+    inactiveColor: Color = PrometheusColors.warning,
+    size: Dp = 8.dp
 ) {
     Box(
         modifier = Modifier
@@ -59,7 +59,7 @@ fun LoadingOverlay(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.4f)),
+                    .background(Color.Black.copy(alpha = 0.5f)),
                 contentAlignment = Alignment.Center
             ) {
                 CircularProgressIndicator(
@@ -79,9 +79,8 @@ fun SectionHeader(
 ) {
     Text(
         text = text,
-        color = PrometheusColors.blue,
-        style = MaterialTheme.typography.labelSmall,
-        fontWeight = FontWeight.Bold,
+        style = MaterialTheme.typography.labelMedium,
+        color = PrometheusColors.textSecondary,
         modifier = modifier
     )
 }
@@ -101,5 +100,31 @@ fun EntranceAnimation(
                 )
     ) {
         content()
+    }
+}
+
+@Composable
+fun ThreatLevelBanner(
+    color: Color,
+    label: String,
+    icon: String = ""
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(color)
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (icon.isNotEmpty()) {
+            Text(text = icon, style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.width(10.dp))
+        }
+        Text(
+            text = label,
+            color = Color.Black,
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.Black
+        )
     }
 }

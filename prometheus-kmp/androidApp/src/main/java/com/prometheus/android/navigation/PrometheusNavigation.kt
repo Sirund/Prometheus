@@ -2,8 +2,9 @@ package com.prometheus.android.navigation
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.ChatBubble
@@ -11,8 +12,13 @@ import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Radio
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import com.prometheus.android.ui.assistant.AssistantScreen
 import com.prometheus.android.ui.map.MapScreen
 import com.prometheus.android.ui.monitor.MonitorScreen
@@ -43,25 +49,49 @@ fun PrometheusApp(
 
     Scaffold(
         bottomBar = {
-            NavigationBar(containerColor = PrometheusColors.cardBackground) {
+            NavigationBar(
+                containerColor = PrometheusColors.background,
+                tonalElevation = 0.dp
+            ) {
                 Screen.entries.forEach { screen ->
+                    val isSelected = selectedScreen == screen
                     NavigationBarItem(
-                        selected = selectedScreen == screen,
+                        selected = isSelected,
                         onClick = { selectedScreen = screen },
-                        icon = { Icon(screen.icon, contentDescription = screen.label) },
-                        label = { Text(screen.label) },
+                        icon = {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .then(if (isSelected) Modifier.background(PrometheusColors.surfaceElevated) else Modifier)
+                                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                            ) {
+                                Icon(
+                                    screen.icon,
+                                    contentDescription = screen.label,
+                                    modifier = Modifier.size(if (isSelected) 22.dp else 20.dp)
+                                )
+                            }
+                        },
+                        label = {
+                            if (isSelected) {
+                                Text(
+                                    screen.label,
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.labelSmall
+                                )
+                            }
+                        },
                         colors = NavigationBarItemDefaults.colors(
                             selectedIconColor = PrometheusColors.blue,
-                            selectedTextColor = PrometheusColors.blue,
-                            unselectedIconColor = PrometheusColors.blue.copy(alpha = 0.5f),
-                            unselectedTextColor = PrometheusColors.blue.copy(alpha = 0.5f),
-                            indicatorColor = PrometheusColors.blue.copy(alpha = 0.2f)
-                        )
+                            unselectedIconColor = PrometheusColors.textSecondary.copy(alpha = 0.5f),
+                            indicatorColor = Color.Transparent
+                        ),
+                        alwaysShowLabel = false
                     )
                 }
             }
         },
-        containerColor = PrometheusColors.darkBackground
+        containerColor = PrometheusColors.background
     ) { padding ->
         Box(modifier = Modifier.padding(padding)) {
             AnimatedContent(

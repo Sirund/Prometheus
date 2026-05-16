@@ -142,7 +142,7 @@ fun AssistantScreen() {
         gesturesEnabled = true,
         drawerContent = {
             ModalDrawerSheet(
-                drawerContainerColor = PrometheusColors.cardBackground,
+                drawerContainerColor = PrometheusColors.surface,
                 modifier = Modifier.width(300.dp)
             ) {
                 Spacer(Modifier.height(24.dp))
@@ -228,7 +228,7 @@ fun AssistantScreen() {
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = PrometheusColors.cardBackground
+                        containerColor = PrometheusColors.surface
                     ),
                     actions = {
                         Row(
@@ -251,7 +251,7 @@ fun AssistantScreen() {
                     }
                 )
             },
-            containerColor = PrometheusColors.darkBackground
+            containerColor = PrometheusColors.background
         ) { padding ->
             Column(
                 modifier = Modifier
@@ -359,8 +359,8 @@ fun AssistantScreen() {
                         },
                         modifier = Modifier.weight(1f),
                         colors = TextFieldDefaults.colors(
-                            focusedContainerColor = PrometheusColors.cardBackground,
-                            unfocusedContainerColor = PrometheusColors.cardBackground,
+                            focusedContainerColor = PrometheusColors.surface,
+                            unfocusedContainerColor = PrometheusColors.surface,
                             focusedTextColor = PrometheusColors.blue,
                             unfocusedTextColor = PrometheusColors.blue,
                             cursorColor = PrometheusColors.blue,
@@ -409,9 +409,9 @@ fun AssistantScreen() {
                         },
                         enabled = isModelLoaded && query.isNotBlank(),
                         colors = ButtonDefaults.textButtonColors(
-                            containerColor = if (isModelLoaded) PrometheusColors.blue else PrometheusColors.cardBackground,
+                            containerColor = if (isModelLoaded) PrometheusColors.blue else PrometheusColors.surface,
                             contentColor = if (isModelLoaded) Color.Black else Color.Gray,
-                            disabledContainerColor = PrometheusColors.cardBackground,
+                            disabledContainerColor = PrometheusColors.surface,
                             disabledContentColor = Color.Gray
                         ),
                         contentPadding = PaddingValues(14.dp)
@@ -432,7 +432,7 @@ private fun ModeIndicatorBar() {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(PrometheusColors.cardBackground)
+            .background(PrometheusColors.surface)
             .border(0.5.dp, PrometheusColors.blue.copy(alpha = 0.15f))
             .padding(vertical = 8.dp),
         horizontalArrangement = Arrangement.Center
@@ -490,7 +490,7 @@ private fun ChatBubble(message: ChatMessage) {
                 color = if (message.isUser) Color.Black else Color.White,
                 modifier = Modifier
                     .background(
-                        color = if (message.isUser) PrometheusColors.blue else PrometheusColors.cardBackground,
+                        color = if (message.isUser) PrometheusColors.blue else PrometheusColors.surface,
                         shape = RoundedCornerShape(16.dp)
                     )
                     .border(1.dp, PrometheusColors.blue.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
