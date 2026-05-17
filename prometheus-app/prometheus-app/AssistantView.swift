@@ -39,12 +39,17 @@ struct AssistantView: View {
     @State private var conversations: [Conversation] = loadConversations()
     @State private var activeIndex = 0
     @State private var showSidebar = false
+    @State private var showVision = false
 
     var body: some View {
         NavigationStack {
             ZStack {
                 Color.appBackground.ignoresSafeArea()
-                stateContent
+                VStack(spacing: 0) {
+                    modeSelector
+                    Divider().background(Color.prometheusBlue.opacity(0.15))
+                    stateContent
+                }
             }
             .navigationTitle("Survival Assistant")
             .toolbarBackground(Color.cardBackground, for: .navigationBar)
@@ -62,12 +67,16 @@ struct AssistantView: View {
 
     @ViewBuilder
     private var stateContent: some View {
-        switch inference.modelState {
-        case .notDownloaded:  downloadView
-        case .downloading:    progressView
-        case .loading:        loadingView
-        case .ready:          chatView
-        case .error(let msg): errorView(msg)
+        if showVision {
+            VisionPanel()
+        } else {
+            switch inference.modelState {
+            case .notDownloaded:  downloadView
+            case .downloading:    progressView
+            case .loading:        loadingView
+            case .ready:          chatViewContent
+            case .error(let msg): errorView(msg)
+            }
         }
     }
 
@@ -244,23 +253,19 @@ struct AssistantView: View {
 
     // MARK: - Chat screen
 
-    private var chatView: some View {
-        VStack(spacing: 0) {
-            modeSelector
-            Divider().background(Color.prometheusBlue.opacity(0.15))
-            messageList
-        }
-        .safeAreaInset(edge: .bottom) { inputBar }
+    private var chatViewContent: some View {
+        messageList
+            .safeAreaInset(edge: .bottom) { inputBar }
     }
 
     private var modeSelector: some View {
         HStack(spacing: 8) {
             Spacer()
-            ModeChipButton(label: "SURVIVAL CHAT", active: selectedMode == .survival) {
-                selectedMode = .survival
+            ModeChipButton(label: "SURVIVAL CHAT", active: !showVision) {
+                showVision = false
             }
-            ModeChipButton(label: "EMERGENCY BRIEF", active: selectedMode == .emergency) {
-                selectedMode = .emergency
+            ModeChipButton(label: "VISION", active: showVision) {
+                showVision = true
             }
             Spacer()
         }
@@ -301,10 +306,10 @@ struct AssistantView: View {
     private var emptyStateHint: some View {
         VStack(spacing: 12) {
             Spacer(minLength: 60)
-            Image(systemName: selectedMode == .survival ? "bubble.left.and.bubble.right.fill" : "exclamationmark.shield.fill")
+            Image(systemName: "bubble.left.and.bubble.right.fill")
                 .font(.system(size: 40))
                 .foregroundColor(.prometheusBlue.opacity(0.3))
-            Text(selectedMode == .survival ? "Ask anything about survival" : "Describe a hazard for an emergency briefing")
+            Text("Ask anything about survival")
                 .font(.caption.monospaced())
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
@@ -316,7 +321,7 @@ struct AssistantView: View {
     private var inputBar: some View {
         HStack(spacing: 0) {
             TextField(
-                selectedMode == .survival ? "Ask about survival, first aid, evacuation..." : "Describe the hazard event...",
+                "Ask about survival, first aid, evacuation...",
                 text: $query,
                 axis: .vertical
             )

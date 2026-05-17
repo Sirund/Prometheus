@@ -14,7 +14,6 @@ import UIKit
 
 enum ChatMode: Equatable {
     case survival
-    case emergency
 }
 
 struct ChatMessage: Identifiable, Codable {
@@ -65,8 +64,6 @@ final class InferenceManager {
 
     private var engine: LMEngine?
     private var survivalConversation: LMConversation?
-    private var emergencyConversation: LMConversation?
-    private var visionConversation: LMConversation?
     private let synthesizer = AVSpeechSynthesizer()
     private let ttsDelegate = TTSDelegate()
 
@@ -78,13 +75,6 @@ final class InferenceManager {
     and hazard awareness — earthquakes, tsunamis, volcanic eruptions, and floods. \
     Keep every answer short and actionable. \
     Write plain text only — no markdown, no bullet points, no headers.
-    """
-
-    static let emergencyPrompt = """
-    You are an emergency voice briefing system. Given a hazard event, \
-    respond with a spoken briefing of at most 60 words: \
-    what happened, what to do right now, and what to avoid. \
-    Plain text only — no markdown, no lists, no headers.
     """
 
     static let visionPrompt = """
@@ -154,7 +144,6 @@ final class InferenceManager {
         print("[InferenceManager] redownloadAndLoad() — forcing fresh download")
         engine = nil
         survivalConversation = nil
-        emergencyConversation = nil
         modelState = .notDownloaded
         await downloadAndLoad()
     }
@@ -243,10 +232,7 @@ final class InferenceManager {
     }
 
     func cancelGeneration(mode: ChatMode) {
-        switch mode {
-        case .survival: survivalConversation?.cancel()
-        case .emergency: emergencyConversation?.cancel()
-        }
+        survivalConversation?.cancel()
     }
 
     func restoreMessages(_ messages: [ChatMessage]) {
@@ -254,14 +240,8 @@ final class InferenceManager {
     }
 
     func clearHistory(mode: ChatMode) {
-        switch mode {
-        case .survival:
-            survivalConversation?.close()
-            survivalConversation = nil
-        case .emergency:
-            emergencyConversation?.close()
-            emergencyConversation = nil
-        }
+        survivalConversation?.close()
+        survivalConversation = nil
         messages.removeAll()
     }
 
@@ -348,26 +328,14 @@ final class InferenceManager {
     // MARK: Private helpers
 
     private func getConversation(mode: ChatMode, engine: LMEngine) async throws -> LMConversation {
-        switch mode {
-        case .survival:
-            if let c = survivalConversation, c.isActive { return c }
-            let c = try await engine.createConversation(
-                configuration: ConversationConfiguration()
-                    .systemPrompt(Self.survivalPrompt)
-                    .maxOutputTokens(512)
-            )
-            survivalConversation = c
-            return c
-        case .emergency:
-            if let c = emergencyConversation, c.isActive { return c }
-            let c = try await engine.createConversation(
-                configuration: ConversationConfiguration()
-                    .systemPrompt(Self.emergencyPrompt)
-                    .maxOutputTokens(128)
-            )
-            emergencyConversation = c
-            return c
-        }
+        if let c = survivalConversation, c.isActive { return c }
+        let c = try await engine.createConversation(
+            configuration: ConversationConfiguration()
+                .systemPrompt(Self.survivalPrompt)
+                .maxOutputTokens(512)
+        )
+        survivalConversation = c
+        return c
     }
 }
 
