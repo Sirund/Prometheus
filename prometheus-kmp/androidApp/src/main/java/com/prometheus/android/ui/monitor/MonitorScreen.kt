@@ -54,7 +54,6 @@ fun MonitorScreen(
             }
         }
     }
-    var lastRefresh by remember { mutableStateOf("Not yet refreshed") }
     var showInjectionDialog by remember { mutableStateOf(false) }
     var showInjection by remember { mutableStateOf(false) }
 
@@ -88,6 +87,7 @@ fun MonitorScreen(
                 SectionHeader(text = "EARTHQUAKE INFO")
                 Spacer(Modifier.height(8.dp))
                 val latLon = if (event != null) "${event.Lintang ?: "--"}, ${event.Bujur ?: "--"}" else "--"
+                val eventTime = if (event != null) "${event.tanggal_ ?: ""} ${event.jam_ ?: ""}".trim() else ""
                 HeroEventCard(
                     magnitude = event?._magnitude ?: "--",
                     location = event?._wilayah ?: if (event != null) "Unknown location" else "Waiting for data...",
@@ -96,7 +96,7 @@ fun MonitorScreen(
                     latLon = latLon,
                     potential = event?._potensi ?: "--",
                     level = dangerLevel,
-                    timestamp = lastRefresh
+                    timestamp = eventTime
                 )
             }
         }
@@ -143,10 +143,7 @@ fun MonitorScreen(
 
         EntranceAnimation(visible = true, index = 4) {
             Button(
-                onClick = {
-                    lastRefresh = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date())
-                    onRefresh?.invoke()
-                },
+                onClick = { onRefresh?.invoke() },
                 modifier = Modifier.fillMaxWidth(),
                 shape = MaterialTheme.shapes.small,
                 colors = ButtonDefaults.buttonColors(
@@ -251,24 +248,19 @@ private fun HeroEventCard(
         Spacer(Modifier.height(12.dp))
         HorizontalDivider(color = p.surfaceElevated)
         Spacer(Modifier.height(8.dp))
-        val hasTsunami = potential.contains("berpotensi", ignoreCase = true) ||
-            potential.contains("warning", ignoreCase = true) ||
-            potential.contains("ya", ignoreCase = true)
-        Text(text = "TSUNAMI POTENTIAL", style = MaterialTheme.typography.labelSmall, color = p.textSecondary)
-        Spacer(Modifier.height(2.dp))
-        Text(text = if (hasTsunami) "YES" else "NO", style = MaterialTheme.typography.labelLarge, color = if (hasTsunami) p.danger else p.textPrimary)
+        Text(text = potential, style = MaterialTheme.typography.bodyMedium, color = p.textPrimary)
         Spacer(Modifier.height(12.dp))
         HorizontalDivider(color = p.surfaceElevated)
         Spacer(Modifier.height(8.dp))
-        Text(text = "LOCATION", style = MaterialTheme.typography.labelSmall, color = p.textSecondary)
-        Spacer(Modifier.height(2.dp))
-        Text(text = location, style = MaterialTheme.typography.labelLarge, color = p.textPrimary)
-        Spacer(Modifier.height(12.dp))
-        Text(
-            text = "Updated $timestamp",
-            style = MaterialTheme.typography.labelSmall,
-            color = p.textSecondary
-        )
+        Text(text = location, style = MaterialTheme.typography.bodyMedium, color = p.textPrimary)
+        if (timestamp.isNotBlank()) {
+            Spacer(Modifier.height(12.dp))
+            Text(
+                text = timestamp,
+                style = MaterialTheme.typography.labelSmall,
+                color = p.textSecondary
+            )
+        }
     }
 }
 

@@ -171,10 +171,6 @@ struct BMKGEventCard: View {
     let potential: String
     let timestamp: String
 
-    private var hasTsunami: Bool {
-        potential.contains("berpotensi") || potential.contains("warning") || potential.contains("ya")
-    }
-
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 0) {
@@ -206,17 +202,16 @@ struct BMKGEventCard: View {
                 .frame(maxWidth: .infinity)
             }
             Divider().background(Color.prometheusBlue.opacity(0.3))
-            Text("TSUNAMI POTENTIAL").font(.caption2.monospaced()).foregroundColor(.gray)
-            Text(hasTsunami ? "YES" : "NO").font(.caption.bold().monospaced())
-                .foregroundColor(hasTsunami ? .red : .white)
+            Text(potential).font(.caption.bold().monospaced()).foregroundColor(.white)
             Divider().background(Color.prometheusBlue.opacity(0.3))
-            Text("LOCATION").font(.caption2.monospaced()).foregroundColor(.gray)
             Text(location).font(.caption.bold().monospaced()).foregroundColor(.white)
-            HStack {
-                Spacer()
-                Text(timestamp)
-                    .font(.caption2.monospaced())
-                    .foregroundColor(.gray)
+            if !timestamp.isEmpty {
+                HStack {
+                    Spacer()
+                    Text(timestamp)
+                        .font(.caption2.monospaced())
+                        .foregroundColor(.gray)
+                }
             }
         }
         .padding()
