@@ -17,9 +17,11 @@ struct MonitorView: View {
                         SectionHeader(title: "WEATHER")
                         WeatherInfoCard(weather: pollingService.weatherInfo)
 
+                        SectionHeader(title: "WEATHER WARNING")
                         if let latestAlert = pollingService.nowcastAlerts.max(by: { $0.guid < $1.guid }) {
-                            SectionHeader(title: "WEATHER WARNING")
                             NowcastAlertCard(alert: latestAlert)
+                        } else {
+                            NowcastClearCard()
                         }
 
                         SectionHeader(title: "EARTHQUAKE INFO")
@@ -297,6 +299,21 @@ struct NowcastAlertCard: View {
                     .foregroundColor(.gray)
                     .lineLimit(2)
             }
+        }
+        .padding()
+        .background(Color.cardBackground)
+        .overlay(Rectangle().stroke(Color.prometheusBlue.opacity(0.3), lineWidth: 1))
+    }
+}
+
+struct NowcastClearCard: View {
+    var body: some View {
+        HStack(spacing: 10) {
+            Text("\u{2600}\u{FE0F}")
+                .font(.title3)
+            Text("Cuaca baik \u2014 Tidak ada peringatan")
+                .font(.caption2.monospaced())
+                .foregroundColor(.green)
         }
         .padding()
         .background(Color.cardBackground)

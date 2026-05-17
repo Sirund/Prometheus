@@ -59,12 +59,10 @@ data class NowcastAlert(
 
         fun nearestAlert(alerts: List<NowcastAlert>, userLat: Double, userLon: Double): NowcastAlert? {
             val maxRadiusKm = 300.0
-            val nearby = alerts.filter {
+            return alerts.filter {
                 val d = it.distanceKmFrom(userLat, userLon)
                 d != null && d <= maxRadiusKm
-            }
-            return nearby.minByOrNull { it.distanceKmFrom(userLat, userLon)!! }
-                ?: alerts.minByOrNull { it.distanceKmFrom(userLat, userLon) ?: Double.MAX_VALUE }
+            }.minByOrNull { it.distanceKmFrom(userLat, userLon)!! }
         }
 
         fun haversine(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
