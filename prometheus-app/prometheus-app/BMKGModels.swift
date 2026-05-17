@@ -91,34 +91,14 @@ enum GeoUtils {
 // MARK: - Evacuation route
 
 struct EvacuationRoute {
+    let coordinates: [(lat: Double, lon: Double)]
+    let steps: [String]
     let distanceKm: Double
     let walkMin: Double
     let runMin: Double
     let cycleMin: Double
     let motorMin: Double
     let durationMin: Double
-
-    /// Returns nil if the user is already outside the danger radius.
-    static func compute(
-        userLat: Double, userLon: Double,
-        epicenterLat: Double, epicenterLon: Double,
-        dangerRadiusKm: Double
-    ) -> EvacuationRoute? {
-        let distToEpicenter = GeoUtils.distanceKm(
-            lat1: userLat, lon1: userLon,
-            lat2: epicenterLat, lon2: epicenterLon
-        )
-        guard distToEpicenter < dangerRadiusKm else { return nil }
-        let km = max((dangerRadiusKm - distToEpicenter) * 1.3, 0.5)
-        return EvacuationRoute(
-            distanceKm: km,
-            walkMin:    km / 5.0  * 60,
-            runMin:     km / 12.0 * 60,
-            cycleMin:   km / 20.0 * 60,
-            motorMin:   km / 60.0 * 60,
-            durationMin: km / 80.0 * 60
-        )
-    }
 }
 
 // MARK: - Emergency briefing text builder
