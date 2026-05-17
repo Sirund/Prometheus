@@ -1,5 +1,6 @@
 package com.prometheus.android.ui.assistant
 
+import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
@@ -43,7 +44,7 @@ import androidx.compose.ui.unit.dp
 import com.prometheus.android.inference.InferenceManager
 import com.prometheus.android.inference.ModelManager
 import com.prometheus.android.inference.VisionInferenceManager
-import com.prometheus.android.ui.theme.LocalPrometheusColors
+import com.prometheus.android.ui.theme.PrometheusColors
 import com.prometheus.model.ChatMessage
 import com.prometheus.prompt.SystemPrompts
 import kotlinx.coroutines.Dispatchers
@@ -53,6 +54,7 @@ import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import java.io.FileOutputStream
 import java.util.UUID
 
 data class ConversationData(
@@ -70,11 +72,12 @@ private fun saveConversations(file: File, conversations: List<ConversationData>)
                 put("title", conv.title)
                 val msgs = JSONArray()
                 for (msg in conv.messages) {
-                    msgs.put(JSONObject().apply {
-                        put("id", msg.id)
-                        put("text", msg.text)
-                        put("isUser", msg.isUser)
-                    })
+                msgs.put(JSONObject().apply {
+                    put("id", msg.id)
+                    put("text", msg.text)
+                    put("isUser", msg.isUser)
+                    if (msg.imagePath != null) put("imagePath", msg.imagePath)
+                })
                 }
                 put("messages", msgs)
             }
@@ -95,10 +98,11 @@ private fun loadConversations(file: File): List<ConversationData> {
             val msgsArr = obj.getJSONArray("messages")
             for (j in 0 until msgsArr.length()) {
                 val m = msgsArr.getJSONObject(j)
-                msgs.add(ChatMessage(
+                msgs.add(                ChatMessage(
                     id = m.getString("id"),
                     text = m.getString("text"),
-                    isUser = m.getBoolean("isUser")
+                    isUser = m.getBoolean("isUser"),
+                    imagePath = m.optString("imagePath", null)
                 ))
             }
             list.add(ConversationData(
@@ -113,13 +117,22 @@ private fun loadConversations(file: File): List<ConversationData> {
     }
 }
 
+private fun saveChatImage(context: Context, bitmap: Bitmap): String {
+    val dir = File(context.filesDir, "chat_images")
+    dir.mkdirs()
+    val file = File(dir, "chat_${System.currentTimeMillis()}.jpg")
+    FileOutputStream(file).use { out ->
+        bitmap.compress(Bitmap.CompressFormat.JPEG, 75, out)
+    }
+    return file.absolutePath
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AssistantScreen() {
     val context = LocalContext.current
     val saveFile = remember { File(context.filesDir, "conversations.json") }
     val manager = remember { InferenceManager() }
-    val visionManager = remember { VisionInferenceManager(context) }
     var query by remember { mutableStateOf("") }
     var selectedImageBitmap by remember { mutableStateOf<Bitmap?>(null) }
     var conversations by remember { mutableStateOf(loadConversations(saveFile)) }
@@ -298,6 +311,11 @@ fun AssistantScreen() {
                                     },
                                     modifier = Modifier.size(32.dp)
                                 ) {
+                                    LaunchedEffect(Unit) {
+                                        conversations[index].messages.forEach { msg ->
+                                            msg.imagePath?.let { path -> File(path).delete() }
+                                        }
+                                    }
                                     Text("\u2716", color = Color.Gray, style = MaterialTheme.typography.labelSmall)
                                 }
                             }
@@ -552,14 +570,17 @@ fun AssistantScreen() {
                             query = ""
                             selectedImageBitmap = null
                             val history = chatHistory
-                            val oldSize = history.size
-                            val aiIndex = oldSize + 1
-                            conversations = conversations.toMutableList().also { list ->
-                                list[activeIndex] = list[activeIndex].copy(
-                                    messages = history + ChatMessage(text = userText, isUser = true) + ChatMessage(text = "...", isUser = false)
-                                )
-                            }
                             scope.launch {
+                                val savedPath = if (image != null) {
+                                    withContext(Dispatchers.IO) { saveChatImage(context, image) }
+                                } else null
+                                val oldSize = history.size
+                                val aiIndex = oldSize + 1
+                                conversations = conversations.toMutableList().also { list ->
+                                    list[activeIndex] = list[activeIndex].copy(
+                                        messages = history + ChatMessage(text = userText, isUser = true, imagePath = savedPath) + ChatMessage(text = "...", isUser = false)
+                                    )
+                                }
                                 val onToken: (String) -> Unit = { response ->
                                     conversations = conversations.toMutableList().also { list ->
                                         val msgs = list[activeIndex].messages.toMutableList()
@@ -569,14 +590,10 @@ fun AssistantScreen() {
                                         list[activeIndex] = list[activeIndex].copy(messages = msgs)
                                     }
                                 }
-                                if (image != null) {
-                                    visionManager.sendMessage(userText, image, onToken)
-                                } else {
-                                    manager.sendMessage(userText, history, sysPrompt, onToken)
-                                }
+                                manager.sendMessage(userText, history, sysPrompt, savedPath, onToken)
                             }
                         },
-                        enabled = isModelLoaded && (query.isNotBlank() || selectedImageBitmap != null),
+                        enabled = isModelLoaded && query.isNotBlank(),
                         colors = ButtonDefaults.textButtonColors(
                             containerColor = if (isModelLoaded) p.blue else p.surface,
                             contentColor = if (isModelLoaded) Color.Black else Color.Gray,
@@ -600,7 +617,7 @@ fun AssistantScreen() {
             onDismissRequest = { showImageSourceDialog = false },
             title = {
                 Text("Choose Image Source",
-                    color = p.blue,
+                    color = PrometheusColors.blue,
                     fontWeight = FontWeight.Bold)
             },
             text = {
@@ -610,10 +627,10 @@ fun AssistantScreen() {
                             showImageSourceDialog = false
                             cameraLauncher.launch(null)
                         },
-                        modifier = Modifier.fillMaxWidth().height(48.dp)
+                        modifier = Modifier.fillMaxWidth().height(56.dp)
                     ) {
                         Text("\uD83D\uDCF7  Take Photo",
-                            color = p.textPrimary,
+                            color = Color.White,
                             fontWeight = FontWeight.Bold)
                     }
                     Spacer(Modifier.height(8.dp))
@@ -622,17 +639,17 @@ fun AssistantScreen() {
                             showImageSourceDialog = false
                             galleryLauncher.launch("image/*")
                         },
-                        modifier = Modifier.fillMaxWidth().height(48.dp)
+                        modifier = Modifier.fillMaxWidth().height(56.dp)
                     ) {
                         Text("\uD83D\uDDBC\uFE0F  Gallery",
-                            color = p.textPrimary,
+                            color = Color.White,
                             fontWeight = FontWeight.Bold)
                     }
                 }
             },
             confirmButton = {
                 TextButton(onClick = { showImageSourceDialog = false }) {
-                    Text("Cancel", color = p.textSecondary)
+                    Text("Cancel", color = Color.Gray)
                 }
             },
             containerColor = p.surface
@@ -694,7 +711,6 @@ private fun CapabilityPill(text: String) {
 
 @Composable
 private fun ChatBubble(message: ChatMessage) {
-    val p = LocalPrometheusColors.current
     AnimatedVisibility(
         visible = true,
         enter = slideInHorizontally(
@@ -702,10 +718,30 @@ private fun ChatBubble(message: ChatMessage) {
             initialOffsetX = { if (message.isUser) it else -it }
         ) + fadeIn(animationSpec = tween(300))
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = if (message.isUser) Arrangement.End else Arrangement.Start
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(4.dp),
+            horizontalAlignment = if (message.isUser) Alignment.End else Alignment.Start
         ) {
+            if (message.imagePath != null) {
+                val bitmap = remember(message.imagePath) {
+                    BitmapFactory.decodeFile(message.imagePath)
+                }
+                if (bitmap != null) {
+                    Image(
+                        bitmap = bitmap.asImageBitmap(),
+                        contentDescription = "Attached image",
+                        modifier = Modifier
+                            .widthIn(max = 240.dp)
+                            .aspectRatio(4f / 3f)
+                            .clip(RoundedCornerShape(12.dp))
+                            .border(1.dp, PrometheusColors.blue.copy(alpha = 0.3f), RoundedCornerShape(12.dp)),
+                        contentScale = ContentScale.Crop
+                    )
+                    Spacer(Modifier.height(6.dp))
+                }
+            }
             Text(
                 text = markdownToAnnotated(message.text),
                 color = if (message.isUser) Color.Black else p.textPrimary,
