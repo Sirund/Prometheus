@@ -85,7 +85,7 @@ class BMKGPollingController(context: Context, baseUrlOverride: String? = null) {
         scope.launch {
             pollWeather()
             while (isActive) {
-                delay(2_000L)
+                delay(60_000L)
                 pollWeather()
             }
         }
