@@ -17,11 +17,9 @@ struct MonitorView: View {
                         SectionHeader(title: "WEATHER")
                         WeatherInfoCard(weather: pollingService.weatherInfo)
 
-                        if !pollingService.nowcastAlerts.isEmpty {
+                        if let latestAlert = pollingService.nowcastAlerts.max(by: { $0.guid < $1.guid }) {
                             SectionHeader(title: "WEATHER WARNING")
-                            ForEach(pollingService.nowcastAlerts, id: \.link) { alert in
-                                NowcastAlertCard(alert: alert)
-                            }
+                            NowcastAlertCard(alert: latestAlert)
                         }
 
                         SectionHeader(title: "EARTHQUAKE INFO")

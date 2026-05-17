@@ -4,8 +4,10 @@ data class NowcastAlert(
     val title: String,
     val description: String,
     val link: String,
-    val pubDate: String
-) {
+    val pubDate: String,
+    val guid: String = ""
+) : Comparable<NowcastAlert> {
+    override fun compareTo(other: NowcastAlert): Int = guid.compareTo(other.guid)
     val isBadWeather: Boolean
         get() = checkBadWeather(title, description)
 
