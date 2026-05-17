@@ -14,16 +14,6 @@ struct MonitorView: View {
                     VStack(alignment: .leading, spacing: 20) {
                         DangerStatusBanner(level: dangerLevel)
 
-                        SectionHeader(title: "WEATHER")
-                        WeatherInfoCard(weather: pollingService.weatherInfo)
-
-                        SectionHeader(title: "WEATHER WARNING")
-                        if let latestAlert = pollingService.nowcastAlerts.max(by: { $0.guid < $1.guid }) {
-                            NowcastAlertCard(alert: latestAlert)
-                        } else {
-                            NowcastClearCard()
-                        }
-
                         SectionHeader(title: "EARTHQUAKE INFO")
                         if let event = pollingService.latestEarthquakeEvent {
                             BMKGEventCard(
@@ -45,6 +35,16 @@ struct MonitorView: View {
                                 potential: "--",
                                 timestamp: pollingService.lastChecked ?? "Not yet refreshed"
                             )
+                        }
+
+                        SectionHeader(title: "WEATHER")
+                        WeatherInfoCard(weather: pollingService.weatherInfo)
+
+                        SectionHeader(title: "WEATHER WARNING")
+                        if let latestAlert = pollingService.nowcastAlerts.max(by: { $0.guid < $1.guid }) {
+                            NowcastAlertCard(alert: latestAlert)
+                        } else {
+                            NowcastClearCard()
                         }
 
                         SectionHeader(title: "RECENT EVENTS")
@@ -204,17 +204,15 @@ struct BMKGEventCard: View {
             Divider().background(Color.prometheusBlue.opacity(0.3))
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("LOCATION").font(.caption2.monospaced()).foregroundColor(.gray)
-                    Text(location).font(.caption.bold().monospaced()).foregroundColor(.white)
+                    let hasTsunami = potential.contains("berpotensi") || potential.contains("warning") || potential.contains("ya")
+                    Text("TSUNAMI POTENTIAL").font(.caption2.monospaced()).foregroundColor(.gray)
+                    Text(hasTsunami ? "YES" : "NO").font(.caption.bold().monospaced())
+                        .foregroundColor(hasTsunami ? .red : .white)
                 }
                 Spacer()
                 VStack(alignment: .trailing, spacing: 2) {
-                    Text("TSUNAMI POTENTIAL").font(.caption2.monospaced()).foregroundColor(.gray)
-                    Text(potential).font(.caption.bold().monospaced())
-                        .foregroundColor(
-                            potential.contains("berpotensi") || potential.contains("warning") || potential.contains("ya")
-                            ? .red : .white
-                        )
+                    Text("LOCATION").font(.caption2.monospaced()).foregroundColor(.gray)
+                    Text(location).font(.caption.bold().monospaced()).foregroundColor(.white)
                 }
             }
             HStack {
@@ -296,6 +294,7 @@ struct WeatherStatColumn: View {
 
 struct NowcastAlertCard: View {
     let alert: shared.NowcastAlert
+    @State private var expanded = false
 
     var body: some View {
         HStack(spacing: 10) {
@@ -308,12 +307,18 @@ struct NowcastAlertCard: View {
                 Text(alert.summary)
                     .font(.caption2.monospaced())
                     .foregroundColor(.gray)
-                    .lineLimit(2)
+                    .lineLimit(expanded ? nil : 2)
+                Text(expanded ? "\u{25B2} Tap to collapse" : "\u{25BC} Tap to expand")
+                    .font(.caption2.monospaced())
+                    .foregroundColor(.gray)
+                    .padding(.top, 2)
             }
         }
         .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color.cardBackground)
         .overlay(Rectangle().stroke(Color.prometheusBlue.opacity(0.3), lineWidth: 1))
+        .onTapGesture { expanded.toggle() }
     }
 }
 

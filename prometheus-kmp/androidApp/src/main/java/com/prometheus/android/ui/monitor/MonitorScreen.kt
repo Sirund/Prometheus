@@ -14,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -84,30 +85,6 @@ fun MonitorScreen(
 
         EntranceAnimation(visible = true, index = 0) {
             Column {
-                SectionHeader(text = "WEATHER")
-                Spacer(Modifier.height(8.dp))
-                WeatherInfoCard(weather = weatherInfo)
-            }
-        }
-
-        Spacer(Modifier.height(16.dp))
-
-        EntranceAnimation(visible = true, index = 1) {
-            val latestAlert = nowcastAlerts.maxOrNull()
-            Column {
-                SectionHeader(text = "WEATHER WARNING")
-                Spacer(Modifier.height(8.dp))
-                if (latestAlert != null) {
-                    NowcastAlertCard(alert = latestAlert)
-                } else {
-                    NowcastClearCard()
-                }
-            }
-        }
-        Spacer(Modifier.height(16.dp))
-
-        EntranceAnimation(visible = true, index = 2) {
-            Column {
                 SectionHeader(text = "EARTHQUAKE INFO")
                 Spacer(Modifier.height(8.dp))
                 val latLon = if (event != null) "${event.Lintang ?: "--"}, ${event.Bujur ?: "--"}" else "--"
@@ -124,7 +101,31 @@ fun MonitorScreen(
             }
         }
 
-        Spacer(Modifier.height(28.dp))
+        Spacer(Modifier.height(16.dp))
+
+        EntranceAnimation(visible = true, index = 1) {
+            Column {
+                SectionHeader(text = "WEATHER")
+                Spacer(Modifier.height(8.dp))
+                WeatherInfoCard(weather = weatherInfo)
+            }
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        EntranceAnimation(visible = true, index = 2) {
+            val latestAlert = nowcastAlerts.maxOrNull()
+            Column {
+                SectionHeader(text = "WEATHER WARNING")
+                Spacer(Modifier.height(8.dp))
+                if (latestAlert != null) {
+                    NowcastAlertCard(alert = latestAlert)
+                } else {
+                    NowcastClearCard()
+                }
+            }
+        }
+        Spacer(Modifier.height(16.dp))
 
         EntranceAnimation(visible = true, index = 3) {
             Column {
@@ -252,18 +253,18 @@ private fun HeroEventCard(
         Spacer(Modifier.height(8.dp))
         Row(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = "LOCATION", style = MaterialTheme.typography.labelSmall, color = p.textSecondary)
+                val hasTsunami = potential.contains("berpotensi", ignoreCase = true) ||
+                    potential.contains("warning", ignoreCase = true) ||
+                    potential.contains("ya", ignoreCase = true)
+                Text(text = "TSUNAMI POTENTIAL", style = MaterialTheme.typography.labelSmall, color = p.textSecondary)
                 Spacer(Modifier.height(2.dp))
-                Text(text = location, style = MaterialTheme.typography.labelLarge, color = p.textPrimary)
+                Text(text = if (hasTsunami) "YES" else "NO", style = MaterialTheme.typography.labelLarge, color = if (hasTsunami) p.danger else p.textPrimary)
             }
             Spacer(Modifier.width(12.dp))
             Column(horizontalAlignment = Alignment.End, modifier = Modifier.weight(1f)) {
-                Text(text = "TSUNAMI POTENTIAL", style = MaterialTheme.typography.labelSmall, color = p.textSecondary)
+                Text(text = "LOCATION", style = MaterialTheme.typography.labelSmall, color = p.textSecondary)
                 Spacer(Modifier.height(2.dp))
-                Text(text = potential, style = MaterialTheme.typography.labelLarge, color = when {
-                    potential.contains("berpotensi", ignoreCase = true) || potential.contains("warning", ignoreCase = true) || potential.contains("ya", ignoreCase = true) -> p.danger
-                    else -> p.textPrimary
-                })
+                Text(text = location, style = MaterialTheme.typography.labelLarge, color = p.textPrimary)
             }
         }
         Spacer(Modifier.height(12.dp))
@@ -376,8 +377,9 @@ private fun RowScope.WeatherStatColumn(
 private fun NowcastAlertCard(alert: NowcastAlert) {
     val p = LocalPrometheusColors.current
     val alertColor = if (alert.isBadWeather) p.danger else p.warning
-    PrometheusCard {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+    var expanded by remember { mutableStateOf(false) }
+    PrometheusCard(modifier = Modifier.clickable { expanded = !expanded }) {
+        Row(verticalAlignment = Alignment.Top) {
             Text(text = if (alert.isBadWeather) "\u26A0\uFE0F" else "\uD83D\uDEE1\uFE0F", fontSize = 20.sp)
             Spacer(Modifier.width(10.dp))
             Column(modifier = Modifier.weight(1f)) {
@@ -391,7 +393,14 @@ private fun NowcastAlertCard(alert: NowcastAlert) {
                     text = alert.summary,
                     style = MaterialTheme.typography.bodySmall,
                     color = p.textSecondary,
-                    maxLines = 2
+                    maxLines = if (expanded) Int.MAX_VALUE else 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = if (expanded) "\u25B2 Tap to collapse" else "\u25BC Tap to expand",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = p.textSecondary,
+                    modifier = Modifier.padding(top = 4.dp)
                 )
             }
         }
