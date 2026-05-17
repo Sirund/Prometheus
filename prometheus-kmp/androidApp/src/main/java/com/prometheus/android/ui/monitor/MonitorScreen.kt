@@ -248,11 +248,21 @@ private fun HeroEventCard(
         Spacer(Modifier.height(8.dp))
         HorizontalDivider(color = p.surfaceElevated)
         Spacer(Modifier.height(6.dp))
-        Text(text = potential, style = MaterialTheme.typography.labelLarge, color = p.textPrimary, fontWeight = FontWeight.Bold)
+        Text(
+            text = potential,
+            style = MaterialTheme.typography.labelLarge,
+            color = p.textPrimary,
+            fontWeight = FontWeight.Bold
+        )
         Spacer(Modifier.height(8.dp))
         HorizontalDivider(color = p.surfaceElevated)
         Spacer(Modifier.height(6.dp))
-        Text(text = location, style = MaterialTheme.typography.labelLarge, color = p.textPrimary, fontWeight = FontWeight.Bold)
+        Text(
+            text = location,
+            style = MaterialTheme.typography.labelLarge,
+            color = p.textPrimary,
+            fontWeight = FontWeight.Bold
+        )
         if (timestamp.isNotBlank()) {
             Spacer(Modifier.height(12.dp))
             Text(
