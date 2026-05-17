@@ -92,15 +92,13 @@ fun MonitorScreen(
 
         Spacer(Modifier.height(16.dp))
 
-        if (nowcastAlerts.isNotEmpty()) {
+        val latestAlert = nowcastAlerts.maxOrNull()
+        if (latestAlert != null) {
             EntranceAnimation(visible = true, index = 1) {
                 Column {
                     SectionHeader(text = "WEATHER WARNING")
                     Spacer(Modifier.height(8.dp))
-                    nowcastAlerts.forEach { alert ->
-                        NowcastAlertCard(alert = alert)
-                        Spacer(Modifier.height(6.dp))
-                    }
+                    NowcastAlertCard(alert = latestAlert)
                 }
             }
             Spacer(Modifier.height(16.dp))

@@ -21,11 +21,12 @@ class BMKGWeatherClient {
             val body = response.body<JsonObject>()
             val data = body["data"]?.jsonArray?.firstOrNull()?.jsonObject
             val cuacaArray = data?.get("cuaca")?.jsonArray
-            val current = cuacaArray?.firstOrNull()?.jsonObject ?: return WeatherInfo.EMPTY
+            val todaySlots = cuacaArray?.firstOrNull()?.jsonArray
+            val current = todaySlots?.firstOrNull()?.jsonObject ?: return WeatherInfo.EMPTY
 
             WeatherInfo(
-                temperature = current["t"]?.jsonPrimitive?.content ?: "--",
-                humidity = current["hu"]?.jsonPrimitive?.content ?: "--",
+                temperature = "${current["t"]?.jsonPrimitive?.content ?: "--"}",
+                humidity = "${current["hu"]?.jsonPrimitive?.content ?: "--"}",
                 windSpeed = current["ws"]?.jsonPrimitive?.content ?: "--",
                 windDirection = current["wd"]?.jsonPrimitive?.content ?: "--",
                 weatherDesc = current["weather_desc"]?.jsonPrimitive?.content ?: "--",
@@ -54,16 +55,18 @@ class BMKGWeatherClient {
             val description = extractXmlTag(item, "description")
             val link = extractXmlTag(item, "link")
             val pubDate = extractXmlTag(item, "pubDate")
+            val guid = extractXmlTag(item, "guid")
             if (title != null && description != null) {
                 alerts.add(NowcastAlert(
                     title = title,
                     description = description,
                     link = link ?: "",
-                    pubDate = pubDate ?: ""
+                    pubDate = pubDate ?: "",
+                    guid = guid ?: ""
                 ))
             }
         }
-        return alerts
+        return alerts.sortedDescending()
     }
 
     private fun extractXmlTag(xml: String, tag: String): String? {
