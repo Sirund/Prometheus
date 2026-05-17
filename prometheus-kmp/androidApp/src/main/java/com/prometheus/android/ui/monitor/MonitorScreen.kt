@@ -92,17 +92,19 @@ fun MonitorScreen(
 
         Spacer(Modifier.height(16.dp))
 
-        val latestAlert = nowcastAlerts.maxOrNull()
-        if (latestAlert != null) {
-            EntranceAnimation(visible = true, index = 1) {
-                Column {
-                    SectionHeader(text = "WEATHER WARNING")
-                    Spacer(Modifier.height(8.dp))
+        EntranceAnimation(visible = true, index = 1) {
+            val latestAlert = nowcastAlerts.maxOrNull()
+            Column {
+                SectionHeader(text = "WEATHER WARNING")
+                Spacer(Modifier.height(8.dp))
+                if (latestAlert != null) {
                     NowcastAlertCard(alert = latestAlert)
+                } else {
+                    NowcastClearCard()
                 }
             }
-            Spacer(Modifier.height(16.dp))
         }
+        Spacer(Modifier.height(16.dp))
 
         EntranceAnimation(visible = true, index = 2) {
             Column {
@@ -377,6 +379,22 @@ private fun NowcastAlertCard(alert: NowcastAlert) {
                     maxLines = 2
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun NowcastClearCard() {
+    val p = LocalPrometheusColors.current
+    PrometheusCard {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(text = "\u2600\uFE0F", fontSize = 20.sp)
+            Spacer(Modifier.width(10.dp))
+            Text(
+                text = "Cuaca baik \u2014 Tidak ada peringatan",
+                style = MaterialTheme.typography.bodySmall,
+                color = p.success
+            )
         }
     }
 }
