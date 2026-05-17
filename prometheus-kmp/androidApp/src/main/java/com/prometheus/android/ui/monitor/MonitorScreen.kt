@@ -1,12 +1,10 @@
 package com.prometheus.android.ui.monitor
 
 import androidx.compose.animation.*
-import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -14,9 +12,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -28,6 +24,8 @@ import com.prometheus.android.ui.shared.StatusDot
 import com.prometheus.android.ui.shared.ThreatLevelBanner
 import com.prometheus.android.ui.theme.LocalPrometheusColors
 import com.prometheus.model.EarthquakeEvent
+import com.prometheus.model.NowcastAlert
+import com.prometheus.model.WeatherInfo
 
 private enum class DangerLevel { None, Watch, Medium, Danger }
 
@@ -36,6 +34,8 @@ fun MonitorScreen(
     onRefresh: (() -> Unit)? = null,
     event: EarthquakeEvent? = null,
     latestEvent: String? = null,
+    weatherInfo: WeatherInfo = WeatherInfo.EMPTY,
+    nowcastAlerts: List<NowcastAlert> = emptyList(),
     injectionEnabled: Boolean = false,
     injectionIp: String = "",
     injectionPort: Int = 8080,
@@ -83,31 +83,41 @@ fun MonitorScreen(
         Spacer(Modifier.height(20.dp))
 
         EntranceAnimation(visible = true, index = 0) {
-            HeroEventCard(
-                magnitude = event?._magnitude ?: "--",
-                location = event?._wilayah ?: if (event != null) "Unknown location" else "Waiting for data...",
-                depth = event?._kedalaman ?: "--",
-                felt = event?._dirasakan ?: "--",
-                potential = event?._potensi ?: "--",
-                level = dangerLevel,
-                timestamp = lastRefresh
-            )
-        }
-
-        Spacer(Modifier.height(20.dp))
-
-        EntranceAnimation(visible = true, index = 1) {
             Column {
-                SectionHeader(text = "SYSTEM STATUS")
+                SectionHeader(text = "WEATHER")
                 Spacer(Modifier.height(8.dp))
-                SystemStatusCard()
+                WeatherInfoCard(weather = weatherInfo)
             }
         }
 
         Spacer(Modifier.height(16.dp))
 
+        val latestAlert = nowcastAlerts.maxOrNull()
+        if (latestAlert != null) {
+            EntranceAnimation(visible = true, index = 1) {
+                Column {
+                    SectionHeader(text = "WEATHER WARNING")
+                    Spacer(Modifier.height(8.dp))
+                    NowcastAlertCard(alert = latestAlert)
+                }
+            }
+            Spacer(Modifier.height(16.dp))
+        }
+
         EntranceAnimation(visible = true, index = 2) {
-            GemmaStatusCard()
+            Column {
+                SectionHeader(text = "EARTHQUAKE INFO")
+                Spacer(Modifier.height(8.dp))
+                HeroEventCard(
+                    magnitude = event?._magnitude ?: "--",
+                    location = event?._wilayah ?: if (event != null) "Unknown location" else "Waiting for data...",
+                    depth = event?._kedalaman ?: "--",
+                    felt = event?._dirasakan ?: "--",
+                    potential = event?._potensi ?: "--",
+                    level = dangerLevel,
+                    timestamp = lastRefresh
+                )
+            }
         }
 
         Spacer(Modifier.height(28.dp))
@@ -170,10 +180,10 @@ fun MonitorScreen(
 private fun DangerBanner(level: DangerLevel) {
     val p = LocalPrometheusColors.current
     val (color, icon, label) = when (level) {
-        DangerLevel.None -> Triple(p.success, "\u2705", "ALL CLEAR — No active alerts")
-        DangerLevel.Watch -> Triple(p.warning, "\u26A0\uFE0F", "WATCH — Monitor closely")
-        DangerLevel.Medium -> Triple(Color(0xFFFF8C00), "\u26A0\uFE0F", "MEDIUM ALERT — Notified")
-        DangerLevel.Danger -> Triple(p.danger, "\u26A0\uFE0F", "DANGER — Take action now")
+        DangerLevel.None -> Triple(p.success, "\u2705", "ALL CLEAR \u2014 No active alerts")
+        DangerLevel.Watch -> Triple(p.warning, "\u26A0\uFE0F", "WATCH \u2014 Monitor closely")
+        DangerLevel.Medium -> Triple(Color(0xFFFF8C00), "\u26A0\uFE0F", "MEDIUM ALERT \u2014 Notified")
+        DangerLevel.Danger -> Triple(p.danger, "\u26A0\uFE0F", "DANGER \u2014 Take action now")
     }
     ThreatLevelBanner(color = color, label = label, icon = icon)
 }
@@ -197,35 +207,32 @@ private fun HeroEventCard(
     }
 
     PrometheusCard(elevated = true) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = magnitude.let { if (it.startsWith("M ")) it else "M $it" },
-                style = MaterialTheme.typography.displayLarge,
-                color = accentColor,
-                fontSize = 52.sp
+        Row(modifier = Modifier.fillMaxWidth()) {
+            StatColumn(
+                modifier = Modifier.weight(1f),
+                icon = "\uD83D\uDCCA",
+                value = magnitude.let { if (it.startsWith("M ")) it else "M $it" },
+                label = "MAGNITUDE",
+                valueColor = accentColor
             )
-            Spacer(Modifier.width(12.dp))
-            Column(modifier = Modifier.padding(bottom = 4.dp)) {
-                Text(
-                    text = "DEPTH",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = p.textSecondary
-                )
-                Text(
-                    text = depth,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = p.textPrimary
-                )
-            }
+            StatColumn(
+                modifier = Modifier.weight(1f),
+                icon = "\u2B07\uFE0F",
+                value = depth,
+                label = "DEPTH",
+                valueColor = p.textPrimary
+            )
+            StatColumn(
+                modifier = Modifier.weight(1f),
+                icon = "\uD83D\uDCCD",
+                value = location,
+                label = "LOCATION",
+                valueColor = p.textPrimary
+            )
         }
+        Spacer(Modifier.height(12.dp))
+        HorizontalDivider(color = p.surfaceElevated)
         Spacer(Modifier.height(8.dp))
-        Text(
-            text = location,
-            style = MaterialTheme.typography.headlineMedium,
-            color = p.textPrimary,
-            fontWeight = FontWeight.Normal
-        )
-        Spacer(Modifier.height(16.dp))
         Row(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(text = "FELT", style = MaterialTheme.typography.labelSmall, color = p.textSecondary)
@@ -252,84 +259,125 @@ private fun HeroEventCard(
 }
 
 @Composable
-private fun SystemStatusCard() {
+private fun RowScope.StatColumn(
+    modifier: Modifier = Modifier,
+    icon: String,
+    value: String,
+    label: String,
+    valueColor: Color
+) {
     val p = LocalPrometheusColors.current
-    PrometheusCard {
-        AlarmIndicatorRow(isActive = true, label = "AUDIBLE ALARM", status = "ARMED")
-        Spacer(Modifier.height(12.dp))
-        HorizontalDivider(color = p.surfaceElevated)
-        Spacer(Modifier.height(12.dp))
-        AlarmIndicatorRow(isActive = true, label = "TTS BRIEFING", status = "READY")
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(text = icon, fontSize = 20.sp)
+        Spacer(Modifier.height(2.dp))
+        Text(
+            text = value,
+            style = MaterialTheme.typography.labelLarge,
+            color = valueColor,
+            fontWeight = FontWeight.Bold,
+            maxLines = 2
+        )
+        Spacer(Modifier.height(2.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = p.textSecondary
+        )
     }
 }
 
 @Composable
-private fun GemmaStatusCard() {
+private fun WeatherInfoCard(weather: WeatherInfo) {
     val p = LocalPrometheusColors.current
-    val infinite = rememberInfiniteTransition(label = "gemma_pulse")
-    val alpha by infinite.animateFloat(
-        initialValue = 0.4f, targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(1400), RepeatMode.Reverse),
-        label = "gemma_alpha"
-    )
-
-    PrometheusCard(elevated = true) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier
-                    .size(10.dp)
-                    .clip(CircleShape)
-                    .background(p.success.copy(alpha = alpha))
+    PrometheusCard {
+        Row(modifier = Modifier.fillMaxWidth()) {
+            WeatherStatColumn(
+                modifier = Modifier.weight(1f),
+                icon = "\uD83C\uDF21\uFE0F",
+                value = "${weather.temperature}\u00B0",
+                label = "TEMP"
             )
-            Spacer(Modifier.width(10.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "GEMMA 4",
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = p.textPrimary
-                )
-                Text(
-                    text = "On-device AI emergency assistant ready when networks go down",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = p.textSecondary,
-                    lineHeight = 18.sp
-                )
-            }
-            Spacer(Modifier.width(8.dp))
+            WeatherStatColumn(
+                modifier = Modifier.weight(1f),
+                icon = "\uD83D\uDCA7",
+                value = "${weather.humidity}%",
+                label = "HUMIDITY"
+            )
+            WeatherStatColumn(
+                modifier = Modifier.weight(1f),
+                icon = "\uD83D\uDCA8",
+                value = "${weather.windSpeed} km/j",
+                label = "WIND"
+            )
+        }
+        if (weather.weatherDesc.isNotBlank() && weather.weatherDesc != "--") {
+            Spacer(Modifier.height(8.dp))
+            HorizontalDivider(color = p.surfaceElevated)
+            Spacer(Modifier.height(6.dp))
             Text(
-                text = "STANDBY",
-                style = MaterialTheme.typography.labelSmall,
-                color = p.success.copy(alpha = alpha),
-                fontWeight = FontWeight.Bold
+                text = weather.weatherDesc,
+                style = MaterialTheme.typography.bodySmall,
+                color = p.textSecondary
             )
         }
     }
 }
 
 @Composable
-private fun AlarmIndicatorRow(isActive: Boolean, label: String, status: String) {
+private fun RowScope.WeatherStatColumn(
+    modifier: Modifier = Modifier,
+    icon: String,
+    value: String,
+    label: String
+) {
     val p = LocalPrometheusColors.current
-    val statusColor = if (isActive) p.success else p.textSecondary
-
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        StatusDot(isActive = isActive)
-        Spacer(Modifier.width(10.dp))
+        Text(text = icon, fontSize = 20.sp)
+        Spacer(Modifier.height(2.dp))
         Text(
-            text = label,
-            style = MaterialTheme.typography.bodySmall,
-            color = p.textPrimary
-        )
-        Spacer(Modifier.weight(1f))
-        Text(
-            text = status,
-            style = MaterialTheme.typography.labelSmall,
-            color = statusColor,
+            text = value,
+            style = MaterialTheme.typography.labelLarge,
+            color = p.textPrimary,
             fontWeight = FontWeight.Bold
         )
+        Spacer(Modifier.height(2.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = p.textSecondary
+        )
+    }
+}
+
+@Composable
+private fun NowcastAlertCard(alert: NowcastAlert) {
+    val p = LocalPrometheusColors.current
+    val alertColor = if (alert.isBadWeather) p.danger else p.warning
+    PrometheusCard {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(text = if (alert.isBadWeather) "\u26A0\uFE0F" else "\uD83D\uDEE1\uFE0F", fontSize = 20.sp)
+            Spacer(Modifier.width(10.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = alert.eventType,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = alertColor,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = alert.summary,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = p.textSecondary,
+                    maxLines = 2
+                )
+            }
+        }
     }
 }
 
@@ -342,7 +390,7 @@ private fun InjectionStatusCard(
 ) {
     val p = LocalPrometheusColors.current
     val statusColor = if (enabled && ip.isNotBlank()) p.success else p.textSecondary
-    val statusText = if (enabled && ip.isNotBlank()) "ACTIVE — $ip:$port" else "DISABLED"
+    val statusText = if (enabled && ip.isNotBlank()) "ACTIVE \u2014 $ip:$port" else "DISABLED"
 
     PrometheusCard(
         modifier = Modifier.clickable(onClick = onClick)

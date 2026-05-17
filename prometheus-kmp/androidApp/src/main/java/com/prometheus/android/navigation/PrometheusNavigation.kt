@@ -29,7 +29,9 @@ import com.prometheus.android.ui.monitor.MonitorScreen
 import com.prometheus.android.ui.theme.LocalPrometheusColors
 import com.prometheus.android.ui.vision.VisionScreen
 import com.prometheus.model.EarthquakeEvent
+import com.prometheus.model.NowcastAlert
 import com.prometheus.model.UserLocation
+import com.prometheus.model.WeatherInfo
 
 enum class Screen(val label: String, val icon: ImageVector) {
     Monitor("MONITOR", Icons.Filled.Radio),
@@ -46,6 +48,8 @@ fun PrometheusApp(
     latestEvent: String? = null,
     currentEvent: EarthquakeEvent? = null,
     currentLocation: UserLocation? = null,
+    weatherInfo: WeatherInfo = WeatherInfo.EMPTY,
+    nowcastAlerts: List<NowcastAlert> = emptyList(),
     injectionEnabled: Boolean = false,
     injectionIp: String = "",
     injectionPort: Int = 8080,
@@ -114,6 +118,8 @@ fun PrometheusApp(
                             onRefresh = onRefreshBmkg,
                             event = currentEvent,
                             latestEvent = latestEvent,
+                            weatherInfo = weatherInfo,
+                            nowcastAlerts = nowcastAlerts,
                             injectionEnabled = injectionEnabled,
                             injectionIp = injectionIp,
                             injectionPort = injectionPort,
