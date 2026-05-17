@@ -22,6 +22,7 @@ class InferenceManager {
         text: String,
         history: List<ChatMessage> = emptyList(),
         systemPrompt: String = SystemPrompts.SURVIVAL_CHATBOT,
+        imagePath: String? = null,
         onToken: (String) -> Unit
     ) = withContext(Dispatchers.IO) {
         if (!ModelManager.isLoaded) {
@@ -48,7 +49,13 @@ class InferenceManager {
             }
             conversation = conv
 
-            val contents = Contents.of(listOf(Content.Text(prompt)))
+            val contentsList = mutableListOf<Content>()
+            if (imagePath != null) {
+                contentsList.add(Content.ImageFile(imagePath))
+            }
+            contentsList.add(Content.Text(prompt))
+            val contents = Contents.of(contentsList)
+
             val response = StringBuilder()
             conv.sendMessageAsync(contents).collect { msg ->
                 response.append(msg.toString())

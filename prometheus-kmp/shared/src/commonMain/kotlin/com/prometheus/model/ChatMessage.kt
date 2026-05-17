@@ -7,5 +7,6 @@ import kotlin.random.Random
 data class ChatMessage(
     val id: String = Random.nextLong().toString(),
     val text: String,
-    val isUser: Boolean
+    val isUser: Boolean,
+    val imagePath: String? = null
 )
