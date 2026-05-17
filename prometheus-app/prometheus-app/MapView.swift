@@ -8,6 +8,7 @@ import MapKit
 
 struct MapView: View {
     @Environment(BMKGPollingService.self) private var pollingService
+    @AppStorage("isDarkMode") private var isDarkMode = false
     @State private var evacuationRoute: EvacuationRoute?
     @State private var routeLoading = false
     @State private var showDetails = false
@@ -84,10 +85,12 @@ struct MapView: View {
             .toolbarBackground(Color.cardBackground, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Label("Maps", systemImage: "map")
-                        .font(.caption.monospaced())
-                        .foregroundColor(.prometheusBlue)
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button(action: { isDarkMode.toggle() }) {
+                        Image(systemName: isDarkMode ? "sun.max" : "moon")
+                            .font(.caption)
+                            .foregroundColor(.prometheusBlue)
+                    }
                 }
             }
         }

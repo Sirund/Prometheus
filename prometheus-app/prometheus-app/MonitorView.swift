@@ -89,11 +89,6 @@ struct MonitorView: View {
                             .foregroundColor(.prometheusBlue)
                     }
                 }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Label("BMKG", systemImage: "checkmark.shield")
-                        .font(.caption.monospaced())
-                        .foregroundColor(.prometheusBlue)
-                }
             }
             .sheet(isPresented: $showInjectionSheet) {
                 InjectionSettingsView(

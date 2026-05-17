@@ -66,11 +66,12 @@ struct EarthquakeEvent: Decodable {
 extension EarthquakeEvent {
     var dangerRadiusKm: Double? {
         guard !hasTsunamiPotential else { return nil }
-        let mag = magnitudeValue ?? 0
+        guard let mag = magnitudeValue else { return nil }
         if mag >= 7 { return 200.0 }
         if mag >= 6 { return 150.0 }
         if mag >= 5 { return 50.0 }
-        return nil
+        if mag >= 4 { return 20.0 }
+        return 10.0
     }
 }
 
