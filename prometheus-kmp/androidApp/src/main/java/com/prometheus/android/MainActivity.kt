@@ -123,6 +123,11 @@ class MainActivity : ComponentActivity() {
         ModelManager.shutdown()
     }
 
+    override fun onResume() {
+        super.onResume()
+        pollingController?.forceCheck()
+    }
+
     private fun requestNotificationPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)

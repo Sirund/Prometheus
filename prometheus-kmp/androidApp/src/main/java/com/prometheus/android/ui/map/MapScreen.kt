@@ -1,8 +1,6 @@
 package com.prometheus.android.ui.map
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
@@ -43,7 +41,6 @@ import com.google.maps.android.compose.Polyline
 import com.google.maps.android.compose.rememberCameraPositionState
 import com.prometheus.android.service.LocationProvider
 import com.prometheus.android.ui.shared.LoadingOverlay
-import com.prometheus.android.ui.shared.ThreatLevelBanner
 import com.prometheus.android.ui.theme.LocalPrometheusColors
 import com.prometheus.model.DangerClassifier
 import com.prometheus.model.EarthquakeEvent
@@ -357,23 +354,27 @@ fun MapScreen(
 @Composable
 private fun EvacuationStatusBanner(isDangerous: Boolean, severity: com.prometheus.model.DangerSeverity?) {
     val p = LocalPrometheusColors.current
-    val targetColor = when {
-        isDangerous -> p.danger
-        severity == com.prometheus.model.DangerSeverity.MEDIUM -> p.warning
-        else -> p.success
-    }
-    val color by animateColorAsState(targetColor, animationSpec = tween(400), label = "banner_color")
+    val icon = if (isDangerous) "\u26A0\uFE0F" else "\uD83D\uDEE1\uFE0F"
     val label = when {
         isDangerous -> "EVACUATION ROUTING — ACTIVE"
         severity == com.prometheus.model.DangerSeverity.MEDIUM -> "MEDIUM ALERT — MONITOR"
         else -> "EVACUATION ROUTING — STANDBY"
     }
-
-    ThreatLevelBanner(
-        color = color.copy(alpha = 0.85f),
-        label = label,
-        icon = if (isDangerous) "\u26A0\uFE0F" else "\uD83D\uDEE1\uFE0F"
-    )
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(text = icon, style = MaterialTheme.typography.titleMedium)
+        Spacer(Modifier.width(10.dp))
+        Text(
+            text = label,
+            color = p.textPrimary,
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.Black
+        )
+    }
 }
 
 @Composable

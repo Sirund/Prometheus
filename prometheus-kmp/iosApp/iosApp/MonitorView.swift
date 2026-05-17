@@ -12,9 +12,16 @@ struct MonitorView: View {
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: 20) {
-                        DangerStatusBanner(level: dangerLevel)
+                        let classification: String = {
+                            switch dangerLevel {
+                            case .none: return "ALL CLEAR"
+                            case .watch: return "WATCH"
+                            case .medium: return "MEDIUM ALERT"
+                            case .danger: return "DANGER"
+                            }
+                        }()
 
-                        SectionHeader(title: "EARTHQUAKE INFO")
+                        SectionHeader(title: "EARTHQUAKE INFO — \(classification)")
                         if let event = pollingService.latestEarthquakeEvent {
                             BMKGEventCard(
                                 magnitude: event.magnitudeValue?.formatted() ?? "--",
@@ -37,7 +44,14 @@ struct MonitorView: View {
                             )
                         }
 
-                        SectionHeader(title: "WEATHER")
+                        let weatherLabel: String = {
+                            let w = pollingService.weatherInfo
+                            if !w.weatherDesc.isEmpty && w.weatherDesc != "--" {
+                                return "WEATHER — \(w.weatherDesc)"
+                            }
+                            return "WEATHER"
+                        }()
+                        SectionHeader(title: weatherLabel)
                         WeatherInfoCard(weather: pollingService.weatherInfo)
 
                         SectionHeader(title: "WEATHER WARNING")
@@ -121,47 +135,6 @@ struct MonitorView: View {
 
 enum DangerLevel { case none, watch, medium, danger }
 
-struct DangerStatusBanner: View {
-    let level: DangerLevel
-
-    private var color: Color {
-        switch level {
-        case .none:   return .green
-        case .watch:  return .orange
-        case .medium: return Color(red: 1.0, green: 0.55, blue: 0.0)
-        case .danger: return .red
-        }
-    }
-    var label: String {
-        switch level {
-        case .none:   return "NO ACTIVE ALERTS"
-        case .watch:  return "WATCH \u2014 MONITOR CLOSELY"
-        case .medium: return "MEDIUM ALERT \u2014 NOTIFIED"
-        case .danger: return "DANGER \u2014 TAKE ACTION NOW"
-        }
-    }
-    var icon: String {
-        switch level {
-        case .none:   return "checkmark.shield.fill"
-        case .watch:  return "exclamationmark.triangle.fill"
-        case .danger: return "alarm.fill"
-        case .medium: return "exclamationmark.triangle.fill"
-        }
-    }
-
-    var body: some View {
-        HStack(spacing: 10) {
-            Image(systemName: icon).font(.title3)
-            Text(label).font(.caption.bold().monospaced())
-            Spacer()
-        }
-        .padding(12)
-        .background(color.opacity(0.15))
-        .overlay(Rectangle().stroke(color.opacity(0.6), lineWidth: 1))
-        .foregroundColor(color)
-    }
-}
-
 struct BMKGEventCard: View {
     let magnitude: String
     let location: String
@@ -202,9 +175,15 @@ struct BMKGEventCard: View {
                 .frame(maxWidth: .infinity)
             }
             Divider().background(Color.prometheusBlue.opacity(0.3))
-            Text(potential).font(.caption.bold().monospaced()).foregroundColor(.white)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("TSUNAMI POTENTIAL").font(.caption2.monospaced()).foregroundColor(.gray)
+                Text(potential).font(.caption.bold().monospaced()).foregroundColor(.white)
+            }
             Divider().background(Color.prometheusBlue.opacity(0.3))
-            Text(location).font(.caption.bold().monospaced()).foregroundColor(.white)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("LOCATION").font(.caption2.monospaced()).foregroundColor(.gray)
+                Text(location).font(.caption.bold().monospaced()).foregroundColor(.white)
+            }
             if !timestamp.isEmpty {
                 HStack {
                     Spacer()
@@ -251,12 +230,6 @@ struct WeatherInfoCard: View {
                 WeatherStatColumn(icon: "\u{1F321}\u{FE0F}", value: "\(weather.temperature)\u{00B0}", label: "TEMP")
                 WeatherStatColumn(icon: "\u{1F4A7}", value: "\(weather.humidity)%", label: "HUMIDITY")
                 WeatherStatColumn(icon: "\u{1F4A8}", value: "\(weather.windSpeed) km/j", label: "WIND")
-            }
-            if !weather.weatherDesc.isEmpty && weather.weatherDesc != "--" {
-                Divider().background(Color.prometheusBlue.opacity(0.3))
-                Text(weather.weatherDesc)
-                    .font(.caption2.monospaced())
-                    .foregroundColor(.gray)
             }
         }
         .padding()
