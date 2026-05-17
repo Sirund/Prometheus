@@ -5,6 +5,7 @@ import android.util.Log
 import com.prometheus.android.inference.EmergencyInferenceManager
 import com.prometheus.model.EarthquakeEvent
 import com.prometheus.model.NowcastAlert
+import com.prometheus.model.UserLocation
 import com.prometheus.model.WeatherInfo
 import com.prometheus.monitor.BMKGPollingManager
 import com.prometheus.monitor.NowcastPollingManager
@@ -101,12 +102,24 @@ class BMKGPollingController(context: Context, baseUrlOverride: String? = null) {
 
     private fun startNowcastPolling() {
         nowcastManager.onPoll = { alerts ->
-            onNowcastUpdate?.invoke(alerts)
+            val userLoc = locationProvider.getLastKnownLocation()
+            val nearest = if (userLoc != null) {
+                NowcastAlert.nearestAlert(alerts, userLoc.latitude, userLoc.longitude)
+            } else {
+                alerts.maxOrNull()
+            }
+            onNowcastUpdate?.invoke(if (nearest != null) listOf(nearest) else emptyList())
         }
         nowcastManager.onBadWeather = { alerts ->
-            onBadWeather?.invoke(alerts)
-            alerts.forEach { alert ->
-                alarmManager.sendNowcastNotification(alert)
+            val userLoc = locationProvider.getLastKnownLocation()
+            val nearest = if (userLoc != null) {
+                NowcastAlert.nearestAlert(alerts, userLoc.latitude, userLoc.longitude)
+            } else {
+                alerts.maxOrNull()
+            }
+            if (nearest != null) {
+                onBadWeather?.invoke(listOf(nearest))
+                alarmManager.sendNowcastNotification(nearest)
             }
         }
         nowcastManager.onError = { error ->
