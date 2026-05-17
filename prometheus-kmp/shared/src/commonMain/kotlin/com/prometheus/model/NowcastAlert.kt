@@ -126,8 +126,15 @@ data class WeatherInfo(
     val windSpeed: String,
     val windDirection: String,
     val weatherDesc: String,
-    val visibility: String
+    val visibility: String,
+    val province: String = ""
 ) {
+    fun matchingNowcastAlert(alerts: List<NowcastAlert>): NowcastAlert? {
+        return alerts.firstOrNull { a ->
+            province.isNotBlank() && a.provinceName.lowercase() == province.lowercase()
+        }
+    }
+
     companion object {
         val EMPTY = WeatherInfo(
             temperature = "--",

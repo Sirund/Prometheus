@@ -21,6 +21,7 @@ class BMKGPollingController(context: Context, baseUrlOverride: String? = null) {
     private val emergencyInference = EmergencyInferenceManager()
     private val weatherClient = BMKGWeatherClient()
     private val nowcastManager = NowcastPollingManager()
+    private var lastWeatherInfo: WeatherInfo = WeatherInfo.EMPTY
 
     var onNewEvent: ((EarthquakeEvent) -> Unit)? = null
     var onPoll: ((List<EarthquakeEvent>) -> Unit)? = null
@@ -94,6 +95,7 @@ class BMKGPollingController(context: Context, baseUrlOverride: String? = null) {
     private suspend fun pollWeather() {
         try {
             val weather = weatherClient.fetchWeatherForecast()
+            lastWeatherInfo = weather
             onWeatherUpdate?.invoke(weather)
         } catch (e: Exception) {
             Log.e("BMKGPolling", "Weather poll error", e)
@@ -102,21 +104,11 @@ class BMKGPollingController(context: Context, baseUrlOverride: String? = null) {
 
     private fun startNowcastPolling() {
         nowcastManager.onPoll = { alerts ->
-            val userLoc = locationProvider.getLastKnownLocation()
-            val nearest = if (userLoc != null) {
-                NowcastAlert.nearestAlert(alerts, userLoc.latitude, userLoc.longitude)
-            } else {
-                alerts.maxOrNull()
-            }
+            val nearest = lastWeatherInfo.matchingNowcastAlert(alerts)
             onNowcastUpdate?.invoke(if (nearest != null) listOf(nearest) else emptyList())
         }
         nowcastManager.onBadWeather = { alerts ->
-            val userLoc = locationProvider.getLastKnownLocation()
-            val nearest = if (userLoc != null) {
-                NowcastAlert.nearestAlert(alerts, userLoc.latitude, userLoc.longitude)
-            } else {
-                alerts.maxOrNull()
-            }
+            val nearest = lastWeatherInfo.matchingNowcastAlert(alerts)
             if (nearest != null) {
                 onBadWeather?.invoke(listOf(nearest))
                 alarmManager.sendNowcastNotification(nearest)
