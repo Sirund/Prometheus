@@ -6,17 +6,15 @@ import com.google.ai.edge.litertlm.Contents
 import com.google.ai.edge.litertlm.Conversation
 import com.prometheus.model.ChatMessage
 import com.prometheus.prompt.SystemPrompts
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-private const val TAG = "InferenceManager"
+private const val TAG = "ConversationManager"
 
-class InferenceManager {
+class ConversationManager {
 
     private var conversation: Conversation? = null
-
-    val isModelLoaded get() = ModelManager.isLoaded
-    val statusMessage get() = ModelManager.statusMessage
 
     suspend fun sendMessage(
         text: String,
@@ -31,8 +29,6 @@ class InferenceManager {
         }
         try {
             val prompt = buildString {
-                appendLine(systemPrompt)
-                appendLine()
                 for (msg in history.takeLast(6)) {
                     val role = if (msg.isUser) "User" else "Assistant"
                     appendLine("$role: ${msg.text}")
@@ -40,6 +36,10 @@ class InferenceManager {
                 appendLine("User: $text")
                 append("Assistant:")
             }
+
+            Log.d(TAG, "=== PROMPT ===")
+            Log.d(TAG, prompt)
+            Log.d(TAG, "=== END PROMPT ===")
 
             try { conversation?.close() } catch (_: Exception) {}
             val conv = ModelManager.createConversation(systemPrompt)
@@ -58,12 +58,17 @@ class InferenceManager {
 
             val response = StringBuilder()
             conv.sendMessageAsync(contents).collect { msg ->
-                response.append(msg.toString())
+                val token = msg.toString()
+                response.append(token)
+                Log.d(TAG, "TOKEN: $token")
                 onToken(response.toString())
             }
+            Log.d(TAG, "=== FULL RESPONSE: ${response} ===")
             if (response.isEmpty()) {
                 onToken("(empty response)")
             }
+        } catch (e: CancellationException) {
+            Log.d(TAG, "Inference cancelled by scope")
         } catch (e: Exception) {
             onToken("Inference failed: ${e.message}")
         }
@@ -72,14 +77,5 @@ class InferenceManager {
     fun shutdown() {
         try { conversation?.close() } catch (_: Exception) {}
         conversation = null
-    }
-
-    fun createNewConversation(systemPrompt: String = SystemPrompts.SURVIVAL_CHATBOT) {
-        try {
-            conversation = ModelManager.createConversation(systemPrompt)
-            Log.d(TAG, "New conversation created")
-        } catch (e: Exception) {
-            Log.e(TAG, "createConversation failed", e)
-        }
     }
 }

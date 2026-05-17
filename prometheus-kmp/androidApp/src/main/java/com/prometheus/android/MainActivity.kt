@@ -9,13 +9,18 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
+import com.prometheus.android.inference.ConversationManager
 import com.prometheus.android.inference.ModelManager
+import com.prometheus.android.ui.assistant.ConversationData
+import com.prometheus.android.ui.assistant.loadConversations
+import com.prometheus.android.ui.assistant.saveConversations
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.io.File
 import com.prometheus.android.service.BMKGPollingController
 import com.prometheus.android.service.InjectionSettings
 import com.prometheus.android.service.LocationProvider
@@ -61,6 +66,21 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
+            val saveFile = remember { File(filesDir, "conversations.json") }
+            var conversations by remember { mutableStateOf(loadConversations(saveFile)) }
+            var activeIndex by remember { mutableStateOf(0) }
+            val conversationManager = remember { ConversationManager() }
+
+            LaunchedEffect(conversations) {
+                withContext(Dispatchers.IO) {
+                    saveConversations(saveFile, conversations)
+                }
+            }
+
+            DisposableEffect(Unit) {
+                onDispose { conversationManager.shutdown() }
+            }
+
             PrometheusTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
@@ -82,7 +102,12 @@ class MainActivity : ComponentActivity() {
                             InjectionSettings.ip = ip
                             InjectionSettings.port = port
                             applyInjectionUrl()
-                        }
+                        },
+                        conversations = conversations,
+                        activeIndex = activeIndex,
+                        conversationManager = conversationManager,
+                        onConversationsChange = { conversations = it },
+                        onActiveIndexChange = { activeIndex = it }
                     )
                 }
             }

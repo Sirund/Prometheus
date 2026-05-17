@@ -19,7 +19,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.prometheus.android.inference.ConversationManager
 import com.prometheus.android.ui.assistant.AssistantScreen
+import com.prometheus.android.ui.assistant.ConversationData
 import com.prometheus.android.ui.map.MapScreen
 import com.prometheus.android.ui.monitor.MonitorScreen
 import com.prometheus.android.ui.theme.PrometheusColors
@@ -43,7 +45,12 @@ fun PrometheusApp(
     injectionEnabled: Boolean = false,
     injectionIp: String = "",
     injectionPort: Int = 8080,
-    onApplyInjection: ((Boolean, String, Int) -> Unit)? = null
+    onApplyInjection: ((Boolean, String, Int) -> Unit)? = null,
+    conversations: List<ConversationData> = emptyList(),
+    activeIndex: Int = 0,
+    conversationManager: ConversationManager? = null,
+    onConversationsChange: (List<ConversationData>) -> Unit = {},
+    onActiveIndexChange: (Int) -> Unit = {}
 ) {
     var selectedScreen by remember { mutableStateOf(Screen.Monitor) }
 
@@ -115,8 +122,22 @@ fun PrometheusApp(
                         event = currentEvent,
                         userLocation = currentLocation
                     )
-                    Screen.Chat -> AssistantScreen()
-                    Screen.Vision -> VisionScreen()
+                    Screen.Chat -> AssistantScreen(
+                        conversations = conversations,
+                        activeIndex = activeIndex,
+                        conversationManager = conversationManager,
+                        onConversationsChange = onConversationsChange,
+                        onActiveIndexChange = onActiveIndexChange,
+                        currentEvent = currentEvent
+                    )
+                    Screen.Vision -> VisionScreen(
+                        conversations = conversations,
+                        activeIndex = activeIndex,
+                        conversationManager = conversationManager,
+                        onConversationsChange = onConversationsChange,
+                        onActiveIndexChange = onActiveIndexChange,
+                        currentEvent = currentEvent
+                    )
                 }
             }
         }

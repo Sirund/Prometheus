@@ -43,6 +43,8 @@ object ModelManager {
 
     private var engine: Engine? = null
     private var appContext: Context? = null
+    private val sessionLock = Any()
+    private var currentConversation: Conversation? = null
     var isLoaded = false
         private set
     var statusMessage = "Initializing..."
@@ -61,24 +63,43 @@ object ModelManager {
                 }
 
                 Log.d(TAG, "Loading model from: $modelPath")
-                statusMessage = "Loading model on CPU..."
 
-                val config = EngineConfig(
-                    modelPath = modelPath,
-                    backend = Backend.CPU(),
-                    visionBackend = Backend.CPU(),
-                    cacheDir = if (modelPath.startsWith("/data/local/tmp"))
-                        context.getExternalFilesDir(null)?.absolutePath
-                    else null
-                )
-
-                val newEngine = Engine(config)
-                newEngine.initialize()
-                Log.d(TAG, "Engine initialized (shared)")
+                var backendUsed = "CPU"
+                val newEngine = try {
+                    statusMessage = "Loading model on GPU..."
+                    val gpuConfig = EngineConfig(
+                        modelPath = modelPath,
+                        backend = Backend.GPU(),
+                        visionBackend = Backend.GPU(),
+                        cacheDir = if (modelPath.startsWith("/data/local/tmp"))
+                            context.getExternalFilesDir(null)?.absolutePath
+                        else null
+                    )
+                    val eng = Engine(gpuConfig)
+                    eng.initialize()
+                    backendUsed = "GPU"
+                    Log.d(TAG, "Engine initialized (GPU)")
+                    eng
+                } catch (e: Exception) {
+                    Log.w(TAG, "GPU init failed, falling back to CPU: ${e.message}")
+                    statusMessage = "GPU unavailable, loading on CPU..."
+                    val cpuConfig = EngineConfig(
+                        modelPath = modelPath,
+                        backend = Backend.CPU(),
+                        visionBackend = Backend.CPU(),
+                        cacheDir = if (modelPath.startsWith("/data/local/tmp"))
+                            context.getExternalFilesDir(null)?.absolutePath
+                        else null
+                    )
+                    val eng = Engine(cpuConfig)
+                    eng.initialize()
+                    Log.d(TAG, "Engine initialized (CPU fallback)")
+                    eng
+                }
 
                 engine = newEngine
                 isLoaded = true
-                statusMessage = "Gemma 4 Online"
+                statusMessage = "Gemma 4 Online ($backendUsed)"
                 Log.d(TAG, "Model ready (shared engine)")
             } catch (e: Exception) {
                 statusMessage = "Error: ${e.message ?: e.javaClass.simpleName}"
@@ -88,19 +109,31 @@ object ModelManager {
     }
 
     fun createConversation(systemPrompt: String): Conversation? {
-        return try {
-            engine?.createConversation(
-                ConversationConfig(
-                    systemInstruction = Contents.of(listOf(Content.Text(systemPrompt)))
+        synchronized(sessionLock) {
+            try {
+                currentConversation?.close()
+            } catch (_: Exception) {}
+            currentConversation = null
+            return try {
+                val conv = engine?.createConversation(
+                    ConversationConfig(
+                        systemInstruction = Contents.of(listOf(Content.Text(systemPrompt)))
+                    )
                 )
-            )
-        } catch (e: Exception) {
-            Log.e(TAG, "createConversation failed", e)
-            null
+                currentConversation = conv
+                conv
+            } catch (e: Exception) {
+                Log.e(TAG, "createConversation failed", e)
+                null
+            }
         }
     }
 
     fun shutdown() {
+        synchronized(sessionLock) {
+            try { currentConversation?.close() } catch (_: Exception) {}
+            currentConversation = null
+        }
         try { engine?.close() } catch (_: Exception) {}
         engine = null
         isLoaded = false

@@ -1,6 +1,5 @@
 package com.prometheus.android.ui.assistant
 
-import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
@@ -38,109 +37,37 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
-import com.prometheus.android.inference.InferenceManager
+import com.prometheus.android.inference.ConversationManager
 import com.prometheus.android.inference.ModelManager
 import com.prometheus.android.ui.theme.PrometheusColors
 import com.prometheus.model.ChatMessage
+import com.prometheus.model.EarthquakeEvent
 import com.prometheus.prompt.SystemPrompts
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.json.JSONArray
-import org.json.JSONObject
 import java.io.File
-import java.io.FileOutputStream
-import java.util.UUID
-
-data class ConversationData(
-    val id: String = UUID.randomUUID().toString(),
-    val title: String = "New conversation",
-    val messages: List<ChatMessage> = emptyList()
-)
-
-private fun saveConversations(file: File, conversations: List<ConversationData>) {
-    try {
-        val arr = JSONArray()
-        for (conv in conversations) {
-            val obj = JSONObject().apply {
-                put("id", conv.id)
-                put("title", conv.title)
-                val msgs = JSONArray()
-                for (msg in conv.messages) {
-                msgs.put(JSONObject().apply {
-                    put("id", msg.id)
-                    put("text", msg.text)
-                    put("isUser", msg.isUser)
-                    if (msg.imagePath != null) put("imagePath", msg.imagePath)
-                })
-                }
-                put("messages", msgs)
-            }
-            arr.put(obj)
-        }
-        file.writeText(JSONObject().apply { put("conversations", arr) }.toString())
-    } catch (_: Exception) {}
-}
-
-private fun loadConversations(file: File): List<ConversationData> {
-    return try {
-        if (!file.exists()) return listOf(ConversationData())
-        val arr = JSONObject(file.readText()).getJSONArray("conversations")
-        val list = mutableListOf<ConversationData>()
-        for (i in 0 until arr.length()) {
-            val obj = arr.getJSONObject(i)
-            val msgs = mutableListOf<ChatMessage>()
-            val msgsArr = obj.getJSONArray("messages")
-            for (j in 0 until msgsArr.length()) {
-                val m = msgsArr.getJSONObject(j)
-                msgs.add(                ChatMessage(
-                    id = m.getString("id"),
-                    text = m.getString("text"),
-                    isUser = m.getBoolean("isUser"),
-                    imagePath = m.optString("imagePath", null)
-                ))
-            }
-            list.add(ConversationData(
-                id = obj.getString("id"),
-                title = obj.getString("title"),
-                messages = msgs
-            ))
-        }
-        if (list.isEmpty()) listOf(ConversationData()) else list
-    } catch (_: Exception) {
-        listOf(ConversationData())
-    }
-}
-
-private fun saveChatImage(context: Context, bitmap: Bitmap): String {
-    val dir = File(context.filesDir, "chat_images")
-    dir.mkdirs()
-    val file = File(dir, "chat_${System.currentTimeMillis()}.jpg")
-    FileOutputStream(file).use { out ->
-        bitmap.compress(Bitmap.CompressFormat.JPEG, 75, out)
-    }
-    return file.absolutePath
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AssistantScreen() {
+fun AssistantScreen(
+    conversations: List<ConversationData>,
+    activeIndex: Int,
+    conversationManager: ConversationManager?,
+    onConversationsChange: (List<ConversationData>) -> Unit,
+    onActiveIndexChange: (Int) -> Unit,
+    currentEvent: EarthquakeEvent? = null
+) {
     val context = LocalContext.current
-    val saveFile = remember { File(context.filesDir, "conversations.json") }
-    val manager = remember { InferenceManager() }
+    val manager = remember { conversationManager ?: ConversationManager() }
     var query by remember { mutableStateOf("") }
     var selectedImageBitmap by remember { mutableStateOf<Bitmap?>(null) }
-    var conversations by remember { mutableStateOf(loadConversations(saveFile)) }
-    var activeIndex by remember { mutableStateOf(0) }
     var isModelLoaded by remember { mutableStateOf(false) }
     var statusMessage by remember { mutableStateOf("Initializing...") }
     var downloadProgress by remember { mutableStateOf(-1) }
     var isDownloading by remember { mutableStateOf(false) }
-    var downloadId by remember { mutableStateOf(-1L) }
     var chatMode by remember { mutableStateOf("SURVIVAL_CHAT") }
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -167,68 +94,14 @@ fun AssistantScreen() {
         }
     }
 
-    val chatHistory by remember { derivedStateOf { conversations.getOrNull(activeIndex)?.messages ?: emptyList() } }
+    // LOCAL state — bypass AnimatedContent barrier, langsung recompose
+    var localConversations by remember { mutableStateOf(conversations) }
 
-    LaunchedEffect(conversations) {
-        withContext(Dispatchers.IO) {
-            saveConversations(saveFile, conversations)
-        }
-    }
+    val chatHistory by remember { derivedStateOf { localConversations.getOrNull(activeIndex)?.messages ?: emptyList() } }
 
     LaunchedEffect(Unit) {
         isModelLoaded = ModelManager.isLoaded
         statusMessage = ModelManager.statusMessage
-
-        if (!isModelLoaded) {
-            var existing = ModelManager.getDownloadProgress(context)
-            if (existing == null) {
-                val activeId = ModelManager.findActiveDownloadByUrl(context)
-                if (activeId != null) existing = ModelManager.getDownloadProgress(context)
-            }
-            if (existing != null && (existing.isRunning || existing.isPending || existing.isPaused)) {
-                isDownloading = true
-                downloadProgress = existing.percent
-                statusMessage = "Downloading: ${existing.percent}%"
-            } else if (ModelManager.isDownloadComplete(context)) {
-                ModelManager.clearDownloadState(context)
-                isModelLoaded = ModelManager.isLoaded
-                statusMessage = ModelManager.statusMessage
-            }
-        }
-    }
-
-    LaunchedEffect(isDownloading) {
-        if (!isDownloading) return@LaunchedEffect
-        while (true) {
-            delay(2000)
-            val progress = ModelManager.getDownloadProgress(context)
-            if (progress != null) {
-                downloadProgress = progress.percent
-                downloadId = progress.hashCode().toLong()
-                statusMessage = when {
-                    progress.isComplete -> "Download complete"
-                    progress.isFailed -> "Download failed"
-                    progress.isPaused -> "Download paused"
-                    progress.isPending -> "Download pending..."
-                    progress.isRunning -> "Downloading: ${progress.percent}%"
-                    else -> "Downloading: ${progress.percent}%"
-                }
-                if (progress.isComplete) {
-                    ModelManager.clearDownloadState(context)
-                    isModelLoaded = ModelManager.isLoaded
-                    isDownloading = !isModelLoaded
-                    return@LaunchedEffect
-                }
-            } else {
-                val isComplete = ModelManager.isDownloadComplete(context)
-                if (isComplete) {
-                    ModelManager.clearDownloadState(context)
-                    isModelLoaded = ModelManager.isLoaded
-                    isDownloading = !isModelLoaded
-                    return@LaunchedEffect
-                }
-            }
-        }
     }
 
     val showDownload = !isModelLoaded && downloadProgress < 0 && statusMessage.startsWith("Model not found")
@@ -259,8 +132,9 @@ fun AssistantScreen() {
                 Button(
                     onClick = {
                         val newConv = ConversationData()
-                        conversations = conversations + newConv
-                        activeIndex = conversations.lastIndex
+                        localConversations = localConversations + newConv
+                        onConversationsChange(localConversations)
+                        onActiveIndexChange(localConversations.lastIndex)
                         scope.launch { drawerState.close() }
                     },
                     modifier = Modifier
@@ -274,7 +148,7 @@ fun AssistantScreen() {
                     Text("+ New conversation", fontWeight = FontWeight.Bold)
                 }
                 LazyColumn(modifier = Modifier.weight(1f)) {
-                    itemsIndexed(conversations) { index, conv ->
+                    itemsIndexed(localConversations) { index, conv ->
                         val title = if (conv.messages.isNotEmpty()) {
                             conv.messages.firstOrNull { it.isUser }?.text?.take(40) ?: "Chat"
                         } else "New conversation"
@@ -284,7 +158,7 @@ fun AssistantScreen() {
                                 .fillMaxWidth()
                                 .background(if (isActive) PrometheusColors.blue.copy(alpha = 0.15f) else Color.Transparent)
                                 .clickable {
-                                    activeIndex = index
+                                    onActiveIndexChange(index)
                                     scope.launch { drawerState.close() }
                                 }
                                 .padding(horizontal = 16.dp, vertical = 12.dp),
@@ -297,23 +171,25 @@ fun AssistantScreen() {
                                 fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
                                 modifier = Modifier.weight(1f)
                             )
-                            if (conversations.size > 1) {
+                            if (localConversations.size > 1) {
                                 IconButton(
                                     onClick = {
-                                        conversations = conversations.toMutableList().apply { removeAt(index) }
-                                        if (activeIndex >= conversations.size) activeIndex = conversations.size - 1
+                                        localConversations[index].messages.forEach { msg ->
+                                            msg.imagePath?.let { path -> File(path).delete() }
+                                        }
+                                        val updated = localConversations.toMutableList().apply { removeAt(index) }
+                                        localConversations = updated
+                                        onConversationsChange(updated)
+                                        if (activeIndex >= updated.size) onActiveIndexChange(updated.size - 1)
                                         if (activeIndex < 0) {
-                                            conversations = listOf(ConversationData())
-                                            activeIndex = 0
+                                            val reset = listOf(ConversationData())
+                                            localConversations = reset
+                                            onConversationsChange(reset)
+                                            onActiveIndexChange(0)
                                         }
                                     },
                                     modifier = Modifier.size(32.dp)
                                 ) {
-                                    LaunchedEffect(Unit) {
-                                        conversations[index].messages.forEach { msg ->
-                                            msg.imagePath?.let { path -> File(path).delete() }
-                                        }
-                                    }
                                     Text("\u2716", color = Color.Gray, style = MaterialTheme.typography.labelSmall)
                                 }
                             }
@@ -401,67 +277,20 @@ fun AssistantScreen() {
                                 CapabilityPill(text = "\uD83D\uDCA7  water & supplies")
                                 CapabilityPill(text = "\u26A0\uFE0F  Indonesia hazards")
                             }
-                            if (showDownload || isDownloading || downloadProgress >= 0) {
+                            if (showDownload) {
                                 Spacer(Modifier.height(16.dp))
-                                val isPaused = isDownloading && downloadProgress >= 0 &&
-                                    ModelManager.getDownloadProgress(context)?.isPaused == true
-                                val btnColor = when {
-                                    !isDownloading -> PrometheusColors.blue
-                                    isPaused -> Color(0xFFFFA500).copy(alpha = 0.6f)
-                                    else -> PrometheusColors.blue.copy(alpha = 0.6f)
-                                }
-                                val btnText = when {
-                                    !isDownloading -> "\u2B07\uFE0F  DOWNLOAD MODEL (2.4 GB)"
-                                    isPaused -> "\u25B6\uFE0F  Download Paused: $downloadProgress%"
-                                    downloadProgress < 0 -> "\u23F3  Starting..."
-                                    downloadProgress >= 100 -> "\u2705  Moving file..."
-                                    else -> "\u23F8\uFE0F  Downloading: $downloadProgress%"
-                                }
                                 Button(
-                                    onClick = {
-                                        when {
-                                            !isDownloading -> {
-                                        ModelManager.enqueueDownload(context)
-                                        isDownloading = true
-                                        downloadProgress = 0
-                                        statusMessage = "Download pending..."
-                                            }
-                                            isPaused -> {
-                                                ModelManager.resumeDownload(context)
-                                                statusMessage = "Downloading: $downloadProgress%"
-                                            }
-                                            else -> {
-                                                val ok = ModelManager.pauseDownload(context)
-                                                if (ok) statusMessage = "Download Paused: $downloadProgress%"
-                                                else {
-                                                    ModelManager.cancelDownload(context)
-                                                    isDownloading = false
-                                                    downloadProgress = -1
-                                                    statusMessage = "Pause failed. Tap to restart."
-                                                }
-                                            }
-                                        }
-                                    },
+                                    onClick = { ModelManager.enqueueDownload(context) },
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .height(48.dp)
                                         .padding(horizontal = 16.dp),
                                     colors = ButtonDefaults.buttonColors(
-                                        containerColor = btnColor,
+                                        containerColor = PrometheusColors.blue,
                                         contentColor = Color.Black
                                     )
                                 ) {
-                                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                        if (isDownloading && downloadProgress in 0..99 && !isPaused) {
-                                            LinearProgressIndicator(
-                                                progress = { downloadProgress / 100f },
-                                                modifier = Modifier.fillMaxWidth().fillMaxHeight(),
-                                                color = PrometheusColors.blue.copy(alpha = 0.3f),
-                                                trackColor = Color.Transparent
-                                            )
-                                        }
-                                        Text(btnText, fontWeight = FontWeight.Bold)
-                                    }
+                                    Text("\u2B07\uFE0F  DOWNLOAD MODEL (2.4 GB)", fontWeight = FontWeight.Bold)
                                 }
                             }
                         }
@@ -558,37 +387,59 @@ fun AssistantScreen() {
                         )
                     }
                     TextButton(
-                        onClick = {
+                            onClick = {
                             val userText = query
                             val image = selectedImageBitmap
-                            val sysPrompt = when (chatMode) {
-                                "EMERGENCY_BRIEF" -> SystemPrompts.EMERGENCY_BRIEFING
-                                else -> SystemPrompts.SURVIVAL_CHATBOT
-                            }
                             query = ""
                             selectedImageBitmap = null
                             val history = chatHistory
+                            val oldSize = history.size
+                            val aiIndex = oldSize + 1
+
+                            // SYNCHRONOUS: show user message + loading bubble immediately
+                            var currentList = localConversations.toMutableList()
+                            currentList[activeIndex] = currentList[activeIndex].copy(
+                                messages = history + ChatMessage(text = userText, isUser = true) + ChatMessage(text = "...", isUser = false)
+                            )
+                            localConversations = currentList
+                            onConversationsChange(currentList)
+
                             scope.launch {
                                 val savedPath = if (image != null) {
                                     withContext(Dispatchers.IO) { saveChatImage(context, image) }
                                 } else null
-                                val oldSize = history.size
-                                val aiIndex = oldSize + 1
-                                conversations = conversations.toMutableList().also { list ->
-                                    list[activeIndex] = list[activeIndex].copy(
-                                        messages = history + ChatMessage(text = userText, isUser = true, imagePath = savedPath) + ChatMessage(text = "...", isUser = false)
-                                    )
+
+                                // Update user message with imagePath if saved
+                                if (savedPath != null) {
+                                    currentList = currentList.toMutableList()
+                                    val msgs = currentList[activeIndex].messages.toMutableList()
+                                    if (oldSize < msgs.size) {
+                                        msgs[oldSize] = ChatMessage(text = userText, isUser = true, imagePath = savedPath)
+                                    }
+                                    currentList[activeIndex] = currentList[activeIndex].copy(messages = msgs)
+                                    localConversations = currentList
+                                    onConversationsChange(currentList)
                                 }
-                                val onToken: (String) -> Unit = { response ->
-                                    conversations = conversations.toMutableList().also { list ->
-                                        val msgs = list[activeIndex].messages.toMutableList()
-                                        if (aiIndex < msgs.size) {
-                                            msgs[aiIndex] = ChatMessage(text = response, isUser = false)
-                                        }
-                                        list[activeIndex] = list[activeIndex].copy(messages = msgs)
+
+                                val sysPrompt = when (chatMode) {
+                                    "EMERGENCY_BRIEF" -> SystemPrompts.EMERGENCY_BRIEFING
+                                    else -> {
+                                        val bmkgCtx = SystemPrompts.buildBmkgContext(currentEvent)
+                                        if (bmkgCtx.isNotBlank()) "$bmkgCtx\n\n${SystemPrompts.GENERAL_PROMPT}"
+                                        else SystemPrompts.GENERAL_PROMPT
                                     }
                                 }
-                                manager.sendMessage(userText, history, sysPrompt, savedPath, onToken)
+
+                                manager.sendMessage(userText, history, sysPrompt, savedPath) { text ->
+                                    currentList = currentList.toMutableList()
+                                    val msgs = currentList[activeIndex].messages.toMutableList()
+                                    if (aiIndex < msgs.size) {
+                                        msgs[aiIndex] = ChatMessage(text = text, isUser = false)
+                                    }
+                                    currentList[activeIndex] = currentList[activeIndex].copy(messages = msgs)
+                                    localConversations = currentList
+                                    onConversationsChange(currentList)
+                                }
                             }
                         },
                         enabled = isModelLoaded && query.isNotBlank(),
@@ -635,9 +486,60 @@ fun AssistantScreen() {
                     }
                     Spacer(Modifier.height(8.dp))
                     TextButton(
-                        onClick = {
-                            showImageSourceDialog = false
-                            galleryLauncher.launch("image/*")
+                            onClick = {
+                            val userText = query
+                            val image = selectedImageBitmap
+                            query = ""
+                            selectedImageBitmap = null
+                            val history = chatHistory
+                            val oldSize = history.size
+                            val aiIndex = oldSize + 1
+
+                            // SYNCHRONOUS: show user message + loading bubble immediately
+                            var currentList = localConversations.toMutableList()
+                            currentList[activeIndex] = currentList[activeIndex].copy(
+                                messages = history + ChatMessage(text = userText, isUser = true) + ChatMessage(text = "...", isUser = false)
+                            )
+                            localConversations = currentList
+                            onConversationsChange(currentList)
+
+                            scope.launch {
+                                val savedPath = if (image != null) {
+                                    withContext(Dispatchers.IO) { saveChatImage(context, image) }
+                                } else null
+
+                                // Update user message with imagePath if saved
+                                if (savedPath != null) {
+                                    currentList = currentList.toMutableList()
+                                    val msgs = currentList[activeIndex].messages.toMutableList()
+                                    if (oldSize < msgs.size) {
+                                        msgs[oldSize] = ChatMessage(text = userText, isUser = true, imagePath = savedPath)
+                                    }
+                                    currentList[activeIndex] = currentList[activeIndex].copy(messages = msgs)
+                                    localConversations = currentList
+                                    onConversationsChange(currentList)
+                                }
+
+                                val sysPrompt = when (chatMode) {
+                                    "EMERGENCY_BRIEF" -> SystemPrompts.EMERGENCY_BRIEFING
+                                    else -> {
+                                        val bmkgCtx = SystemPrompts.buildBmkgContext(currentEvent)
+                                        if (bmkgCtx.isNotBlank()) "$bmkgCtx\n\n${SystemPrompts.GENERAL_PROMPT}"
+                                        else SystemPrompts.GENERAL_PROMPT
+                                    }
+                                }
+
+                                manager.sendMessage(userText, history, sysPrompt, savedPath) { text ->
+                                    currentList = currentList.toMutableList()
+                                    val msgs = currentList[activeIndex].messages.toMutableList()
+                                    if (aiIndex < msgs.size) {
+                                        msgs[aiIndex] = ChatMessage(text = text, isUser = false)
+                                    }
+                                    currentList[activeIndex] = currentList[activeIndex].copy(messages = msgs)
+                                    localConversations = currentList
+                                    onConversationsChange(currentList)
+                                }
+                            }
                         },
                         modifier = Modifier.fillMaxWidth().height(56.dp)
                     ) {

@@ -86,8 +86,8 @@ class STTManager(private val context: Context) {
 
     fun stop() {
         recognizer?.stopListening()
-        recognizer?.destroy()
-        recognizer = null
+        // Don't destroy — let onResults/onError fire naturally.
+        // destroy() happens in next startListening() or shutdown().
     }
 
     fun shutdown() {
