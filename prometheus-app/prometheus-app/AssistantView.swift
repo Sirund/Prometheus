@@ -34,6 +34,7 @@ private func loadConversations() -> [Conversation] {
 struct AssistantView: View {
     @Environment(InferenceManager.self) private var inference
     @AppStorage("isDarkMode") private var isDarkMode = false
+    @AppStorage("tutorialSeen_assistant") private var tutorialSeen = false
     @State private var query = ""
     @State private var selectedMode: ChatMode = .survival
     @FocusState private var inputFocused: Bool
@@ -41,6 +42,7 @@ struct AssistantView: View {
     @State private var activeIndex = 0
     @State private var showSidebar = false
     @State private var showVision = false
+    @State private var showTutorial = false
 
     var body: some View {
         NavigationStack {
@@ -58,6 +60,16 @@ struct AssistantView: View {
             .toolbar { toolbarContent }
         }
         .task { await inference.start() }
+        .onAppear {
+            if !tutorialSeen { tutorialSeen = true; showTutorial = true }
+        }
+        .overlay {
+            if showTutorial {
+                TutorialOverlay(tabName: "Assistant", steps: TutorialContent.assistant) {
+                    showTutorial = false
+                }
+            }
+        }
         .sheet(isPresented: $showSidebar) { sidebarView }
         .onChange(of: inference.isGenerating) { _, generating in
             if !generating { syncToConversation() }
@@ -375,6 +387,11 @@ struct AssistantView: View {
                 }
                 Button(action: { isDarkMode.toggle() }) {
                     Image(systemName: isDarkMode ? "sun.max" : "moon")
+                        .font(.caption)
+                        .foregroundColor(.prometheusBlue)
+                }
+                Button(action: { showTutorial = true }) {
+                    Image(systemName: "questionmark.circle")
                         .font(.caption)
                         .foregroundColor(.prometheusBlue)
                 }
