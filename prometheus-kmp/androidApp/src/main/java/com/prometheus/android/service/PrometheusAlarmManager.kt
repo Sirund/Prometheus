@@ -12,6 +12,7 @@ import android.speech.tts.TextToSpeech
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.prometheus.model.EarthquakeEvent
+import com.prometheus.model.NowcastAlert
 import com.prometheus.monitor.EmergencyBriefingFormatter
 import java.util.Locale
 
@@ -19,8 +20,10 @@ class PrometheusAlarmManager(private val context: Context) {
 
     companion object {
         const val CHANNEL_ALERT = "prometheus_earthquake_alerts"
+        const val CHANNEL_WEATHER = "prometheus_weather_warnings"
         const val CHANNEL_STATUS = "prometheus_status"
         const val ID_ALERT = 1001
+        const val ID_WEATHER = 1003
         const val ID_STATUS = 1002
     }
 
@@ -46,6 +49,12 @@ class PrometheusAlarmManager(private val context: Context) {
                     .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                     .build()
             )
+        }
+        val weatherChannel = NotificationChannel(
+            CHANNEL_WEATHER, "Weather Warnings", NotificationManager.IMPORTANCE_HIGH
+        ).apply {
+            description = "Weather Early Warning (Nowcast) alerts"
+            enableVibration(true)
         }
         val statusChannel = NotificationChannel(
             CHANNEL_STATUS, "Monitoring Status", NotificationManager.IMPORTANCE_LOW
@@ -157,6 +166,20 @@ class PrometheusAlarmManager(private val context: Context) {
                 setOnCompletionListener { release() }
             }
         } catch (_: Exception) { }
+    }
+
+    fun sendNowcastNotification(alert: NowcastAlert) {
+        val n = NotificationCompat.Builder(context, CHANNEL_WEATHER)
+            .setSmallIcon(android.R.drawable.ic_dialog_alert)
+            .setContentTitle("\u26A0\uFE0F Weather Warning — ${alert.eventType}")
+            .setContentText(alert.summary.take(100))
+            .setStyle(NotificationCompat.BigTextStyle().bigText(alert.summary))
+            .setPriority(NotificationManager.IMPORTANCE_HIGH)
+            .setAutoCancel(true)
+            .setCategory(NotificationCompat.CATEGORY_ALARM)
+            .setContentIntent(openAppIntent())
+            .build()
+        NotificationManagerCompat.from(context).notify(ID_WEATHER, n)
     }
 
     fun shutdown() {

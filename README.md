@@ -24,35 +24,51 @@ Built by **Team Gravity Falls** for the Google Gemma hackathon — May 2026.
 | **Andi** | BMKG integration: endpoints, update cadence, attribution, parsing and **danger classification** contract (what JSON fields mean, thresholds, tests against live/sample payloads). Provides epicentre coordinates for map routing. |
 | **Arund** | Gemma 4 behavior: **system prompts** (survival chat vs emergency briefing vs multimodal accessibility), prompt safety, length limits for voice, vision input prompting strategy, and evaluation of model outputs for crisis use. |
 
-## Tech stack (directional)
+## Tech stack
 
-| Layer | Technology |
-|-------|------------|
-| App | Swift + SwiftUI (existing project under `prometheus-app/`) |
-| Hazard data | BMKG open JSON (see `config/bmkg_endpoints.json`) |
-| On-device LLM | Gemma 4 (LiteRT LM — text, vision, and audio modalities) |
-| Evacuation map | Google Maps SDK for iOS + Directions API (shortest path from user location to outside disaster radius) |
-| Voice output | Apple `AVSpeechSynthesizer` for TTS briefings and accessibility responses |
-| Vision input | `AVCaptureSession` (camera feed) → Gemma 4 vision → spoken response |
-| Alerts | Local notifications + in-app alarm audio |
+| Layer | Android (KMP) | iOS |
+|-------|---------------|-----|
+| App | Jetpack Compose (Kotlin) | Swift + SwiftUI |
+| Cross-platform | KMP shared module (`shared/`) | KMP shared module (`shared/`) |
+| Hazard data | BMKG open JSON (see `config/bmkg_endpoints.json`) | BMKG open JSON |
+| On-device LLM | Gemma 4 (LiteRT LM — text, vision) | Gemma 4 (LiteRT LM) |
+| Evacuation map | Google Maps SDK for Android | Google Maps SDK for iOS |
+| Voice output | Android TextToSpeech | Apple AVSpeechSynthesizer |
+| Vision input | CameraX → Gemma 4 vision → TTS | AVCaptureSession → Gemma 4 |
+| Alerts | Notifications + alarm audio | Local notifications + alarm |
 
 ## Repository layout
 
 | Path | Purpose |
 |------|---------|
-| `prometheus-app/` | **Xcode project — owned by Pelangi for app work;** do not refactor here until the team aligns on the upgrade. |
-| `config/` | Shared **prompts** and **BMKG endpoint** references for app and tooling. |
-| `tools/` | Small scripts (e.g. sample BMKG fetch) for integration testing without the simulator. |
-| `src/chunking/` | **Legacy** book ingestion pipeline; kept for reference only — **not** the main product path. |
-| `book/` | **Legacy** extracted book JSON; **not** required for the BMKG + Gemma upgrade. |
+| `prometheus-kmp/` | **KMP project** — shared Kotlin module + Android app (Jetpack Compose) + iOS app |
+| `prometheus-kmp/androidApp/` | Android app: Compose UI, navigation, services, inference |
+| `prometheus-kmp/shared/` | KMP shared module: BMKG models, danger classifier, networking, polling, prompts |
+| `prometheus-kmp/iosApp/` | iOS app (SwiftUI) using shared framework |
+| `prometheus-app/` | **Legacy Xcode project** — not the main product path |
+| `config/` | Shared **prompts** and **BMKG endpoint** references for app and tooling |
+| `tools/` | Small scripts (e.g. sample BMKG fetch) for integration testing |
+| `docs/` | Project documentation, tutorials |
 
-## Quick start (repo)
+## Quick start
 
-1. Clone the repository.
-2. **App:** Open `prometheus-app/prometheus-app.xcodeproj` in Xcode when you are ready to work on the iOS target (model download and device requirements stay as in the existing app docs, if any).
-3. **BMKG smoke check:** From the repo root, with Python 3 installed:  
-   `python tools/fetch_bmkg_autogempa.py`  
-   Prints the latest `autogempa` payload summary (for Andi's integration tests).
+### Android
+```bash
+# Prerequisites: JDK 17+, Android SDK API 36
+cd prometheus-kmp
+./gradlew :androidApp:assembleDebug
+# APK at: androidApp/build/outputs/apk/debug/androidApp-debug.apk
+adb install androidApp/build/outputs/apk/debug/androidApp-debug.apk
+```
+
+### iOS
+Open `prometheus-app/prometheus-app.xcodeproj` in Xcode 16+ (macOS only).
+
+### BMKG smoke check
+```bash
+python tools/fetch_bmkg_autogempa.py
+```
+Prints the latest `autogempa` payload summary.
 
 ## BMKG (short reference)
 
@@ -113,14 +129,15 @@ flowchart LR
   Gemma --> Speech
 ```
 
-## Roadmap (non-app work first)
+## Roadmap
 
 - [x] README and shared `config/` + `tools/` for BMKG and prompts
+- [x] Android app: Compose UI, bottom navigation, BMKG polling, danger display, evacuation map (Google Maps SDK)
+- [x] Android app: On-device Gemma 4 inference (chat + vision + emergency briefing)
+- [x] Android app: Dark/light mode toggle with system detection
+- [x] iOS app: Shared models, networking, and polling via KMP module
 - [ ] Andi: finalize danger rules, sample fixtures, and safe-radius values per magnitude band
 - [ ] Arund: lock emergency vs chat vs vision-accessibility prompts and max tokens for voice
-- [ ] Pelangi: integrate BMKG feeds, alarm path, and dual conversation modes in the app
-- [ ] Pelangi: integrate Google Maps SDK — epicentre pin, radius overlay, evacuation routing
-- [ ] Pelangi: integrate camera input → Gemma vision → TTS response (accessibility mode)
 
 ---
 

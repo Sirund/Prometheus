@@ -102,26 +102,31 @@ class EvacuationRouter(private val googleApiKey: String = "") {
         epicenterLat: Double, epicenterLon: Double,
         dangerRadiusKm: Double
     ): List<Candidate> {
+        val userLatRad = userLat * PI / 180.0
+        val userLonRad = userLon * PI / 180.0
+        val epicenterLatRad = epicenterLat * PI / 180.0
+        val epicenterLonRad = epicenterLon * PI / 180.0
+        val dlonRad = (userLon - epicenterLon) * PI / 180.0
         val bearing = atan2(
-            sin(Math.toRadians(userLon - epicenterLon)) * cos(Math.toRadians(userLat)),
-            cos(Math.toRadians(epicenterLat)) * sin(Math.toRadians(userLat)) -
-                    sin(Math.toRadians(epicenterLat)) * cos(Math.toRadians(userLat)) * cos(Math.toRadians(userLon - epicenterLon))
+            sin(dlonRad) * cos(userLatRad),
+            cos(epicenterLatRad) * sin(userLatRad) -
+                    sin(epicenterLatRad) * cos(userLatRad) * cos(dlonRad)
         )
-        val away = Math.toDegrees(bearing + PI)
+        val away = (bearing + PI) * 180.0 / PI
         val exitDistanceKm = dangerRadiusKm * 1.1
         val angularDist = exitDistanceKm / 6371.0
 
         fun destAtAngle(angleDeg: Double): Pair<Double, Double> {
-            val rad = Math.toRadians(angleDeg)
+            val rad = angleDeg * PI / 180.0
             val dlat = asin(
-                sin(Math.toRadians(userLat)) * cos(angularDist) +
-                        cos(Math.toRadians(userLat)) * sin(angularDist) * cos(rad)
+                sin(userLatRad) * cos(angularDist) +
+                        cos(userLatRad) * sin(angularDist) * cos(rad)
             )
-            val dlon = Math.toRadians(userLon) + atan2(
-                sin(rad) * sin(angularDist) * cos(Math.toRadians(userLat)),
-                cos(angularDist) - sin(Math.toRadians(userLat)) * sin(dlat)
+            val dlon = userLonRad + atan2(
+                sin(rad) * sin(angularDist) * cos(userLatRad),
+                cos(angularDist) - sin(userLatRad) * sin(dlat)
             )
-            return Math.toDegrees(dlat) to ((Math.toDegrees(dlon) + 540) % 360 - 180)
+            return (dlat * 180.0 / PI) to (((dlon * 180.0 / PI) + 540) % 360 - 180)
         }
 
         val seen = mutableSetOf<Pair<Double, Double>>()
@@ -174,9 +179,11 @@ class EvacuationRouter(private val googleApiKey: String = "") {
     }
 
     private fun haversineKm(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
-        val dlat = Math.toRadians(lat2 - lat1)
-        val dlon = Math.toRadians(lon2 - lon1)
-        val a = sin(dlat / 2).pow(2) + cos(Math.toRadians(lat1)) * cos(Math.toRadians(lat2)) * sin(dlon / 2).pow(2)
+        val dlat = (lat2 - lat1) * PI / 180.0
+        val dlon = (lon2 - lon1) * PI / 180.0
+        val lat1Rad = lat1 * PI / 180.0
+        val lat2Rad = lat2 * PI / 180.0
+        val a = sin(dlat / 2).pow(2) + cos(lat1Rad) * cos(lat2Rad) * sin(dlon / 2).pow(2)
         return 2 * atan2(sqrt(a), sqrt(1 - a)) * 6371.0
     }
 

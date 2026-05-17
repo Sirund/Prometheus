@@ -37,7 +37,7 @@ import com.prometheus.android.inference.STTManager
 import com.prometheus.android.inference.TTSManager
 import com.prometheus.android.ui.assistant.ConversationData
 import com.prometheus.android.ui.assistant.saveChatImage
-import com.prometheus.android.ui.theme.PrometheusColors
+import com.prometheus.android.ui.theme.LocalPrometheusColors
 import com.prometheus.model.ChatMessage
 import com.prometheus.model.EarthquakeEvent
 import com.prometheus.prompt.SystemPrompts
@@ -62,6 +62,7 @@ fun VisionScreen(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val p = LocalPrometheusColors.current
 
     val manager = remember { conversationManager ?: ConversationManager() }
     val ttsManager = remember { TTSManager(context) }
@@ -133,20 +134,19 @@ fun VisionScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Virtual Assistant", color = PrometheusColors.blue) },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = PrometheusColors.surface),
-                actions = {
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(end = 8.dp)) {
-                        Box(Modifier.size(6.dp).clip(RoundedCornerShape(3.dp)).background(if (isModelLoaded) Color.Green else Color(0xFFFFA500)))
-                        Spacer(Modifier.width(4.dp))
-                        Text(statusMessage, color = Color.Gray, style = MaterialTheme.typography.labelSmall)
-                    }
-                }
+                title = { Text("Virtual Assistant", color = p.blue) },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = p.surface)
             )
         },
-        containerColor = PrometheusColors.background
+        containerColor = p.background
     ) { padding ->
         Box(Modifier.fillMaxSize().padding(padding)) {
+
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 16.dp, top = 4.dp)) {
+                Box(Modifier.size(6.dp).clip(RoundedCornerShape(3.dp)).background(if (isModelLoaded) Color.Green else Color(0xFFFFA500)))
+                Spacer(Modifier.width(4.dp))
+                Text(statusMessage, color = p.textSecondary, style = MaterialTheme.typography.labelSmall)
+            }
 
             if (!isModelLoaded) {
                 DownloadPrompt(
@@ -298,9 +298,9 @@ fun VisionScreen(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
-                    .padding(16.dp)
-                    .background(PrometheusColors.surface.copy(alpha = 0.9f), RoundedCornerShape(12.dp))
-                    .border(1.dp, PrometheusColors.blue.copy(alpha = 0.2f), RoundedCornerShape(12.dp))
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                    .background(p.surface.copy(alpha = 0.9f), RoundedCornerShape(12.dp))
+                    .border(1.dp, p.blue.copy(alpha = 0.2f), RoundedCornerShape(12.dp))
                     .padding(12.dp)
                     .heightIn(max = 80.dp)
                     .clickable(enabled = false) {}
@@ -308,9 +308,8 @@ fun VisionScreen(
                 when (talkMode) {
                     TalkMode.Idle -> Text(
                         text = description ?: "Hold mic to ask",
-                        color = Color.Gray,
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.align(Alignment.Center)
+                        color = p.textSecondary,
+                        style = MaterialTheme.typography.bodySmall
                     )
                     TalkMode.Recording -> Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -318,7 +317,7 @@ fun VisionScreen(
                     ) {
                         Text("\uD83C\uDF99\uFE0F", style = MaterialTheme.typography.bodyMedium)
                         Spacer(Modifier.width(8.dp))
-                        Text("Listening...", color = PrometheusColors.blue, fontWeight = FontWeight.Bold)
+                        Text("Listening...", color = p.blue, fontWeight = FontWeight.Bold)
                     }
                     TalkMode.Transcribing -> Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -327,10 +326,10 @@ fun VisionScreen(
                         CircularProgressIndicator(
                             modifier = Modifier.size(16.dp),
                             strokeWidth = 2.dp,
-                            color = PrometheusColors.blue
+                            color = p.blue
                         )
                         Spacer(Modifier.width(8.dp))
-                        Text("Transcribing voice...", color = Color.Gray)
+                        Text("Transcribing voice...", color = p.textSecondary)
                     }
                     TalkMode.Sending -> Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -339,10 +338,10 @@ fun VisionScreen(
                         CircularProgressIndicator(
                             modifier = Modifier.size(16.dp),
                             strokeWidth = 2.dp,
-                            color = PrometheusColors.blue
+                            color = p.blue
                         )
                         Spacer(Modifier.width(8.dp))
-                        Text("Analyzing...", color = Color.Gray)
+                        Text("Analyzing...", color = p.textSecondary)
                     }
                     TalkMode.Result -> Text(
                         text = description ?: "",
@@ -363,6 +362,7 @@ private fun MicButton(
     onPress: () -> Unit,
     onRelease: () -> Unit
 ) {
+    val p = LocalPrometheusColors.current
     val infiniteTransition = rememberInfiniteTransition(label = "mic")
     val breathingAlpha by infiniteTransition.animateFloat(
         initialValue = 0.5f,
@@ -404,7 +404,7 @@ private fun MicButton(
             CircularProgressIndicator(
                 modifier = Modifier.size(32.dp),
                 strokeWidth = 3.dp,
-                color = PrometheusColors.blue
+                color = p.blue
             )
         } else {
             // Pulse ring for recording
@@ -441,6 +441,7 @@ private fun PermissionGate(
     audioGranted: Boolean,
     onRequest: () -> Unit
 ) {
+    val p = LocalPrometheusColors.current
     Box(
         modifier = Modifier.fillMaxSize().padding(32.dp),
         contentAlignment = Alignment.Center
@@ -448,7 +449,7 @@ private fun PermissionGate(
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text("\uD83D\uDCF7\uD83C\uDF99\uFE0F", style = MaterialTheme.typography.displaySmall)
             Spacer(Modifier.height(12.dp))
-            Text("PERMISSIONS REQUIRED", color = Color.White,
+            Text("PERMISSIONS REQUIRED", color = p.textPrimary,
                 style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(6.dp))
             val missing = buildList {
@@ -456,12 +457,12 @@ private fun PermissionGate(
                 if (!audioGranted) add("Microphone")
             }
             Text("Grant ${missing.joinToString(" & ")} to use Talk to Gemma",
-                color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                color = p.textSecondary, style = MaterialTheme.typography.bodySmall)
             Spacer(Modifier.height(20.dp))
             Button(
                 onClick = onRequest,
                 modifier = Modifier.fillMaxWidth().height(48.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = PrometheusColors.blue, contentColor = Color.Black)
+                colors = ButtonDefaults.buttonColors(containerColor = p.blue, contentColor = Color.Black)
             ) { Text("GRANT PERMISSIONS", fontWeight = FontWeight.Bold) }
         }
     }
@@ -475,6 +476,7 @@ private fun DownloadPrompt(
     onDownloadChange: (Boolean, Int, String) -> Unit,
     onModelLoaded: () -> Unit
 ) {
+    val p = LocalPrometheusColors.current
     Box(
         modifier = Modifier.fillMaxWidth().fillMaxHeight().padding(32.dp),
         contentAlignment = Alignment.Center
@@ -482,18 +484,18 @@ private fun DownloadPrompt(
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text("\uD83E\uDD16", style = MaterialTheme.typography.displaySmall)
             Spacer(Modifier.height(8.dp))
-            Text("MODEL NOT FOUND", color = Color.White,
+            Text("MODEL NOT FOUND", color = p.textPrimary,
                 style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             Text("Download Gemma 4 (2.4 GB) to enable TALK",
-                color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                color = p.textSecondary, style = MaterialTheme.typography.bodySmall)
             Spacer(Modifier.height(16.dp))
 
             val isPaused = isDownloading && downloadProgress >= 0 &&
                 ModelManager.getDownloadProgress(context)?.isPaused == true
             val btnColor = when {
-                !isDownloading -> PrometheusColors.blue
+                !isDownloading -> p.blue
                 isPaused -> Color(0xFFFFA500).copy(alpha = 0.6f)
-                else -> PrometheusColors.blue.copy(alpha = 0.6f)
+                else -> p.blue.copy(alpha = 0.6f)
             }
             val btnText = when {
                 !isDownloading -> "\u2B07\uFE0F  DOWNLOAD MODEL (2.4 GB)"
@@ -535,7 +537,7 @@ private fun DownloadPrompt(
                         LinearProgressIndicator(
                             progress = { downloadProgress / 100f },
                             modifier = Modifier.fillMaxWidth().fillMaxHeight(),
-                            color = PrometheusColors.blue.copy(alpha = 0.3f),
+                            color = p.blue.copy(alpha = 0.3f),
                             trackColor = Color.Transparent
                         )
                     }

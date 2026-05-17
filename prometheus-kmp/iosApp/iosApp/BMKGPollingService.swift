@@ -8,8 +8,11 @@ import CoreLocation
 class BMKGPollingService: NSObject, CLLocationManagerDelegate {
     private var timer: Timer?
     private var lastEventId: String?
+    private var weatherTimer: Timer?
+    private var nowcastTimer: Timer?
     private let synth = AVSpeechSynthesizer()
     private let locationManager = CLLocationManager()
+    private let weatherClient = BMKGWeatherClient()
     var currentLocation: UserLocation?
 
     var isMonitoring = false
@@ -17,6 +20,8 @@ class BMKGPollingService: NSObject, CLLocationManagerDelegate {
     var latestEarthquakeEvent: EarthquakeEvent?
     var lastChecked: String?
     var dangerLevel: Int = 0
+    var weatherInfo = shared.WeatherInfo(temperature: "--", humidity: "--", windSpeed: "--", windDirection: "--", weatherDesc: "Loading...", visibility: "--")
+    var nowcastAlerts: [shared.NowcastAlert] = []
 
     var injectionEnabled = false
     var injectionIp = ""
@@ -44,15 +49,21 @@ class BMKGPollingService: NSObject, CLLocationManagerDelegate {
     func start() {
         isMonitoring = true
         checkNow()
-        timer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
+        timer = Timer.scheduledTimer(withTimeInterval: 10, repeats: true) { [weak self] _ in
             self?.checkNow()
         }
+        startWeatherPolling()
+        startNowcastPolling()
     }
 
     func stop() {
         isMonitoring = false
         timer?.invalidate()
         timer = nil
+        weatherTimer?.invalidate()
+        weatherTimer = nil
+        nowcastTimer?.invalidate()
+        nowcastTimer = nil
     }
 
     func checkNow() {
@@ -74,6 +85,73 @@ class BMKGPollingService: NSObject, CLLocationManagerDelegate {
                 }
             }
         }
+        Task { await pollWeather() }
+        Task { await pollNowcast() }
+    }
+
+    // MARK: - Weather Polling
+
+    private func startWeatherPolling() {
+        Task { await pollWeather() }
+        weatherTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
+            Task { [weak self] in await self?.pollWeather() }
+        }
+    }
+
+    private func pollWeather() async {
+        do {
+            let adm4: String
+            if let loc = currentLocation {
+                adm4 = shared.WeatherInfo.adm4ForLocation(lat: loc.latitude, lon: loc.longitude)
+            } else {
+                adm4 = shared.WeatherInfo.DEFAULT_ADM4
+            }
+            let info = try await weatherClient.fetchWeatherForecast(adm4: adm4)
+            await MainActor.run { weatherInfo = info }
+        } catch {
+            print("Weather poll error: \(error)")
+        }
+    }
+
+    // MARK: - Nowcast Polling
+
+    private func startNowcastPolling() {
+        Task { await pollNowcast() }
+        nowcastTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
+            Task { [weak self] in await self?.pollNowcast() }
+        }
+    }
+
+    private var knownAlertLinks: Set<String> = []
+
+    private func pollNowcast() async {
+        do {
+            let alerts = try await weatherClient.fetchNowcastAlerts()
+            await MainActor.run {
+                let nearest = weatherInfo.matchingNowcastAlert(alerts: alerts)
+                nowcastAlerts = nearest.map { [$0] } ?? []
+                if let alert = nearest, alert.isBadWeather, !knownAlertLinks.contains(alert.link) {
+                    knownAlertLinks.insert(alert.link)
+                    sendNowcastNotification(alert: alert)
+                }
+            }
+        } catch {
+            print("Nowcast poll error: \(error)")
+        }
+    }
+
+    private func sendNowcastNotification(alert: shared.NowcastAlert) {
+        let content = UNMutableNotificationContent()
+        content.title = "\u{26A0}\u{FE0F} Weather Warning — \(alert.eventType)"
+        content.body = alert.summary
+        content.sound = .default
+
+        let request = UNNotificationRequest(
+            identifier: "nowcast_\(UUID().uuidString)",
+            content: content,
+            trigger: nil
+        )
+        UNUserNotificationCenter.current().add(request)
     }
 
     @MainActor
@@ -131,7 +209,7 @@ class BMKGPollingService: NSObject, CLLocationManagerDelegate {
         let felt = event.dirasakan_?.isEmpty == false ? "\nFelt: \(event.dirasakan_!)" : ""
 
         let content = UNMutableNotificationContent()
-        content.title = "🚨 EARTHQUAKE DETECTED — M\(mag)"
+        content.title = "\u{1F6A8} EARTHQUAKE DETECTED — M\(mag)"
         content.body = "\(loc)\nDepth: \(depth) | \(time)\(tsunami)\(felt)"
         content.sound = .defaultCritical
         content.interruptionLevel = .critical

@@ -38,8 +38,8 @@ struct MapView: View {
             ZStack {
                 Color.background.ignoresSafeArea()
 
-                VStack(spacing: 0) {
-                    EvacuationStatusBanner(isDangerous: isDangerous)
+                    VStack(spacing: 0) {
+                        EvacuationStatusBanner(isDangerous: isDangerous)
 
                     if #available(iOS 17.0, *) {
                         mapContent
@@ -78,13 +78,6 @@ struct MapView: View {
             .navigationTitle("Evacuation")
             .toolbarBackground(Color.surface, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Label("Maps", systemImage: "map")
-                        .font(.caption.monospaced())
-                        .foregroundColor(.prometheusBlue)
-                }
-            }
         }
         .task(id: pollingService.latestEarthquakeEvent?.dateTime) {
             await fetchRoute()

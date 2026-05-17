@@ -1,0 +1,137 @@
+<svg width="560" height="280" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#081420"/>
+      <stop offset="100%" stop-color="#030B14"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="42%" r="40%">
+      <stop offset="0%" stop-color="#00BFFF" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="#00BFFF" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="flameBlur" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="7" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="softGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="560" height="280" fill="url(#bg)"/>
+  <rect width="560" height="280" fill="url(#glow)"/>
+
+  <!-- Outer border -->
+  <rect x="1" y="1" width="558" height="278" fill="none"
+        stroke="#00BFFF" stroke-width="0.75" stroke-opacity="0.3"/>
+
+  <!-- Corner grid dots — top left -->
+  <g fill="#00BFFF" opacity="0.2">
+    <circle cx="22" cy="22" r="1.8"/><circle cx="34" cy="22" r="1.8"/><circle cx="46" cy="22" r="1.8"/>
+    <circle cx="22" cy="34" r="1.8"/><circle cx="34" cy="34" r="1.8"/><circle cx="46" cy="34" r="1.8"/>
+    <circle cx="22" cy="46" r="1.8"/><circle cx="34" cy="46" r="1.8"/>
+  </g>
+  <!-- Corner grid dots — top right -->
+  <g fill="#00BFFF" opacity="0.2">
+    <circle cx="538" cy="22" r="1.8"/><circle cx="526" cy="22" r="1.8"/><circle cx="514" cy="22" r="1.8"/>
+    <circle cx="538" cy="34" r="1.8"/><circle cx="526" cy="34" r="1.8"/><circle cx="514" cy="34" r="1.8"/>
+    <circle cx="538" cy="46" r="1.8"/><circle cx="526" cy="46" r="1.8"/>
+  </g>
+  <!-- Corner grid dots — bottom left -->
+  <g fill="#00BFFF" opacity="0.2">
+    <circle cx="22" cy="258" r="1.8"/><circle cx="34" cy="258" r="1.8"/><circle cx="46" cy="258" r="1.8"/>
+    <circle cx="22" cy="246" r="1.8"/><circle cx="34" cy="246" r="1.8"/>
+  </g>
+  <!-- Corner grid dots — bottom right -->
+  <g fill="#00BFFF" opacity="0.2">
+    <circle cx="538" cy="258" r="1.8"/><circle cx="526" cy="258" r="1.8"/><circle cx="514" cy="258" r="1.8"/>
+    <circle cx="538" cy="246" r="1.8"/><circle cx="526" cy="246" r="1.8"/>
+  </g>
+
+  <!-- Signal arcs radiating from flame center (280, 82) -->
+  <g fill="none" stroke="#00BFFF" stroke-linecap="round">
+    <!-- Inner pair -->
+    <path d="M253,72 Q240,82 253,92" stroke-width="2" opacity="0.5"/>
+    <path d="M307,72 Q320,82 307,92" stroke-width="2" opacity="0.5"/>
+    <!-- Outer pair -->
+    <path d="M240,63 Q222,82 240,101" stroke-width="1.5" opacity="0.28"/>
+    <path d="M320,63 Q338,82 320,101" stroke-width="1.5" opacity="0.28"/>
+    <!-- Outermost pair -->
+    <path d="M227,54 Q204,82 227,110" stroke-width="1" opacity="0.14"/>
+    <path d="M333,54 Q356,82 333,110" stroke-width="1" opacity="0.14"/>
+  </g>
+
+  <!-- Flame — glow halo -->
+  <path d="M280,34 C280,34 310,54 308,80 C306,100 294,112 280,116
+           C266,112 254,100 252,80 C250,54 280,34 280,34 Z"
+        fill="#00BFFF" opacity="0.18" filter="url(#flameBlur)"/>
+
+  <!-- Flame — outer shape -->
+  <path d="M280,34 C280,34 310,54 308,80 C306,100 294,112 280,116
+           C266,112 254,100 252,80 C250,54 280,34 280,34 Z"
+        fill="#00BFFF" opacity="0.75" filter="url(#softGlow)"/>
+
+  <!-- Flame — inner white core -->
+  <path d="M280,52 C280,52 298,66 296,84 C294,98 288,107 280,110
+           C272,107 266,98 264,84 C262,66 280,52 280,52 Z"
+        fill="white" opacity="0.9"/>
+
+  <!-- PROMETHEUS -->
+  <text x="280" y="162"
+        font-family="'Helvetica Neue', Helvetica, Arial, sans-serif"
+        font-size="50" font-weight="800" letter-spacing="5"
+        text-anchor="middle" fill="#00BFFF">PROMETHEUS</text>
+
+  <!-- Tagline -->
+  <text x="280" y="184"
+        font-family="'Helvetica Neue', Helvetica, Arial, sans-serif"
+        font-size="12" font-weight="400" letter-spacing="3.5"
+        text-anchor="middle" fill="#00BFFF" opacity="0.5">OFFLINE AI  ·  DISASTER READINESS  ·  INDONESIA</text>
+
+  <!-- Divider -->
+  <line x1="76" y1="204" x2="484" y2="204"
+        stroke="#00BFFF" stroke-width="0.5" stroke-opacity="0.22"/>
+
+  <!-- Feature chip: MONITOR -->
+  <rect x="68" y="217" width="96" height="24" rx="4"
+        fill="#00BFFF" fill-opacity="0.07"
+        stroke="#00BFFF" stroke-width="0.75" stroke-opacity="0.55"/>
+  <text x="116" y="234"
+        font-family="'Helvetica Neue', Helvetica, Arial, sans-serif"
+        font-size="9.5" font-weight="700" letter-spacing="2"
+        text-anchor="middle" fill="#00BFFF" opacity="0.85">MONITOR</text>
+
+  <!-- Feature chip: EVACUATE -->
+  <rect x="176" y="217" width="96" height="24" rx="4"
+        fill="#00BFFF" fill-opacity="0.07"
+        stroke="#00BFFF" stroke-width="0.75" stroke-opacity="0.55"/>
+  <text x="224" y="234"
+        font-family="'Helvetica Neue', Helvetica, Arial, sans-serif"
+        font-size="9.5" font-weight="700" letter-spacing="2"
+        text-anchor="middle" fill="#00BFFF" opacity="0.85">EVACUATE</text>
+
+  <!-- Feature chip: SURVIVAL -->
+  <rect x="284" y="217" width="96" height="24" rx="4"
+        fill="#00BFFF" fill-opacity="0.07"
+        stroke="#00BFFF" stroke-width="0.75" stroke-opacity="0.55"/>
+  <text x="332" y="234"
+        font-family="'Helvetica Neue', Helvetica, Arial, sans-serif"
+        font-size="9.5" font-weight="700" letter-spacing="2"
+        text-anchor="middle" fill="#00BFFF" opacity="0.85">SURVIVAL</text>
+
+  <!-- Feature chip: VISION -->
+  <rect x="392" y="217" width="96" height="24" rx="4"
+        fill="#00BFFF" fill-opacity="0.07"
+        stroke="#00BFFF" stroke-width="0.75" stroke-opacity="0.55"/>
+  <text x="440" y="234"
+        font-family="'Helvetica Neue', Helvetica, Arial, sans-serif"
+        font-size="9.5" font-weight="700" letter-spacing="2"
+        text-anchor="middle" fill="#00BFFF" opacity="0.85">VISION</text>
+</svg>

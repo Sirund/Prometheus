@@ -3,10 +3,14 @@ package com.prometheus.android.navigation
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChatBubble
+import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Radio
 import androidx.compose.material.icons.filled.RecordVoiceOver
@@ -24,10 +28,12 @@ import com.prometheus.android.ui.assistant.AssistantScreen
 import com.prometheus.android.ui.assistant.ConversationData
 import com.prometheus.android.ui.map.MapScreen
 import com.prometheus.android.ui.monitor.MonitorScreen
-import com.prometheus.android.ui.theme.PrometheusColors
+import com.prometheus.android.ui.theme.LocalPrometheusColors
 import com.prometheus.android.ui.vision.VisionScreen
 import com.prometheus.model.EarthquakeEvent
+import com.prometheus.model.NowcastAlert
 import com.prometheus.model.UserLocation
+import com.prometheus.model.WeatherInfo
 
 enum class Screen(val label: String, val icon: ImageVector) {
     Monitor("MONITOR", Icons.Filled.Radio),
@@ -38,10 +44,14 @@ enum class Screen(val label: String, val icon: ImageVector) {
 
 @Composable
 fun PrometheusApp(
+    isDarkMode: Boolean = true,
+    onToggleDarkMode: () -> Unit = {},
     onRefreshBmkg: (() -> Unit)? = null,
     latestEvent: String? = null,
     currentEvent: EarthquakeEvent? = null,
     currentLocation: UserLocation? = null,
+    weatherInfo: WeatherInfo = WeatherInfo.EMPTY,
+    nowcastAlerts: List<NowcastAlert> = emptyList(),
     injectionEnabled: Boolean = false,
     injectionIp: String = "",
     injectionPort: Int = 8080,
@@ -53,11 +63,12 @@ fun PrometheusApp(
     onActiveIndexChange: (Int) -> Unit = {}
 ) {
     var selectedScreen by remember { mutableStateOf(Screen.Monitor) }
+    val p = LocalPrometheusColors.current
 
     Scaffold(
         bottomBar = {
             NavigationBar(
-                containerColor = PrometheusColors.background,
+                containerColor = p.background,
                 tonalElevation = 0.dp
             ) {
                 Screen.entries.forEach { screen ->
@@ -69,7 +80,7 @@ fun PrometheusApp(
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(12.dp))
-                                    .then(if (isSelected) Modifier.background(PrometheusColors.surfaceElevated) else Modifier)
+                                    .then(if (isSelected) Modifier.background(p.surfaceElevated) else Modifier)
                                     .padding(horizontal = 16.dp, vertical = 8.dp)
                             ) {
                                 Icon(
@@ -89,8 +100,8 @@ fun PrometheusApp(
                             }
                         },
                         colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = PrometheusColors.blue,
-                            unselectedIconColor = PrometheusColors.textSecondary.copy(alpha = 0.5f),
+                            selectedIconColor = p.blue,
+                            unselectedIconColor = p.textSecondary.copy(alpha = 0.5f),
                             indicatorColor = Color.Transparent
                         ),
                         alwaysShowLabel = false
@@ -98,47 +109,69 @@ fun PrometheusApp(
                 }
             }
         },
-        containerColor = PrometheusColors.background
+        containerColor = p.background
     ) { padding ->
-        Box(modifier = Modifier.padding(padding)) {
-            AnimatedContent(
-                targetState = selectedScreen,
-                transitionSpec = {
-                    fadeIn(animationSpec = tween(300)) togetherWith fadeOut(animationSpec = tween(300))
-                },
-                label = "screen_transition"
-            ) { screen ->
-                when (screen) {
-                    Screen.Monitor -> MonitorScreen(
-                        onRefresh = onRefreshBmkg,
-                        event = currentEvent,
-                        latestEvent = latestEvent,
-                        injectionEnabled = injectionEnabled,
-                        injectionIp = injectionIp,
-                        injectionPort = injectionPort,
-                        onApplyInjection = onApplyInjection
-                    )
-                    Screen.Evacuate -> MapScreen(
-                        event = currentEvent,
-                        userLocation = currentLocation
-                    )
-                    Screen.Chat -> AssistantScreen(
-                        conversations = conversations,
-                        activeIndex = activeIndex,
-                        conversationManager = conversationManager,
-                        onConversationsChange = onConversationsChange,
-                        onActiveIndexChange = onActiveIndexChange,
-                        currentEvent = currentEvent
-                    )
-                    Screen.Vision -> VisionScreen(
-                        conversations = conversations,
-                        activeIndex = activeIndex,
-                        conversationManager = conversationManager,
-                        onConversationsChange = onConversationsChange,
-                        onActiveIndexChange = onActiveIndexChange,
-                        currentEvent = currentEvent
-                    )
+        Box(modifier = Modifier.fillMaxSize()) {
+            Box(modifier = Modifier.padding(padding)) {
+                AnimatedContent(
+                    targetState = selectedScreen,
+                    transitionSpec = {
+                        fadeIn(animationSpec = tween(300)) togetherWith fadeOut(animationSpec = tween(300))
+                    },
+                    label = "screen_transition"
+                ) { screen ->
+                    when (screen) {
+                        Screen.Monitor -> MonitorScreen(
+                            onRefresh = onRefreshBmkg,
+                            event = currentEvent,
+                            latestEvent = latestEvent,
+                            weatherInfo = weatherInfo,
+                            nowcastAlerts = nowcastAlerts,
+                            injectionEnabled = injectionEnabled,
+                            injectionIp = injectionIp,
+                            injectionPort = injectionPort,
+                            onApplyInjection = onApplyInjection
+                        )
+                        Screen.Evacuate -> MapScreen(
+                            event = currentEvent,
+                            userLocation = currentLocation
+                        )
+                        Screen.Chat -> AssistantScreen(
+                            conversations = conversations,
+                            activeIndex = activeIndex,
+                            conversationManager = conversationManager,
+                            onConversationsChange = onConversationsChange,
+                            onActiveIndexChange = onActiveIndexChange,
+                            currentEvent = currentEvent
+                        )
+                        Screen.Vision -> VisionScreen(
+                            conversations = conversations,
+                            activeIndex = activeIndex,
+                            conversationManager = conversationManager,
+                            onConversationsChange = onConversationsChange,
+                            onActiveIndexChange = onActiveIndexChange,
+                            currentEvent = currentEvent
+                        )
+                    }
                 }
+            }
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .statusBarsPadding()
+                    .padding(top = 8.dp, end = 12.dp)
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(p.surfaceElevated)
+                    .clickable(onClick = onToggleDarkMode),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = if (isDarkMode) Icons.Filled.LightMode else Icons.Filled.DarkMode,
+                    contentDescription = if (isDarkMode) "Switch to light mode" else "Switch to dark mode",
+                    tint = p.blue,
+                    modifier = Modifier.size(26.dp)
+                )
             }
         }
     }

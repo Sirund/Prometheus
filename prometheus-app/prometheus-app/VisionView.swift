@@ -1,108 +1,264 @@
-//
-//  VisionView.swift
-//  prometheus-app
-//
-
 import SwiftUI
+import AVFoundation
 
-struct VisionView: View {
+// MARK: - Camera service
+
+final class CameraService: NSObject, @unchecked Sendable {
+    let session = AVCaptureSession()
+    private let output = AVCapturePhotoOutput()
+    private var captureContinuation: CheckedContinuation<CGImage?, Never>?
+
+    override init() {
+        super.init()
+        session.sessionPreset = .photo
+        guard
+            let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back),
+            let input = try? AVCaptureDeviceInput(device: device),
+            session.canAddInput(input),
+            session.canAddOutput(output)
+        else { return }
+        session.addInput(input)
+        session.addOutput(output)
+    }
+
+    func start() { if !session.isRunning { session.startRunning() } }
+    func stop()  { if  session.isRunning { session.stopRunning()  } }
+
+    func capturePhoto() async -> CGImage? {
+        await withCheckedContinuation { continuation in
+            captureContinuation = continuation
+            output.capturePhoto(with: AVCapturePhotoSettings(), delegate: self)
+        }
+    }
+}
+
+extension CameraService: AVCapturePhotoCaptureDelegate {
+    func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
+        guard error == nil,
+              let data = photo.fileDataRepresentation(),
+              let uiImage = UIImage(data: data)
+        else {
+            captureContinuation?.resume(returning: nil)
+            captureContinuation = nil
+            return
+        }
+        // Draw into a renderer so EXIF orientation is baked into the CGImage.
+        let renderer = UIGraphicsImageRenderer(size: uiImage.size)
+        let normalized = renderer.image { _ in uiImage.draw(at: .zero) }
+        captureContinuation?.resume(returning: normalized.cgImage)
+        captureContinuation = nil
+    }
+}
+
+// MARK: - Camera preview (UIViewRepresentable)
+
+#if canImport(UIKit)
+struct CameraPreviewView: UIViewRepresentable {
+    let session: AVCaptureSession
+
+    func makeUIView(context: Context) -> PreviewUIView {
+        let view = PreviewUIView()
+        view.backgroundColor = .black
+        view.previewLayer.session = session
+        view.previewLayer.videoGravity = .resizeAspectFill
+        return view
+    }
+
+    func updateUIView(_ uiView: PreviewUIView, context: Context) {}
+
+    class PreviewUIView: UIView {
+        override class var layerClass: AnyClass { AVCaptureVideoPreviewLayer.self }
+        var previewLayer: AVCaptureVideoPreviewLayer { layer as! AVCaptureVideoPreviewLayer }
+    }
+}
+#endif
+
+// MARK: - Vision panel (embedded in AssistantView)
+
+struct VisionPanel: View {
+    @Environment(InferenceManager.self) private var inference
+    @State private var camera = CameraService()
+    @State private var isCapturing = false
+    @State private var isAnalyzing = false
+    @State private var capturedImage: CGImage?
+    @State private var description: String?
+    private let synthesizer = AVSpeechSynthesizer()
+
     var body: some View {
-        NavigationStack {
-            ZStack {
-                Color.darkBackground.ignoresSafeArea()
+        VStack(spacing: 8) {
+            cameraArea
+            descriptionStrip
+            infoCard
+            captureButton
+        }
+        .onAppear { camera.start() }
+        .onDisappear { camera.stop() }
+    }
 
-                VStack(spacing: 0) {
-                    // Camera viewfinder placeholder
-                    ZStack {
-                        Color.cardBackground
-                        VStack(spacing: 16) {
-                            Image(systemName: "camera.viewfinder")
-                                .font(.system(size: 64))
-                                .foregroundColor(.prometheusBlue.opacity(0.45))
-                            Text("CAMERA FEED")
-                                .font(.caption.bold().monospaced())
-                                .foregroundColor(.white)
-                            Text("AVCaptureSession  →  Gemma 4 Vision  →  Speech")
-                                .font(.caption2.monospaced())
-                                .foregroundColor(.gray)
-                        }
-                    }
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 280)
-                    .clipShape(RoundedRectangle(cornerRadius: 20))
-                    .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.prometheusBlue.opacity(0.3), lineWidth: 1))
-                    .shadow(color: .black.opacity(0.4), radius: 10, x: 0, y: 5)
-                    .padding(.horizontal)
-                    .padding(.top)
+    // MARK: - Camera UI
 
-                    // Response strip
-                    HStack(spacing: 10) {
-                        Image(systemName: "waveform")
-                            .font(.body)
-                            .foregroundColor(.prometheusBlue.opacity(0.5))
-                        Text("Spoken response will play here — no screen reading required")
-                            .font(.caption.monospaced())
-                            .foregroundColor(.gray)
-                            .lineLimit(2)
-                        Spacer()
-                    }
-                    .padding(12)
-                    .background(Color.cardBackground)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.prometheusBlue.opacity(0.2), lineWidth: 1))
-                    .padding(.horizontal)
-                    .padding(.top, 12)
+    private var cameraArea: some View {
+        ZStack {
+            #if canImport(UIKit)
+            CameraPreviewView(session: camera.session)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            #else
+            Color.black
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            #endif
 
-                    Spacer()
-
-                    // Accessibility note
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("VISION ACCESSIBILITY MODE")
-                            .font(.caption2.bold().monospaced())
-                            .foregroundColor(.prometheusBlue)
-                        Text("Point the camera at surroundings, signage, or injuries. Gemma 4 describes what it sees in calm spoken language — no typing or screen reading needed. Designed for visually impaired users and high-stress situations.")
-                            .font(.caption2.monospaced())
-                            .foregroundColor(.gray)
-                            .lineSpacing(4)
-                    }
-                    .padding()
-                    .background(Color.cardBackground.opacity(0.5))
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.prometheusBlue.opacity(0.15), lineWidth: 1))
-                    .padding(.horizontal)
-
-                    Spacer()
-
-                    // Large tap target — accessibility-first design
-                    Button(action: { /* TODO: trigger AVCaptureSession + Gemma vision */ }) {
-                        VStack(spacing: 10) {
-                            Image(systemName: "camera.circle.fill")
-                                .font(.system(size: 60))
-                            Text("TAP TO DESCRIBE SURROUNDINGS")
-                                .font(.caption.bold().monospaced())
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding(28)
-                        .background(Color.prometheusBlue.opacity(0.12))
-                        .clipShape(RoundedRectangle(cornerRadius: 20))
-                        .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.prometheusBlue.opacity(0.5), lineWidth: 2))
-                        .foregroundColor(.prometheusBlue)
-                    }
-                    .buttonStyle(.plain)
-                    .padding()
-                    .disabled(true)
-                }
+            if let image = capturedImage {
+                Image(decorative: image, scale: 1)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            .navigationTitle("Vision Assist")
-            .toolbarBackground(Color.cardBackground, for: .navigationBar)
-            .toolbarBackground(.visible, for: .navigationBar)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Label("Accessibility", systemImage: "figure.wave")
-                        .font(.caption.monospaced())
+
+            if isCapturing {
+                Color.black.opacity(0.5)
+                Text("CAPTURING...")
+                    .font(.caption.bold().monospaced())
+                    .foregroundColor(.prometheusBlue)
+            } else if isAnalyzing {
+                VStack(spacing: 8) {
+                    ProgressView()
+                        .tint(.prometheusBlue)
+                    Text("ANALYZING...")
+                        .font(.caption.bold().monospaced())
                         .foregroundColor(.prometheusBlue)
                 }
             }
         }
+        .overlay(Rectangle().stroke(Color.prometheusBlue.opacity(0.3), lineWidth: 1))
+        .padding(.horizontal)
+        .padding(.top, 8)
+        .layoutPriority(1)
+    }
+
+    private var descriptionStrip: some View {
+        HStack(spacing: 10) {
+            Image(systemName: (isCapturing || isAnalyzing) ? "hourglass" : capturedImage != nil ? "photo.fill" : "waveform")
+                .font(.body)
+                .foregroundColor(.prometheusBlue.opacity(0.5))
+            Text(description ?? "Point camera and tap Describe to hear surroundings")
+                .font(.caption.monospaced())
+                .foregroundColor(.secondary)
+                .lineLimit(3)
+            Spacer()
+        }
+        .padding(12)
+        .background(Color.cardBackground)
+        .overlay(Rectangle().stroke(Color.prometheusBlue.opacity(0.2), lineWidth: 1))
+        .padding(.horizontal)
+    }
+
+    private var infoCard: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("VISION ACCESSIBILITY MODE")
+                .font(.caption2.bold().monospaced())
+                .foregroundColor(.prometheusBlue)
+            Text("Point the camera at surroundings, signage, or injuries. On-device vision analysis detects people, scene type, and visible text — spoken aloud automatically.")
+                .font(.caption2.monospaced())
+                .foregroundColor(.secondary)
+                .lineSpacing(4)
+        }
+        .padding()
+        .background(Color.cardBackground.opacity(0.5))
+        .overlay(Rectangle().stroke(Color.prometheusBlue.opacity(0.15), lineWidth: 1))
+        .padding(.horizontal)
+    }
+
+    private var captureButton: some View {
+        let hasCapture = capturedImage != nil
+        return Button(action: captureAndDescribe) {
+            VStack(spacing: 10) {
+                Image(systemName: isCapturing
+                    ? "camera.circle.fill"
+                    : isAnalyzing ? "hourglass.circle.fill"
+                    : hasCapture ? "arrow.circlepath" : "camera.circle.fill")
+                    .font(.system(size: 60))
+                Text(isCapturing
+                    ? "CAPTURING PHOTO..."
+                    : isAnalyzing ? "AI ANALYZING — PLEASE WAIT..."
+                    : hasCapture ? "TAP FOR NEW CAPTURE" : "TAP TO DESCRIBE SURROUNDINGS")
+                    .font(.caption.bold().monospaced())
+            }
+            .frame(maxWidth: .infinity)
+            .padding(28)
+            .background(isCapturing
+                ? Color.prometheusBlue.opacity(0.25)
+                : Color.prometheusBlue.opacity(0.12))
+            .overlay(Rectangle().stroke(Color.prometheusBlue.opacity(0.5), lineWidth: 2))
+            .foregroundColor(.prometheusBlue)
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal)
+        .disabled(isCapturing || isAnalyzing)
+    }
+
+    // MARK: - Capture + describe
+
+    private func captureAndDescribe() {
+        if capturedImage != nil {
+            capturedImage = nil
+            description = nil
+            return
+        }
+
+        isCapturing = true
+        isAnalyzing = false
+        description = nil
+
+        Task {
+            guard let cgImage = await camera.capturePhoto() else {
+                isCapturing = false
+                description = "Capture failed. Try again."
+                return
+            }
+
+            #if canImport(UIKit)
+            let uiImage = UIImage(cgImage: cgImage)
+            let resized = uiImage.resized(toMaxDimension: 512)
+            guard let imageData = resized.jpegData(compressionQuality: 0.7) else {
+                isCapturing = false
+                description = "Failed to encode image."
+                return
+            }
+
+            // Photo is captured — switch to analysis phase
+            capturedImage = cgImage
+            isCapturing = false
+            isAnalyzing = true
+            description = "Analyzing..."
+
+            await inference.describeImage(imageData) { text in
+                description = text
+            }
+            isAnalyzing = false
+
+            if let text = description, !text.isEmpty {
+                let utterance = AVSpeechUtterance(string: text)
+                utterance.voice = AVSpeechSynthesisVoice(language: "en-US")
+                utterance.rate = 0.5
+                synthesizer.speak(utterance)
+            }
+            #else
+            isCapturing = false
+            description = "Camera capture not supported on this platform."
+            #endif
+        }
     }
 }
+
+#if canImport(UIKit)
+private extension UIImage {
+    func resized(toMaxDimension maxDim: CGFloat) -> UIImage {
+        let scale = min(maxDim / size.width, maxDim / size.height, 1)
+        guard scale < 1 else { return self }
+        let newSize = CGSize(width: size.width * scale, height: size.height * scale)
+        return UIGraphicsImageRenderer(size: newSize).image { _ in
+            draw(in: CGRect(origin: .zero, size: newSize))
+        }
+    }
+}
+#endif

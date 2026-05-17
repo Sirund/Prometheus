@@ -8,7 +8,7 @@ import com.prometheus.network.BMKGClient
 import kotlinx.coroutines.*
 
 class BMKGPollingManager(
-    private val intervalMs: Long = 30_000L,
+    private val intervalMs: Long = 10_000L,
     private val baseUrlOverride: String? = null
 ) {
     private val client = BMKGClient(baseUrlOverride)
