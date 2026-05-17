@@ -14,6 +14,8 @@ struct MapView: View {
     @State private var showDetails = false
     @State private var showEvacuationGuide = false
     @State private var mapPosition: MapCameraPosition = .automatic
+    @AppStorage("tutorialSeen_evacuate") private var tutorialSeen = false
+    @State private var showTutorial = false
 
     private var epicenter: CLLocationCoordinate2D? {
         guard let pair = pollingService.latestEarthquakeEvent?.coordinatePair else { return nil }
@@ -126,10 +128,27 @@ struct MapView: View {
             .toolbarBackground(.visible, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button(action: { isDarkMode.toggle() }) {
-                        Image(systemName: isDarkMode ? "sun.max" : "moon")
-                            .font(.caption)
-                            .foregroundColor(.prometheusBlue)
+                    HStack(spacing: 12) {
+                        Button(action: { isDarkMode.toggle() }) {
+                            Image(systemName: isDarkMode ? "sun.max" : "moon")
+                                .font(.caption)
+                                .foregroundColor(.prometheusBlue)
+                        }
+                        Button(action: { showTutorial = true }) {
+                            Image(systemName: "questionmark.circle")
+                                .font(.caption)
+                                .foregroundColor(.prometheusBlue)
+                        }
+                    }
+                }
+            }
+            .onAppear {
+                if !tutorialSeen { tutorialSeen = true; showTutorial = true }
+            }
+            .overlay {
+                if showTutorial {
+                    TutorialOverlay(tabName: "Evacuation", steps: TutorialContent.evacuate) {
+                        showTutorial = false
                     }
                 }
             }

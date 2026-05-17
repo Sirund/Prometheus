@@ -3,7 +3,9 @@ import SwiftUI
 struct MonitorView: View {
     @Environment(BMKGPollingService.self) private var pollingService
     @AppStorage("isDarkMode") private var isDarkMode = false
+    @AppStorage("tutorialSeen_monitor") private var tutorialSeen = false
     @State private var showInjectionSheet = false
+    @State private var showTutorial = false
 
     var body: some View {
         NavigationStack {
@@ -83,10 +85,27 @@ struct MonitorView: View {
             .toolbarBackground(.visible, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button(action: { isDarkMode.toggle() }) {
-                        Image(systemName: isDarkMode ? "sun.max" : "moon")
-                            .font(.caption)
-                            .foregroundColor(.prometheusBlue)
+                    HStack(spacing: 12) {
+                        Button(action: { isDarkMode.toggle() }) {
+                            Image(systemName: isDarkMode ? "sun.max" : "moon")
+                                .font(.caption)
+                                .foregroundColor(.prometheusBlue)
+                        }
+                        Button(action: { showTutorial = true }) {
+                            Image(systemName: "questionmark.circle")
+                                .font(.caption)
+                                .foregroundColor(.prometheusBlue)
+                        }
+                    }
+                }
+            }
+            .onAppear {
+                if !tutorialSeen { tutorialSeen = true; showTutorial = true }
+            }
+            .overlay {
+                if showTutorial {
+                    TutorialOverlay(tabName: "Monitor", steps: TutorialContent.monitor) {
+                        showTutorial = false
                     }
                 }
             }
