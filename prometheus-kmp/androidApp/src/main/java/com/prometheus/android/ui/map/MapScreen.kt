@@ -1,8 +1,8 @@
 package com.prometheus.android.ui.map
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.*
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -295,7 +295,7 @@ fun MapScreen(
             Box(
                 modifier = Modifier.padding(horizontal = 16.dp)
             ) {
-                Column {
+                Column(modifier = Modifier.animateContentSize()) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -322,8 +322,14 @@ fun MapScreen(
 
                     AnimatedVisibility(
                         visible = showDetails,
-                        enter = slideInVertically(initialOffsetY = { it }),
-                        exit = slideOutVertically(targetOffsetY = { it })
+                        enter = slideInVertically(
+                            initialOffsetY = { it },
+                            animationSpec = tween(300, easing = FastOutSlowInEasing)
+                        ) + fadeIn(animationSpec = tween(300)),
+                        exit = slideOutVertically(
+                            targetOffsetY = { it },
+                            animationSpec = tween(300, easing = FastOutSlowInEasing)
+                        ) + fadeOut(animationSpec = tween(300))
                     ) {
                         RoutingDetailsCard(
                             event = event,
