@@ -94,7 +94,13 @@ class BMKGPollingController(context: Context, baseUrlOverride: String? = null) {
 
     private suspend fun pollWeather() {
         try {
-            val weather = weatherClient.fetchWeatherForecast()
+            val userLoc = locationProvider.getLastKnownLocation()
+            val adm4 = if (userLoc != null) {
+                WeatherInfo.adm4ForLocation(userLoc.latitude, userLoc.longitude)
+            } else {
+                WeatherInfo.DEFAULT_ADM4
+            }
+            val weather = weatherClient.fetchWeatherForecast(adm4)
             lastWeatherInfo = weather
             onWeatherUpdate?.invoke(weather)
         } catch (e: Exception) {

@@ -100,7 +100,13 @@ class BMKGPollingService: NSObject, CLLocationManagerDelegate {
 
     private func pollWeather() async {
         do {
-            let info = try await weatherClient.fetchWeatherForecast(adm4: "31.71.01.1001")
+            let adm4: String
+            if let loc = currentLocation {
+                adm4 = shared.WeatherInfo.adm4ForLocation(lat: loc.latitude, lon: loc.longitude)
+            } else {
+                adm4 = shared.WeatherInfo.DEFAULT_ADM4
+            }
+            let info = try await weatherClient.fetchWeatherForecast(adm4: adm4)
             await MainActor.run { weatherInfo = info }
         } catch {
             print("Weather poll error: \(error)")

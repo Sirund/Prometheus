@@ -31,6 +31,7 @@ struct MonitorView: View {
                                 location: event.wilayah_ ?? "--",
                                 depth: event.kedalaman_ ?? "--",
                                 felt: event.dirasakan_ ?? "--",
+                                latLon: "\(event.Lintang ?? "--"), \(event.Bujur ?? "--")",
                                 potential: event.potensi_ ?? "--",
                                 timestamp: "\(event.tanggal_ ?? "") \(event.jam_ ?? "")"
                             )
@@ -40,6 +41,7 @@ struct MonitorView: View {
                                 location: "Waiting for data...",
                                 depth: "--",
                                 felt: "--",
+                                latLon: "--",
                                 potential: "--",
                                 timestamp: pollingService.lastChecked ?? "Not yet refreshed"
                             )
@@ -165,6 +167,7 @@ struct BMKGEventCard: View {
     let location: String
     let depth: String
     let felt: String
+    let latLon: String
     let potential: String
     let timestamp: String
 
@@ -183,18 +186,26 @@ struct BMKGEventCard: View {
                     label: "DEPTH",
                     valueColor: .white
                 )
-                StatColumn(
-                    icon: "\u{1F4CD}",
-                    value: location,
-                    label: "LOCATION",
-                    valueColor: .white
-                )
+                VStack(alignment: .center, spacing: 2) {
+                    Text("\u{1F4CD}").font(.title3)
+                    Text(felt)
+                        .font(.caption.bold().monospaced())
+                        .foregroundColor(.white)
+                        .multilineTextAlignment(.center)
+                        .lineLimit(2)
+                    if latLon != "--" {
+                        Text(latLon)
+                            .font(.caption2.monospaced())
+                            .foregroundColor(.gray)
+                    }
+                }
+                .frame(maxWidth: .infinity)
             }
             Divider().background(Color.prometheusBlue.opacity(0.3))
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("FELT").font(.caption2.monospaced()).foregroundColor(.gray)
-                    Text(felt).font(.caption.bold().monospaced()).foregroundColor(.white)
+                    Text("LOCATION").font(.caption2.monospaced()).foregroundColor(.gray)
+                    Text(location).font(.caption.bold().monospaced()).foregroundColor(.white)
                 }
                 Spacer()
                 VStack(alignment: .trailing, spacing: 2) {
