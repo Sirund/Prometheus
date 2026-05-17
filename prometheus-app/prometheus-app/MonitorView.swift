@@ -1,15 +1,7 @@
-//
-//  MonitorView.swift
-//  prometheus-app
-//
-//  Created by Pelangi Masita Wati on 06/05/26.
-//
-
 import SwiftUI
 
 struct MonitorView: View {
-    @State private var dangerLevel: DangerLevel = .none
-    @State private var lastRefresh: String = "Not yet refreshed"
+    @Environment(BMKGPollingService.self) private var pollingService
 
     var body: some View {
         NavigationStack {
@@ -21,25 +13,43 @@ struct MonitorView: View {
                         DangerStatusBanner(level: dangerLevel)
 
                         SectionHeader(title: "LATEST BMKG EVENT")
-                        BMKGEventCard(
-                            magnitude: "--",
-                            location: "Waiting for data...",
-                            depth: "--",
-                            felt: "--",
-                            potential: "--",
-                            timestamp: lastRefresh
-                        )
+                        if let event = pollingService.latestEarthquakeEvent {
+                            BMKGEventCard(
+                                magnitude: event.magnitudeValue.map { "\($0)" } ?? "--",
+                                location: event.Wilayah ?? "--",
+                                depth: event.Kedalaman ?? "--",
+                                felt: event.Dirasakan ?? "--",
+                                potential: event.Potensi ?? "--",
+                                timestamp: "\(event.Tanggal ?? "") \(event.Jam ?? "")".trimmingCharacters(in: .whitespaces)
+                            )
+                        } else {
+                            BMKGEventCard(
+                                magnitude: "--",
+                                location: "Waiting for data...",
+                                depth: "--",
+                                felt: "--",
+                                potential: "--",
+                                timestamp: pollingService.lastChecked ?? "Not yet refreshed"
+                            )
+                        }
 
                         SectionHeader(title: "ALARM & BRIEFING")
                         AlarmStatusCard()
 
                         SectionHeader(title: "RECENT EVENTS")
-                        Text("No data loaded. Tap refresh to poll BMKG.")
-                            .font(.caption.monospaced())
-                            .foregroundColor(.gray)
-                            .padding(.horizontal, 4)
+                        if let latest = pollingService.latestEvent {
+                            Text(latest)
+                                .font(.caption.monospaced())
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 4)
+                        } else {
+                            Text("No data loaded. Tap refresh to poll BMKG.")
+                                .font(.caption.monospaced())
+                                .foregroundColor(.gray)
+                                .padding(.horizontal, 4)
+                        }
 
-                        Button(action: { /* TODO: BMKGMonitor.fetch() */ }) {
+                        Button(action: { pollingService.checkNow() }) {
                             HStack {
                                 Image(systemName: "arrow.clockwise")
                                 Text("REFRESH BMKG")
@@ -70,11 +80,19 @@ struct MonitorView: View {
             }
         }
     }
+
+    private var dangerLevel: DangerLevel {
+        switch pollingService.dangerLevel {
+        case 2: return .danger
+        case 1: return .medium
+        default: return .none
+        }
+    }
 }
 
 // MARK: - Supporting views
 
-enum DangerLevel { case none, watch, danger }
+enum DangerLevel { case none, watch, medium, danger }
 
 struct DangerStatusBanner: View {
     let level: DangerLevel
@@ -82,7 +100,8 @@ struct DangerStatusBanner: View {
     var color: Color {
         switch level {
         case .none:   return .prometheusBlue
-        case .watch:  return .orange
+        case .watch:  return .yellow
+        case .medium: return .orange
         case .danger: return .red
         }
     }
@@ -90,13 +109,15 @@ struct DangerStatusBanner: View {
         switch level {
         case .none:   return "NO ACTIVE ALERTS"
         case .watch:  return "WATCH — MONITOR CLOSELY"
+        case .medium: return "ELEVATED — STAY ALERT"
         case .danger: return "DANGER — TAKE ACTION NOW"
         }
     }
     var icon: String {
         switch level {
         case .none:   return "checkmark.shield.fill"
-        case .watch:  return "exclamationmark.triangle.fill"
+        case .watch:  return "eye.fill"
+        case .medium: return "exclamationmark.triangle.fill"
         case .danger: return "alarm.fill"
         }
     }

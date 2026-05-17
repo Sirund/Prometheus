@@ -7,7 +7,7 @@ struct Conversation: Identifiable, Codable {
 }
 
 struct AssistantView: View {
-    @State private var manager = InferenceManager()
+    @Environment(InferenceManager.self) private var manager
     @State private var query: String = ""
     @State private var conversations: [Conversation] = loadConversations()
     @State private var activeIndex = 0

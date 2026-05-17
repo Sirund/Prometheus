@@ -54,6 +54,7 @@ final class InferenceManager {
     var messages: [ChatMessage] = []
     var isGenerating = false
     var isSpeaking = false
+    private(set) var hasVisionBackend = false
 
     /// Exposed directly so views can observe download progress without mirroring.
     let downloader = ModelDownloader()
@@ -63,6 +64,7 @@ final class InferenceManager {
     private var engine: LMEngine?
     private var survivalConversation: LMConversation?
     private var emergencyConversation: LMConversation?
+    private var visionConversation: LMConversation?
     private let synthesizer = AVSpeechSynthesizer()
     private let ttsDelegate = TTSDelegate()
 
@@ -81,6 +83,15 @@ final class InferenceManager {
     respond with a spoken briefing of at most 60 words: \
     what happened, what to do right now, and what to avoid. \
     Plain text only — no markdown, no lists, no headers.
+    """
+
+    static let visionPrompt = """
+    You are a calm, practical vision assistant for visually impaired users in a disaster situation. \
+    Describe what the user's camera shows in 2-4 short sentences. Focus on: \
+    people, injuries, or hazards (fires, floods, debris, downed power lines); \
+    signage, exits, or evacuation-related text; general surroundings for spatial awareness. \
+    Use plain spoken language only — no markdown, no bullet points. \
+    Keep it brief and calm. If you cannot see anything clearly, say so honestly.
     """
 
     // MARK: Init
@@ -177,22 +188,33 @@ final class InferenceManager {
         }
         modelState = .loading
 
-        print("[InferenceManager] loadEngine() — using GPU backend (device)")
-        let config = EngineConfiguration(modelPath: url).backend(.gpu)
+        // Gemma 4 is natively multimodal — vision is in the model weights, no separate visionBackend needed.
+        // Setting visionBackend causes litert_lm_engine_create to return NULL on most devices.
+        let candidates: [(String, EngineConfiguration)] = [
+            ("GPU", EngineConfiguration(modelPath: url).backend(.gpu)),
+            ("CPU", EngineConfiguration(modelPath: url).backend(.cpu)),
+        ]
 
-        print("[InferenceManager] loadEngine() — creating LMEngine…")
-        let e = LMEngine(configuration: config)
-        do {
-            print("[InferenceManager] loadEngine() — calling e.load()…")
-            try await e.load()
-            engine = e
-            modelState = .ready
-            print("[InferenceManager] loadEngine() — engine ready")
-        } catch {
-            print("[InferenceManager] loadEngine() — FAILED: \(error)")
-            print("[InferenceManager] loadEngine() — localizedDescription: \(error.localizedDescription)")
-            modelState = .error(error.localizedDescription)
+        var lastError: Error?
+        for (label, config) in candidates {
+            print("[InferenceManager] loadEngine() — trying \(label)…")
+            let e = LMEngine(configuration: config)
+            do {
+                try await e.load()
+                engine = e
+                // gemma-4-E2B-it.litertlm is text-only; vision encoder profile is absent.
+                // Sending images crashes the C layer (EXC_BAD_ACCESS). Keep false until a
+                // vision-capable model variant is used.
+                hasVisionBackend = false
+                modelState = .ready
+                print("[InferenceManager] loadEngine() — \(label) engine ready (vision=false, text-only model)")
+                return
+            } catch {
+                print("[InferenceManager] loadEngine() — \(label) failed: \(error)")
+                lastError = error
+            }
         }
+        modelState = .error(lastError?.localizedDescription ?? "Unable to load model")
     }
 
     // MARK: Chat
@@ -235,6 +257,35 @@ final class InferenceManager {
             emergencyConversation = nil
         }
         messages.removeAll()
+    }
+
+    // MARK: Vision
+
+    func describeImage(_ data: Data, onToken: @escaping (String) -> Void) async {
+        guard let engine else { return }
+        guard hasVisionBackend else {
+            onToken("Vision is not supported by this model. The current model (Gemma 4 E2B) is text-only. A multimodal model variant is required for image descriptions.")
+            return
+        }
+        do {
+            if visionConversation == nil || visionConversation?.isActive == false {
+                visionConversation = try await engine.createConversation(
+                    configuration: ConversationConfiguration()
+                        .systemPrompt(Self.visionPrompt)
+                        .maxOutputTokens(150)
+                        .maxImageDimension(512)
+                )
+            }
+            guard let conv = visionConversation else { return }
+            var full = ""
+            let stream = try await conv.sendStream("Describe what you see.", images: [data])
+            for try await token in stream {
+                full += token
+                onToken(full)
+            }
+        } catch {
+            onToken("Vision failed: \(error.localizedDescription)")
+        }
     }
 
     // MARK: TTS
