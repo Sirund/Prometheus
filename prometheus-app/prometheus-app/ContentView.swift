@@ -21,9 +21,6 @@ struct ContentView: View {
 
             AssistantView()
                 .tabItem { Label("SURVIVAL", systemImage: "bubble.left.and.bubble.right") }
-
-            VisionView()
-                .tabItem { Label("VISION", systemImage: "camera.viewfinder") }
         }
         .environment(inference)
         .tint(.prometheusBlue)

@@ -73,9 +73,9 @@ struct CameraPreviewView: UIViewRepresentable {
 }
 #endif
 
-// MARK: - Vision view
+// MARK: - Vision panel (embedded in AssistantView)
 
-struct VisionView: View {
+struct VisionPanel: View {
     @Environment(InferenceManager.self) private var inference
     @State private var camera = CameraService()
     @State private var isCapturing = false
@@ -85,30 +85,11 @@ struct VisionView: View {
     private let synthesizer = AVSpeechSynthesizer()
 
     var body: some View {
-        NavigationStack {
-            ZStack {
-                Color.appBackground.ignoresSafeArea()
-
-                VStack(spacing: 8) {
-                    cameraArea
-                    descriptionStrip
-                    infoCard
-                    captureButton
-                }
-            }
-            .navigationTitle("Vision Assist")
-            .toolbarBackground(Color.cardBackground, for: .navigationBar)
-            .toolbarBackground(.visible, for: .navigationBar)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    HStack(spacing: 4) {
-                        Circle().fill(Color.green).frame(width: 6, height: 6)
-                        Text("VISION READY")
-                            .font(.caption2.monospaced())
-                            .foregroundColor(.secondary)
-                    }
-                }
-            }
+        VStack(spacing: 8) {
+            cameraArea
+            descriptionStrip
+            infoCard
+            captureButton
         }
         .onAppear { camera.start() }
         .onDisappear { camera.stop() }
