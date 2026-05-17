@@ -43,7 +43,7 @@ import androidx.compose.ui.unit.dp
 import com.prometheus.android.inference.InferenceManager
 import com.prometheus.android.inference.ModelManager
 import com.prometheus.android.inference.VisionInferenceManager
-import com.prometheus.android.ui.theme.PrometheusColors
+import com.prometheus.android.ui.theme.LocalPrometheusColors
 import com.prometheus.model.ChatMessage
 import com.prometheus.prompt.SystemPrompts
 import kotlinx.coroutines.Dispatchers
@@ -133,6 +133,7 @@ fun AssistantScreen() {
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
+    val p = LocalPrometheusColors.current
 
     var showImageSourceDialog by remember { mutableStateOf(false) }
 
@@ -232,18 +233,18 @@ fun AssistantScreen() {
         gesturesEnabled = true,
         drawerContent = {
             ModalDrawerSheet(
-                drawerContainerColor = PrometheusColors.surface,
+                drawerContainerColor = p.surface,
                 modifier = Modifier.width(300.dp)
             ) {
                 Spacer(Modifier.height(24.dp))
                 Text(
                     text = "Conversations",
-                    color = PrometheusColors.blue,
+                    color = p.blue,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                 )
-                HorizontalDivider(color = PrometheusColors.blue.copy(alpha = 0.15f))
+                HorizontalDivider(color = p.blue.copy(alpha = 0.15f))
                 Button(
                     onClick = {
                         val newConv = ConversationData()
@@ -255,7 +256,7 @@ fun AssistantScreen() {
                         .fillMaxWidth()
                         .padding(horizontal = 12.dp, vertical = 8.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = PrometheusColors.blue,
+                        containerColor = p.blue,
                         contentColor = Color.Black
                     )
                 ) {
@@ -270,7 +271,7 @@ fun AssistantScreen() {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .background(if (isActive) PrometheusColors.blue.copy(alpha = 0.15f) else Color.Transparent)
+                                .background(if (isActive) p.blue.copy(alpha = 0.15f) else Color.Transparent)
                                 .clickable {
                                     activeIndex = index
                                     scope.launch { drawerState.close() }
@@ -280,7 +281,7 @@ fun AssistantScreen() {
                         ) {
                             Text(
                                 text = title,
-                                color = if (isActive) PrometheusColors.blue else Color.White,
+                                color = if (isActive) p.blue else p.textPrimary,
                                 style = MaterialTheme.typography.bodySmall,
                                 fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
                                 modifier = Modifier.weight(1f)
@@ -312,13 +313,13 @@ fun AssistantScreen() {
                     title = {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             IconButton(onClick = { scope.launch { if (drawerState.isClosed) drawerState.open() else drawerState.close() } }) {
-                                Text("\u2630", color = PrometheusColors.blue, style = MaterialTheme.typography.titleMedium)
+                                Text("\u2630", color = p.blue, style = MaterialTheme.typography.titleMedium)
                             }
-                            Text("Survival Assistant", color = PrometheusColors.blue)
+                            Text("Survival Assistant", color = p.blue)
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = PrometheusColors.surface
+                        containerColor = p.surface
                     ),
                     actions = {
                         Row(
@@ -341,7 +342,7 @@ fun AssistantScreen() {
                     }
                 )
             },
-            containerColor = PrometheusColors.background
+            containerColor = p.background
         ) { padding ->
             Column(
                 modifier = Modifier
@@ -368,7 +369,7 @@ fun AssistantScreen() {
                             Spacer(Modifier.height(8.dp))
                             Text(
                                 text = "SURVIVAL ASSISTANT",
-                                color = Color.White,
+                                color = p.textPrimary,
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold
                             )
@@ -389,9 +390,9 @@ fun AssistantScreen() {
                                 val isPaused = isDownloading && downloadProgress >= 0 &&
                                     ModelManager.getDownloadProgress(context)?.isPaused == true
                                 val btnColor = when {
-                                    !isDownloading -> PrometheusColors.blue
+                                    !isDownloading -> p.blue
                                     isPaused -> Color(0xFFFFA500).copy(alpha = 0.6f)
-                                    else -> PrometheusColors.blue.copy(alpha = 0.6f)
+                                    else -> p.blue.copy(alpha = 0.6f)
                                 }
                                 val btnText = when {
                                     !isDownloading -> "\u2B07\uFE0F  DOWNLOAD MODEL (2.4 GB)"
@@ -439,7 +440,7 @@ fun AssistantScreen() {
                                             LinearProgressIndicator(
                                                 progress = { downloadProgress / 100f },
                                                 modifier = Modifier.fillMaxWidth().fillMaxHeight(),
-                                                color = PrometheusColors.blue.copy(alpha = 0.3f),
+                                                color = p.blue.copy(alpha = 0.3f),
                                                 trackColor = Color.Transparent
                                             )
                                         }
@@ -467,7 +468,7 @@ fun AssistantScreen() {
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 8.dp)
-                        .border(1.dp, PrometheusColors.blue.copy(alpha = 0.3f)),
+                        .border(1.dp, p.blue.copy(alpha = 0.3f)),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     if (selectedImageBitmap != null) {
@@ -510,16 +511,16 @@ fun AssistantScreen() {
                                     "EMERGENCY_BRIEF" -> "Paste earthquake data for briefing..."
                                     else -> "Ask anything about survival..."
                                 },
-                                color = PrometheusColors.blue.copy(alpha = 0.5f)
+                                color = p.blue.copy(alpha = 0.5f)
                             )
                         },
                         modifier = Modifier.weight(1f),
                         colors = TextFieldDefaults.colors(
-                            focusedContainerColor = PrometheusColors.surface,
-                            unfocusedContainerColor = PrometheusColors.surface,
-                            focusedTextColor = PrometheusColors.blue,
-                            unfocusedTextColor = PrometheusColors.blue,
-                            cursorColor = PrometheusColors.blue,
+                            focusedContainerColor = p.surface,
+                            unfocusedContainerColor = p.surface,
+                            focusedTextColor = p.blue,
+                            unfocusedTextColor = p.blue,
+                            cursorColor = p.blue,
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent
                         ),
@@ -527,7 +528,7 @@ fun AssistantScreen() {
                     )
                     VerticalDivider(
                         modifier = Modifier.height(44.dp),
-                        color = PrometheusColors.blue.copy(alpha = 0.2f)
+                        color = p.blue.copy(alpha = 0.2f)
                     )
                     TextButton(
                         onClick = { showImageSourceDialog = true },
@@ -537,7 +538,7 @@ fun AssistantScreen() {
                         Icon(
                             Icons.Filled.Image,
                             contentDescription = "Attach image",
-                            tint = PrometheusColors.blue.copy(alpha = 0.6f)
+                            tint = p.blue.copy(alpha = 0.6f)
                         )
                     }
                     TextButton(
@@ -577,9 +578,9 @@ fun AssistantScreen() {
                         },
                         enabled = isModelLoaded && (query.isNotBlank() || selectedImageBitmap != null),
                         colors = ButtonDefaults.textButtonColors(
-                            containerColor = if (isModelLoaded) PrometheusColors.blue else PrometheusColors.surface,
+                            containerColor = if (isModelLoaded) p.blue else p.surface,
                             contentColor = if (isModelLoaded) Color.Black else Color.Gray,
-                            disabledContainerColor = PrometheusColors.surface,
+                            disabledContainerColor = p.surface,
                             disabledContentColor = Color.Gray
                         ),
                         contentPadding = PaddingValues(14.dp)
@@ -599,7 +600,7 @@ fun AssistantScreen() {
             onDismissRequest = { showImageSourceDialog = false },
             title = {
                 Text("Choose Image Source",
-                    color = PrometheusColors.blue,
+                    color = p.blue,
                     fontWeight = FontWeight.Bold)
             },
             text = {
@@ -612,7 +613,7 @@ fun AssistantScreen() {
                         modifier = Modifier.fillMaxWidth().height(48.dp)
                     ) {
                         Text("\uD83D\uDCF7  Take Photo",
-                            color = Color.White,
+                            color = p.textPrimary,
                             fontWeight = FontWeight.Bold)
                     }
                     Spacer(Modifier.height(8.dp))
@@ -624,17 +625,17 @@ fun AssistantScreen() {
                         modifier = Modifier.fillMaxWidth().height(48.dp)
                     ) {
                         Text("\uD83D\uDDBC\uFE0F  Gallery",
-                            color = Color.White,
+                            color = p.textPrimary,
                             fontWeight = FontWeight.Bold)
                     }
                 }
             },
             confirmButton = {
                 TextButton(onClick = { showImageSourceDialog = false }) {
-                    Text("Cancel", color = Color.Gray)
+                    Text("Cancel", color = p.textSecondary)
                 }
             },
-            containerColor = PrometheusColors.surface
+            containerColor = p.surface
         )
     }
 }
@@ -644,11 +645,12 @@ private fun ModeIndicatorBar(
     currentMode: String,
     onModeChange: (String) -> Unit
 ) {
+    val p = LocalPrometheusColors.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(PrometheusColors.surface)
-            .border(0.5.dp, PrometheusColors.blue.copy(alpha = 0.15f))
+            .background(p.surface)
+            .border(0.5.dp, p.blue.copy(alpha = 0.15f))
             .padding(vertical = 8.dp),
         horizontalArrangement = Arrangement.Center
     ) {
@@ -660,19 +662,20 @@ private fun ModeIndicatorBar(
 
 @Composable
 private fun ModeChip(label: String, active: Boolean, onClick: () -> Unit) {
+    val p = LocalPrometheusColors.current
     Text(
         text = label,
-        color = if (active) PrometheusColors.blue else Color.Gray,
+        color = if (active) p.blue else Color.Gray,
         style = MaterialTheme.typography.labelSmall,
         fontWeight = FontWeight.Bold,
         modifier = Modifier
             .clickable(onClick = onClick)
             .background(
-                if (active) PrometheusColors.blue.copy(alpha = 0.2f) else Color.Transparent
+                if (active) p.blue.copy(alpha = 0.2f) else Color.Transparent
             )
             .border(
                 1.dp,
-                if (active) PrometheusColors.blue.copy(alpha = 0.6f) else Color.Gray.copy(alpha = 0.3f)
+                if (active) p.blue.copy(alpha = 0.6f) else Color.Gray.copy(alpha = 0.3f)
             )
             .padding(horizontal = 10.dp, vertical = 4.dp)
     )
@@ -680,9 +683,10 @@ private fun ModeChip(label: String, active: Boolean, onClick: () -> Unit) {
 
 @Composable
 private fun CapabilityPill(text: String) {
+    val p = LocalPrometheusColors.current
     Text(
         text = text,
-        color = Color.Gray,
+        color = p.textSecondary,
         style = MaterialTheme.typography.labelSmall,
         modifier = Modifier.padding(vertical = 2.dp)
     )
@@ -690,6 +694,7 @@ private fun CapabilityPill(text: String) {
 
 @Composable
 private fun ChatBubble(message: ChatMessage) {
+    val p = LocalPrometheusColors.current
     AnimatedVisibility(
         visible = true,
         enter = slideInHorizontally(
@@ -703,13 +708,13 @@ private fun ChatBubble(message: ChatMessage) {
         ) {
             Text(
                 text = markdownToAnnotated(message.text),
-                color = if (message.isUser) Color.Black else Color.White,
+                color = if (message.isUser) Color.Black else p.textPrimary,
                 modifier = Modifier
                     .background(
-                        color = if (message.isUser) PrometheusColors.blue else PrometheusColors.surface,
+                        color = if (message.isUser) p.blue else p.surface,
                         shape = RoundedCornerShape(16.dp)
                     )
-                    .border(1.dp, PrometheusColors.blue.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
+                    .border(1.dp, p.blue.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
                     .padding(12.dp)
             )
         }

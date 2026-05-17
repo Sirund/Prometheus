@@ -1,6 +1,7 @@
 package com.prometheus.android
 
 import android.Manifest
+import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -19,7 +20,7 @@ import com.prometheus.android.inference.ModelManager
 import com.prometheus.android.service.BMKGPollingController
 import com.prometheus.android.service.InjectionSettings
 import com.prometheus.android.service.LocationProvider
-import com.prometheus.android.ui.theme.PrometheusColors
+import com.prometheus.android.ui.theme.LocalPrometheusColors
 import com.prometheus.android.ui.theme.PrometheusTheme
 import com.prometheus.android.navigation.PrometheusApp
 import com.prometheus.model.EarthquakeEvent
@@ -35,6 +36,7 @@ class MainActivity : ComponentActivity() {
     private var injectionEnabled by mutableStateOf(false)
     private var injectionIp by mutableStateOf("")
     private var injectionPort by mutableStateOf(8080)
+    private var isDarkMode by mutableStateOf(true)
 
     private val notificationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -56,17 +58,28 @@ class MainActivity : ComponentActivity() {
         injectionIp = InjectionSettings.ip
         injectionPort = InjectionSettings.port
 
+        val prefs = getSharedPreferences("theme", Context.MODE_PRIVATE)
+        isDarkMode = prefs.getBoolean("dark_mode", true)
+
         lifecycleScope.launch {
             ModelManager.init(this@MainActivity)
         }
 
         setContent {
-            PrometheusTheme {
+            val p = LocalPrometheusColors.current
+            PrometheusTheme(darkTheme = isDarkMode) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
-                    color = PrometheusColors.background
+                    color = p.background
                 ) {
                     PrometheusApp(
+                        isDarkMode = isDarkMode,
+                        onToggleDarkMode = {
+                            isDarkMode = !isDarkMode
+                            getSharedPreferences("theme", Context.MODE_PRIVATE).edit()
+                                .putBoolean("dark_mode", isDarkMode)
+                                .apply()
+                        },
                         onRefreshBmkg = { pollingController?.forceCheck() },
                         latestEvent = latestEvent,
                         currentEvent = currentEvent,

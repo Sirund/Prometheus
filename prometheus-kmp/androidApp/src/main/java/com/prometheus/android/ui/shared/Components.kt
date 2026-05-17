@@ -15,7 +15,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.prometheus.android.ui.theme.PrometheusColors
+import com.prometheus.android.ui.theme.LocalPrometheusColors
 import com.prometheus.android.ui.theme.PrometheusShapes
 
 @Composable
@@ -25,9 +25,10 @@ fun PrometheusCard(
     shape: androidx.compose.ui.graphics.Shape = PrometheusShapes.medium,
     content: @Composable ColumnScope.() -> Unit
 ) {
+    val p = LocalPrometheusColors.current
     Column(
         modifier = modifier
-            .background(if (elevated) PrometheusColors.surfaceElevated else PrometheusColors.surface, shape = shape)
+            .background(if (elevated) p.surfaceElevated else p.surface, shape = shape)
             .padding(20.dp),
         content = content
     )
@@ -36,8 +37,8 @@ fun PrometheusCard(
 @Composable
 fun StatusDot(
     isActive: Boolean,
-    activeColor: Color = PrometheusColors.success,
-    inactiveColor: Color = PrometheusColors.warning,
+    activeColor: Color = LocalPrometheusColors.current.success,
+    inactiveColor: Color = LocalPrometheusColors.current.warning,
     size: Dp = 8.dp
 ) {
     Box(
@@ -53,6 +54,7 @@ fun LoadingOverlay(
     isLoading: Boolean,
     content: @Composable () -> Unit
 ) {
+    val p = LocalPrometheusColors.current
     Box {
         content()
         if (isLoading) {
@@ -63,7 +65,7 @@ fun LoadingOverlay(
                 contentAlignment = Alignment.Center
             ) {
                 CircularProgressIndicator(
-                    color = PrometheusColors.blue,
+                    color = p.blue,
                     strokeWidth = 3.dp,
                     modifier = Modifier.size(36.dp)
                 )
@@ -80,7 +82,7 @@ fun SectionHeader(
     Text(
         text = text,
         style = MaterialTheme.typography.labelMedium,
-        color = PrometheusColors.textSecondary,
+        color = LocalPrometheusColors.current.textSecondary,
         modifier = modifier
     )
 }

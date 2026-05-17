@@ -35,21 +35,21 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import com.prometheus.android.ui.theme.PrometheusColors
+import com.prometheus.android.ui.theme.LocalPrometheusColors
 import java.io.File
 import java.util.concurrent.Executors
 
 enum class VisionMode { Idle, Recording, Transcribing, AudioCaptured, PhotoCaptured, Sending, Result }
 
-fun borderColorForMode(mode: VisionMode): Color {
+fun borderColorForMode(mode: VisionMode, defaultBlue: Color = Color(0xFF4FC3F7)): Color {
     return when (mode) {
         VisionMode.Recording -> Color(0xFF4CAF50).copy(alpha = 0.9f)
         VisionMode.Transcribing -> Color(0xFF4CAF50).copy(alpha = 0.6f)
-        VisionMode.Idle -> PrometheusColors.blue.copy(alpha = 0.3f)
+        VisionMode.Idle -> defaultBlue.copy(alpha = 0.3f)
         VisionMode.AudioCaptured -> Color(0xFF4CAF50).copy(alpha = 0.5f)
-        VisionMode.PhotoCaptured -> PrometheusColors.blue.copy(alpha = 0.6f)
-        VisionMode.Sending -> PrometheusColors.blue.copy(alpha = 0.8f)
-        VisionMode.Result -> PrometheusColors.blue.copy(alpha = 0.3f)
+        VisionMode.PhotoCaptured -> defaultBlue.copy(alpha = 0.6f)
+        VisionMode.Sending -> defaultBlue.copy(alpha = 0.8f)
+        VisionMode.Result -> defaultBlue.copy(alpha = 0.3f)
     }
 }
 
@@ -137,14 +137,15 @@ fun CameraFrame(
     hasPermission: Boolean,
     freezeBitmap: Bitmap?,
     isCapturing: Boolean,
-    borderColor: Color = PrometheusColors.blue.copy(alpha = 0.3f),
+    borderColor: Color = Color(0xFF4FC3F7).copy(alpha = 0.3f),
     borderWidth: Dp = 1.dp,
     onPermissionRequest: () -> Unit,
     onCameraActionsReady: (CameraActions?) -> Unit
 ) {
+    val p = LocalPrometheusColors.current
     Box(
         modifier = modifier
-            .background(PrometheusColors.surface)
+            .background(p.surface)
             .border(borderWidth, borderColor)
     ) {
         if (!hasPermission) {
@@ -154,12 +155,12 @@ fun CameraFrame(
             ) {
                 Text("\uD83D\uDCF7", style = MaterialTheme.typography.displayLarge)
                 Spacer(Modifier.height(8.dp))
-                Text("CAMERA PERMISSION REQUIRED", color = Color.White,
+                Text("CAMERA PERMISSION REQUIRED", color = p.textPrimary,
                     style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(12.dp))
                 Button(
                     onClick = onPermissionRequest,
-                    colors = ButtonDefaults.buttonColors(containerColor = PrometheusColors.blue, contentColor = Color.Black)
+                    colors = ButtonDefaults.buttonColors(containerColor = p.blue, contentColor = Color.Black)
                 ) { Text("GRANT CAMERA PERMISSION", fontWeight = FontWeight.Bold) }
             }
         } else {
@@ -189,7 +190,7 @@ fun CameraFrame(
                     Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.5f)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("CAPTURING...", color = PrometheusColors.blue,
+                    Text("CAPTURING...", color = p.blue,
                         style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
                 }
             }

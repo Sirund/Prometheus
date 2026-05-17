@@ -118,6 +118,8 @@ Tests use the same BMKG fixture files as the Python test suite (`tools/test_fixt
 - **PrometheusAlarmManager** — Notification channels, TextToSpeech (id-ID), alarm media player
 - **BMKGPollingController** — Wires shared polling manager to Android alarm system
 - **InferenceManager** — LiteRT-LM Kotlin integration point for Gemma 4
+- **Theme** — Dark/light mode via `PrometheusTheme(darkTheme = ...)`, toggled from bottom nav
+- **Local injection** — Hidden by default; enable by setting `showInjection = true` in `MonitorScreen.kt`
 
 ### iOS
 - **BMKGPollingService** — Timer-based polling calling shared BMKGClient
@@ -128,12 +130,14 @@ Tests use the same BMKG fixture files as the Python test suite (`tools/test_fixt
 
 | Library | Version | Used in |
 |---------|---------|---------|
-| Kotlin | 2.1.20 | All modules |
+| Kotlin | 2.2.20 | All modules |
 | Ktor | 3.1.0 | shared (BMKG networking) |
 | kotlinx.serialization | 1.7.3 | shared (JSON decoding) |
 | kotlinx.coroutines | 1.9.0 | shared (async polling) |
 | Jetpack Compose | BOM 2024.12 | Android UI |
-| LiteRT-LM | latest | iOS inference (Swift), Android inference (Kotlin) |
+| CameraX | 1.4.1 | Android camera preview |
+| LiteRT-LM | 0.11.0 | iOS + Android inference |
+| Google Maps Compose | 4.3.3 | Android evacuation map |
 
 ## Migrating from original iOS-only project
 

@@ -26,7 +26,7 @@ import com.prometheus.android.inference.ModelManager
 import com.prometheus.android.inference.STTManager
 import com.prometheus.android.inference.TTSManager
 import com.prometheus.android.inference.VisionInferenceManager
-import com.prometheus.android.ui.theme.PrometheusColors
+import com.prometheus.android.ui.theme.LocalPrometheusColors
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -35,6 +35,7 @@ import kotlinx.coroutines.launch
 fun VisionScreen() {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val p = LocalPrometheusColors.current
 
     val visionManager = remember { VisionInferenceManager(context) }
     val ttsManager = remember { TTSManager(context) }
@@ -154,18 +155,18 @@ fun VisionScreen() {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Virtual Assistant", color = PrometheusColors.blue) },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = PrometheusColors.surface),
+                title = { Text("Virtual Assistant", color = p.blue) },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = p.surface),
                 actions = {
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(end = 8.dp)) {
                         Box(Modifier.size(6.dp).clip(RoundedCornerShape(3.dp)).background(if (isModelLoaded) Color.Green else Color(0xFFFFA500)))
                         Spacer(Modifier.width(4.dp))
-                        Text(statusMessage, color = Color.Gray, style = MaterialTheme.typography.labelSmall)
+                        Text(statusMessage, color = p.textSecondary, style = MaterialTheme.typography.labelSmall)
                     }
                 }
             )
         },
-        containerColor = PrometheusColors.background
+        containerColor = p.background
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
 
@@ -204,7 +205,7 @@ fun VisionScreen() {
                     hasPermission = hasCameraPermission,
                     freezeBitmap = freezeBitmap,
                     isCapturing = isCapturing,
-                    borderColor = borderColorForMode(visionMode),
+                    borderColor = borderColorForMode(visionMode, p.blue),
                     borderWidth = borderWidth,
                     onPermissionRequest = { permissionLauncher.launch(arrayOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO)) },
                     onCameraActionsReady = { cameraActions = it }
@@ -267,8 +268,8 @@ fun VisionScreen() {
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp)
-                    .background(PrometheusColors.surface)
-                    .border(1.dp, PrometheusColors.blue.copy(alpha = 0.2f))
+                    .background(p.surface)
+                    .border(1.dp, p.blue.copy(alpha = 0.2f))
                     .padding(start = 12.dp, end = 4.dp, top = 4.dp, bottom = 4.dp)
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -281,12 +282,12 @@ fun VisionScreen() {
                             else -> "\u2139\uFE0F"
                         },
                         style = MaterialTheme.typography.bodyLarge,
-                        color = PrometheusColors.blue.copy(alpha = 0.5f)
+                        color = p.blue.copy(alpha = 0.5f)
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
                         text = description ?: visionStatusText(visionMode, recordedText),
-                        color = Color.Gray,
+                        color = p.textSecondary,
                         style = MaterialTheme.typography.labelSmall,
                         maxLines = 3,
                         modifier = Modifier.weight(1f)
@@ -301,8 +302,8 @@ fun VisionScreen() {
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp)
-                    .background(PrometheusColors.surface.copy(alpha = 0.5f))
-                    .border(1.dp, PrometheusColors.blue.copy(alpha = 0.15f))
+                    .background(p.surface.copy(alpha = 0.5f))
+                    .border(1.dp, p.blue.copy(alpha = 0.15f))
                     .padding(vertical = 12.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
@@ -316,12 +317,12 @@ fun VisionScreen() {
                     Text(
                         if (recordedText != null) "\u2716" else "\uD83C\uDF99\uFE0F",
                         style = MaterialTheme.typography.titleLarge,
-                        color = if (recordedText != null) PrometheusColors.blue else Color.Unspecified
+                        color = if (recordedText != null) p.blue else Color.Unspecified
                     )
                     Spacer(Modifier.height(4.dp))
                     Text(
                         if (recordedText != null) "Clear voice" else "Hold to speak",
-                        color = Color.Gray,
+                        color = p.textSecondary,
                         style = MaterialTheme.typography.labelSmall)
                 }
                 Column(
@@ -334,12 +335,12 @@ fun VisionScreen() {
                     Text(
                         if (capturedImage != null) "\u2716" else "\uD83D\uDCF7",
                         style = MaterialTheme.typography.titleLarge,
-                        color = if (capturedImage != null) PrometheusColors.blue else Color.Unspecified
+                        color = if (capturedImage != null) p.blue else Color.Unspecified
                     )
                     Spacer(Modifier.height(4.dp))
                     Text(
                         if (capturedImage != null) "Clear image" else "Tap to capture",
-                        color = Color.Gray,
+                        color = p.textSecondary,
                         style = MaterialTheme.typography.labelSmall)
                 }
                 Column(
@@ -355,7 +356,7 @@ fun VisionScreen() {
                     Spacer(Modifier.height(4.dp))
                     Text(
                         if (responseText != null) "Replay" else "Double-tap to send",
-                        color = Color.Gray,
+                        color = p.textSecondary,
                         style = MaterialTheme.typography.labelSmall)
                 }
             }
@@ -371,6 +372,7 @@ private fun PermissionGate(
     audioGranted: Boolean,
     onRequest: () -> Unit
 ) {
+    val p = LocalPrometheusColors.current
     Box(
         modifier = Modifier.fillMaxSize().padding(32.dp),
         contentAlignment = Alignment.Center
@@ -378,7 +380,7 @@ private fun PermissionGate(
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text("\uD83D\uDCF7\uD83C\uDF99\uFE0F", style = MaterialTheme.typography.displaySmall)
             Spacer(Modifier.height(12.dp))
-            Text("PERMISSIONS REQUIRED", color = Color.White,
+            Text("PERMISSIONS REQUIRED", color = p.textPrimary,
                 style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(6.dp))
             val missing = buildList {
@@ -386,12 +388,12 @@ private fun PermissionGate(
                 if (!audioGranted) add("Microphone")
             }
             Text("Grant ${missing.joinToString(" & ")} to use Talk to Gemma",
-                color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                color = p.textSecondary, style = MaterialTheme.typography.bodySmall)
             Spacer(Modifier.height(20.dp))
             Button(
                 onClick = onRequest,
                 modifier = Modifier.fillMaxWidth().height(48.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = PrometheusColors.blue, contentColor = Color.Black)
+                colors = ButtonDefaults.buttonColors(containerColor = p.blue, contentColor = Color.Black)
             ) { Text("GRANT PERMISSIONS", fontWeight = FontWeight.Bold) }
         }
     }
@@ -405,6 +407,7 @@ private fun DownloadPrompt(
     onDownloadChange: (Boolean, Int, String) -> Unit,
     onModelLoaded: () -> Unit
 ) {
+    val p = LocalPrometheusColors.current
     Box(
         modifier = Modifier.fillMaxWidth().fillMaxHeight().padding(32.dp),
         contentAlignment = Alignment.Center
@@ -412,18 +415,18 @@ private fun DownloadPrompt(
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text("\uD83E\uDD16", style = MaterialTheme.typography.displaySmall)
             Spacer(Modifier.height(8.dp))
-            Text("MODEL NOT FOUND", color = Color.White,
+            Text("MODEL NOT FOUND", color = p.textPrimary,
                 style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             Text("Download Gemma 4 (2.4 GB) to enable vision",
-                color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                color = p.textSecondary, style = MaterialTheme.typography.bodySmall)
             Spacer(Modifier.height(16.dp))
 
             val isPaused = isDownloading && downloadProgress >= 0 &&
                 ModelManager.getDownloadProgress(context)?.isPaused == true
             val btnColor = when {
-                !isDownloading -> PrometheusColors.blue
+                !isDownloading -> p.blue
                 isPaused -> Color(0xFFFFA500).copy(alpha = 0.6f)
-                else -> PrometheusColors.blue.copy(alpha = 0.6f)
+                else -> p.blue.copy(alpha = 0.6f)
             }
             val btnText = when {
                 !isDownloading -> "\u2B07\uFE0F  DOWNLOAD MODEL (2.4 GB)"
@@ -465,7 +468,7 @@ private fun DownloadPrompt(
                         LinearProgressIndicator(
                             progress = { downloadProgress / 100f },
                             modifier = Modifier.fillMaxWidth().fillMaxHeight(),
-                            color = PrometheusColors.blue.copy(alpha = 0.3f),
+                            color = p.blue.copy(alpha = 0.3f),
                             trackColor = Color.Transparent
                         )
                     }

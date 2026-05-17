@@ -44,7 +44,7 @@ import com.google.maps.android.compose.rememberCameraPositionState
 import com.prometheus.android.service.LocationProvider
 import com.prometheus.android.ui.shared.LoadingOverlay
 import com.prometheus.android.ui.shared.ThreatLevelBanner
-import com.prometheus.android.ui.theme.PrometheusColors
+import com.prometheus.android.ui.theme.LocalPrometheusColors
 import com.prometheus.model.DangerClassifier
 import com.prometheus.model.EarthquakeEvent
 import com.prometheus.model.UserLocation
@@ -63,6 +63,7 @@ fun MapScreen(
     val currentLocation = remember {
         userLocation ?: locationProvider.getLastKnownLocation()
     }
+    val p = LocalPrometheusColors.current
 
     val epicenter: LatLng? = remember(event) {
         event?.coordinatePair?.let { LatLng(it.first, it.second) }
@@ -193,20 +194,20 @@ fun MapScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Evacuation", color = PrometheusColors.blue) },
+                title = { Text("Evacuation", color = p.blue) },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = PrometheusColors.surface
+                    containerColor = p.surface
                 ),
                 actions = {
                     Text(
                         text = if (isDangerous) "\u26A0\uFE0F" else "\uD83D\uDDFA\uFE0F",
-                        color = if (isDangerous) Color.Red else PrometheusColors.blue,
+                        color = if (isDangerous) Color.Red else p.blue,
                         style = MaterialTheme.typography.labelSmall
                     )
                 }
             )
         },
-        containerColor = PrometheusColors.background
+        containerColor = p.background
     ) { padding ->
         val mapsAvailable = remember {
             GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(context)
@@ -244,7 +245,7 @@ fun MapScreen(
                     GoogleMap(
                         modifier = Modifier
                             .fillMaxSize()
-                            .border(1.dp, PrometheusColors.surfaceElevated),
+                            .border(1.dp, p.surfaceElevated),
                         cameraPositionState = cameraState,
                         properties = MapProperties(
                             isMyLocationEnabled = hasLocationPermission,
@@ -288,7 +289,7 @@ fun MapScreen(
                         if (evacuationRoute != null) {
                             Polyline(
                                 points = evacuationRoute!!.coordinates.map { LatLng(it.first, it.second) },
-                                color = PrometheusColors.blue,
+                                color = p.blue,
                                 width = 6f
                             )
                         }
@@ -308,7 +309,7 @@ fun MapScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(PrometheusColors.surface)
+                            .background(p.surface)
                             .clickable { showDetails = !showDetails }
                             .padding(horizontal = 20.dp, vertical = 14.dp),
                         contentAlignment = Alignment.Center
@@ -316,14 +317,14 @@ fun MapScreen(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
                                 text = "ROUTING DETAILS",
-                                color = PrometheusColors.blue,
+                                color = p.blue,
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = FontWeight.Bold
                             )
                             Spacer(Modifier.weight(1f))
                             Text(
                                 text = if (showDetails) "\u25BC" else "\u25B2",
-                                color = PrometheusColors.blue,
+                                color = p.blue,
                                 style = MaterialTheme.typography.labelMedium
                             )
                         }
@@ -355,10 +356,11 @@ fun MapScreen(
 
 @Composable
 private fun EvacuationStatusBanner(isDangerous: Boolean, severity: com.prometheus.model.DangerSeverity?) {
+    val p = LocalPrometheusColors.current
     val targetColor = when {
-        isDangerous -> PrometheusColors.danger
-        severity == com.prometheus.model.DangerSeverity.MEDIUM -> PrometheusColors.warning
-        else -> PrometheusColors.success
+        isDangerous -> p.danger
+        severity == com.prometheus.model.DangerSeverity.MEDIUM -> p.warning
+        else -> p.success
     }
     val color by animateColorAsState(targetColor, animationSpec = tween(400), label = "banner_color")
     val label = when {
@@ -385,10 +387,11 @@ private fun RoutingDetailsCard(
     evacuationRoute: EvacuationRoute?,
     routeLoading: Boolean
 ) {
+    val p = LocalPrometheusColors.current
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(PrometheusColors.surface)
+            .background(p.surface)
             .padding(20.dp)
     ) {
         val epicenterStr = buildString {
@@ -411,21 +414,21 @@ private fun RoutingDetailsCard(
         val depthStr = event?._kedalaman ?: "--"
 
         RouteInfoRow(label = "RULE", value = ruleNameStr)
-        HorizontalDivider(color = PrometheusColors.surfaceElevated)
+        HorizontalDivider(color = p.surfaceElevated)
         RouteInfoRow(label = "MAGNITUDE", value = magStr)
-        HorizontalDivider(color = PrometheusColors.surfaceElevated)
+        HorizontalDivider(color = p.surfaceElevated)
         RouteInfoRow(label = "USER LOCATION", value = userLocStr)
-        HorizontalDivider(color = PrometheusColors.surfaceElevated)
+        HorizontalDivider(color = p.surfaceElevated)
         RouteInfoRow(label = "DANGER RADIUS", value = radiusStr)
-        HorizontalDivider(color = PrometheusColors.surfaceElevated)
+        HorizontalDivider(color = p.surfaceElevated)
         RouteInfoRow(label = "DIRECTION", value = dirStr)
-        HorizontalDivider(color = PrometheusColors.surfaceElevated)
+        HorizontalDivider(color = p.surfaceElevated)
         RouteInfoRow(label = "DISTANCE", value = if (evacuationRoute != null) "${"%.1f".format(evacuationRoute.distanceKm)} km" else if (isDangerous && !routeLoading) "Unavailable" else "--")
         if (evacuationRoute != null) {
-            HorizontalDivider(color = PrometheusColors.surfaceElevated)
+            HorizontalDivider(color = p.surfaceElevated)
             Text(
                 text = "ESTIMATED TIME",
-                color = Color.Gray,
+                color = p.textSecondary,
                 style = MaterialTheme.typography.labelSmall,
                 modifier = Modifier.padding(vertical = 4.dp)
             )
@@ -440,6 +443,7 @@ private fun RoutingDetailsCard(
 
 @Composable
 private fun MapUnavailableFallback(epicenter: LatLng?) {
+    val p = LocalPrometheusColors.current
     val context = LocalContext.current
     val isApiKeyMissing = remember {
         try {
@@ -452,8 +456,8 @@ private fun MapUnavailableFallback(epicenter: LatLng?) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(PrometheusColors.surface)
-            .border(1.dp, PrometheusColors.blue.copy(alpha = 0.3f)),
+            .background(p.surface)
+            .border(1.dp, p.blue.copy(alpha = 0.3f)),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -464,7 +468,7 @@ private fun MapUnavailableFallback(epicenter: LatLng?) {
             Spacer(Modifier.height(8.dp))
             Text(
                 text = "Maps Unavailable",
-                color = PrometheusColors.blue,
+                color = p.blue,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Bold
             )
@@ -474,14 +478,14 @@ private fun MapUnavailableFallback(epicenter: LatLng?) {
                     text = "Set a Google Maps API key in AndroidManifest.xml:\n" +
                             "<meta-data android:name=\"com.google.android.geo.API_KEY\"\n" +
                             "  android:value=\"YOUR_KEY\"/>",
-                    color = Color.Gray,
+                    color = p.textSecondary,
                     style = MaterialTheme.typography.labelSmall,
                     textAlign = TextAlign.Center
                 )
             } else {
                 Text(
                     text = "Google Play Services may be missing.",
-                    color = Color.Gray,
+                    color = p.textSecondary,
                     style = MaterialTheme.typography.labelSmall,
                     textAlign = TextAlign.Center
                 )
@@ -490,7 +494,7 @@ private fun MapUnavailableFallback(epicenter: LatLng?) {
                 Spacer(Modifier.height(12.dp))
                 Text(
                     text = "Epicenter: ${"%.2f".format(epicenter.latitude)}, ${"%.2f".format(epicenter.longitude)}",
-                    color = Color.Gray,
+                    color = p.textSecondary,
                     style = MaterialTheme.typography.labelSmall
                 )
             }
@@ -500,6 +504,7 @@ private fun MapUnavailableFallback(epicenter: LatLng?) {
 
 @Composable
 private fun TransportTimeRow(icon: String, label: String, minutes: Double) {
+    val p = LocalPrometheusColors.current
     val display = when {
         minutes < 1.0 -> "< 1 min"
         minutes < 60.0 -> "${"%.0f".format(minutes)} min"
@@ -517,14 +522,14 @@ private fun TransportTimeRow(icon: String, label: String, minutes: Double) {
         Spacer(Modifier.width(8.dp))
         Text(
             text = label,
-            color = PrometheusColors.textSecondary,
+            color = p.textSecondary,
             style = MaterialTheme.typography.labelSmall,
             modifier = Modifier.width(48.dp)
         )
         Spacer(Modifier.weight(1f))
         Text(
             text = display,
-            color = PrometheusColors.textPrimary,
+            color = p.textPrimary,
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.Bold
         )
@@ -533,6 +538,7 @@ private fun TransportTimeRow(icon: String, label: String, minutes: Double) {
 
 @Composable
 private fun RouteInfoRow(label: String, value: String) {
+    val p = LocalPrometheusColors.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -541,13 +547,13 @@ private fun RouteInfoRow(label: String, value: String) {
     ) {
         Text(
             text = label,
-            color = PrometheusColors.textSecondary,
+            color = p.textSecondary,
             style = MaterialTheme.typography.labelSmall,
             modifier = Modifier.width(100.dp)
         )
         Text(
             text = value,
-            color = PrometheusColors.textPrimary,
+            color = p.textPrimary,
             style = MaterialTheme.typography.bodySmall
         )
     }
