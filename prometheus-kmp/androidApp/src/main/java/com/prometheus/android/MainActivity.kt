@@ -24,7 +24,9 @@ import com.prometheus.android.ui.theme.LocalPrometheusColors
 import com.prometheus.android.ui.theme.PrometheusTheme
 import com.prometheus.android.navigation.PrometheusApp
 import com.prometheus.model.EarthquakeEvent
+import com.prometheus.model.NowcastAlert
 import com.prometheus.model.UserLocation
+import com.prometheus.model.WeatherInfo
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -33,6 +35,8 @@ class MainActivity : ComponentActivity() {
     private var latestEvent by mutableStateOf<String?>(null)
     private var currentEvent by mutableStateOf<EarthquakeEvent?>(null)
     private var currentLocation by mutableStateOf<UserLocation?>(null)
+    private var weatherInfo by mutableStateOf(WeatherInfo.EMPTY)
+    private var nowcastAlerts by mutableStateOf<List<NowcastAlert>>(emptyList())
     private var injectionEnabled by mutableStateOf(false)
     private var injectionIp by mutableStateOf("")
     private var injectionPort by mutableStateOf(8080)
@@ -84,6 +88,8 @@ class MainActivity : ComponentActivity() {
                         latestEvent = latestEvent,
                         currentEvent = currentEvent,
                         currentLocation = currentLocation,
+                        weatherInfo = weatherInfo,
+                        nowcastAlerts = nowcastAlerts,
                         injectionEnabled = injectionEnabled,
                         injectionIp = injectionIp,
                         injectionPort = injectionPort,
@@ -155,6 +161,12 @@ class MainActivity : ComponentActivity() {
                     currentLocation = locProvider.getLastKnownLocation()
                     val mag = event.magnitudeValue?.let { "M $it" } ?: "Unknown"
                     latestEvent = "$mag — ${event._wilayah ?: "Unknown location"}"
+                }
+                onWeatherUpdate = { weather ->
+                    weatherInfo = weather
+                }
+                onNowcastUpdate = { alerts ->
+                    nowcastAlerts = alerts
                 }
                 start()
             }

@@ -14,7 +14,17 @@ struct MonitorView: View {
                     VStack(alignment: .leading, spacing: 20) {
                         DangerStatusBanner(level: dangerLevel)
 
-                        SectionHeader(title: "LATEST BMKG EVENT")
+                        SectionHeader(title: "WEATHER")
+                        WeatherInfoCard(weather: pollingService.weatherInfo)
+
+                        if !pollingService.nowcastAlerts.isEmpty {
+                            SectionHeader(title: "WEATHER WARNING")
+                            ForEach(pollingService.nowcastAlerts, id: \.link) { alert in
+                                NowcastAlertCard(alert: alert)
+                            }
+                        }
+
+                        SectionHeader(title: "EARTHQUAKE INFO")
                         if let event = pollingService.latestEarthquakeEvent {
                             BMKGEventCard(
                                 magnitude: event.magnitudeValue?.formatted() ?? "--",
@@ -34,9 +44,6 @@ struct MonitorView: View {
                                 timestamp: pollingService.lastChecked ?? "Not yet refreshed"
                             )
                         }
-
-                        SectionHeader(title: "ALARM & BRIEFING")
-                        AlarmStatusCard(event: pollingService.latestEarthquakeEvent)
 
                         SectionHeader(title: "RECENT EVENTS")
                         if let latest = pollingService.latestEvent {
@@ -111,12 +118,24 @@ struct MonitorView: View {
 }
 
 enum DangerLevel { case none, watch, medium, danger }
+
+struct DangerStatusBanner: View {
+    let level: DangerLevel
+
+    private var color: Color {
+        switch level {
+        case .none:   return .green
+        case .watch:  return .orange
+        case .medium: return Color(red: 1.0, green: 0.55, blue: 0.0)
+        case .danger: return .red
+        }
     }
     var label: String {
         switch level {
         case .none:   return "NO ACTIVE ALERTS"
-        case .watch:  return "WATCH — MONITOR CLOSELY"
-        case .danger: return "DANGER — TAKE ACTION NOW"
+        case .watch:  return "WATCH \u2014 MONITOR CLOSELY"
+        case .medium: return "MEDIUM ALERT \u2014 NOTIFIED"
+        case .danger: return "DANGER \u2014 TAKE ACTION NOW"
         }
     }
     var icon: String {
@@ -124,6 +143,7 @@ enum DangerLevel { case none, watch, medium, danger }
         case .none:   return "checkmark.shield.fill"
         case .watch:  return "exclamationmark.triangle.fill"
         case .danger: return "alarm.fill"
+        case .medium: return "exclamationmark.triangle.fill"
         }
     }
 
@@ -150,28 +170,134 @@ struct BMKGEventCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("M \(magnitude)")
-                        .font(.title.bold().monospaced())
-                        .foregroundColor(.prometheusBlue)
-                    Text(location)
-                        .font(.caption.monospaced())
-                        .foregroundColor(.white)
-                }
-                Spacer()
-                VStack(alignment: .trailing, spacing: 2) {
-                    EventField(label: "DEPTH", value: depth)
-                    EventField(label: "FELT", value: felt)
-                }
+            HStack(spacing: 0) {
+                StatColumn(
+                    icon: "\u{1F4CA}",
+                    value: "M \(magnitude)",
+                    label: "MAGNITUDE",
+                    valueColor: .prometheusBlue
+                )
+                StatColumn(
+                    icon: "\u{2B07}\u{FE0F}",
+                    value: depth,
+                    label: "DEPTH",
+                    valueColor: .white
+                )
+                StatColumn(
+                    icon: "\u{1F4CD}",
+                    value: location,
+                    label: "LOCATION",
+                    valueColor: .white
+                )
             }
             Divider().background(Color.prometheusBlue.opacity(0.3))
             HStack {
-                EventField(label: "TSUNAMI POTENTIAL", value: potential)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("FELT").font(.caption2.monospaced()).foregroundColor(.gray)
+                    Text(felt).font(.caption.bold().monospaced()).foregroundColor(.white)
+                }
+                Spacer()
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text("TSUNAMI POTENTIAL").font(.caption2.monospaced()).foregroundColor(.gray)
+                    Text(potential).font(.caption.bold().monospaced())
+                        .foregroundColor(
+                            potential.contains("berpotensi") || potential.contains("warning") || potential.contains("ya")
+                            ? .red : .white
+                        )
+                }
+            }
+            HStack {
                 Spacer()
                 Text(timestamp)
                     .font(.caption2.monospaced())
                     .foregroundColor(.gray)
+            }
+        }
+        .padding()
+        .background(Color.cardBackground)
+        .overlay(Rectangle().stroke(Color.prometheusBlue.opacity(0.3), lineWidth: 1))
+    }
+}
+
+struct StatColumn: View {
+    let icon: String
+    let value: String
+    let label: String
+    let valueColor: Color
+
+    var body: some View {
+        VStack(spacing: 2) {
+            Text(icon).font(.title3)
+            Text(value)
+                .font(.caption.bold().monospaced())
+                .foregroundColor(valueColor)
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+            Text(label)
+                .font(.caption2.monospaced())
+                .foregroundColor(.gray)
+        }
+        .frame(maxWidth: .infinity)
+    }
+}
+
+struct WeatherInfoCard: View {
+    let weather: shared.WeatherInfo
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 0) {
+                WeatherStatColumn(icon: "\u{1F321}\u{FE0F}", value: "\(weather.temperature)\u{00B0}", label: "TEMP")
+                WeatherStatColumn(icon: "\u{1F4A7}", value: "\(weather.humidity)%", label: "HUMIDITY")
+                WeatherStatColumn(icon: "\u{1F4A8}", value: "\(weather.windSpeed) km/j", label: "WIND")
+            }
+            if !weather.weatherDesc.isEmpty && weather.weatherDesc != "--" {
+                Divider().background(Color.prometheusBlue.opacity(0.3))
+                Text(weather.weatherDesc)
+                    .font(.caption2.monospaced())
+                    .foregroundColor(.gray)
+            }
+        }
+        .padding()
+        .background(Color.cardBackground)
+        .overlay(Rectangle().stroke(Color.prometheusBlue.opacity(0.3), lineWidth: 1))
+    }
+}
+
+struct WeatherStatColumn: View {
+    let icon: String
+    let value: String
+    let label: String
+
+    var body: some View {
+        VStack(spacing: 2) {
+            Text(icon).font(.title3)
+            Text(value)
+                .font(.caption.bold().monospaced())
+                .foregroundColor(.white)
+            Text(label)
+                .font(.caption2.monospaced())
+                .foregroundColor(.gray)
+        }
+        .frame(maxWidth: .infinity)
+    }
+}
+
+struct NowcastAlertCard: View {
+    let alert: shared.NowcastAlert
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Text(alert.isBadWeather ? "\u{26A0}\u{FE0F}" : "\u{1F6E1}\u{FE0F}")
+                .font(.title3)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(alert.eventType)
+                    .font(.caption.bold().monospaced())
+                    .foregroundColor(alert.isBadWeather ? .red : .orange)
+                Text(alert.summary)
+                    .font(.caption2.monospaced())
+                    .foregroundColor(.gray)
+                    .lineLimit(2)
             }
         }
         .padding()
@@ -187,7 +313,7 @@ struct InjectionStatusCard: View {
 
     var body: some View {
         let statusColor: Color = enabled && !ip.isEmpty ? .green : .gray
-        let statusText: String = enabled && !ip.isEmpty ? "ACTIVE — \(ip):\(port)" : "DISABLED"
+        let statusText: String = enabled && !ip.isEmpty ? "ACTIVE \u2014 \(ip):\(port)" : "DISABLED"
 
         VStack(alignment: .leading, spacing: 4) {
             HStack {
@@ -294,48 +420,5 @@ struct SectionHeader: View {
             .font(.caption.bold().monospaced())
             .foregroundColor(.prometheusBlue)
             .padding(.top, 4)
-    }
-}
-
-struct AlarmStatusCard: View {
-    let event: EarthquakeEvent?
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                AlarmIndicatorRow(icon: "alarm.fill", label: "AUDIBLE ALARM", status: "ARMED", statusColor: .prometheusBlue)
-                Spacer()
-            }
-            Divider().background(Color.prometheusBlue.opacity(0.15))
-            AlarmIndicatorRow(icon: "waveform", label: "TTS BRIEFING", status: "READY", statusColor: .prometheusBlue)
-            Divider().background(Color.prometheusBlue.opacity(0.15))
-            AlarmIndicatorRow(icon: "brain.head.profile", label: "GEMMA 4 EMERGENCY PROMPT", status: "NOT LOADED", statusColor: .gray)
-        }
-        .padding()
-        .background(Color.cardBackground)
-        .overlay(Rectangle().stroke(Color.prometheusBlue.opacity(0.3), lineWidth: 1))
-    }
-}
-
-struct AlarmIndicatorRow: View {
-    let icon: String
-    let label: String
-    let status: String
-    let statusColor: Color
-
-    var body: some View {
-        HStack(spacing: 8) {
-            Image(systemName: icon)
-                .font(.caption)
-                .foregroundColor(statusColor.opacity(0.7))
-                .frame(width: 16)
-            Text(label)
-                .font(.caption2.monospaced())
-                .foregroundColor(.gray)
-            Spacer()
-            Text(status)
-                .font(.caption2.bold().monospaced())
-                .foregroundColor(statusColor)
-        }
     }
 }
