@@ -6,17 +6,53 @@
 import SwiftUI
 import LiteRTLMDownloader
 
+// MARK: - Conversation model
+
+struct Conversation: Identifiable, Codable {
+    var id = UUID()
+    var messages: [ChatMessage]
+}
+
+private let conversationsKey = "prometheus_conversations"
+
+private func saveConversations(_ conversations: [Conversation]) {
+    if let data = try? JSONEncoder().encode(conversations) {
+        UserDefaults.standard.set(data, forKey: conversationsKey)
+    }
+}
+
+private func loadConversations() -> [Conversation] {
+    guard let data = UserDefaults.standard.data(forKey: conversationsKey),
+          let decoded = try? JSONDecoder().decode([Conversation].self, from: data),
+          !decoded.isEmpty
+    else { return [Conversation(messages: [])] }
+    return decoded
+}
+
+// MARK: - View
+
 struct AssistantView: View {
     @Environment(InferenceManager.self) private var inference
+    @AppStorage("isDarkMode") private var isDarkMode = false
+    @AppStorage("tutorialSeen_assistant") private var tutorialSeen = false
     @State private var query = ""
     @State private var selectedMode: ChatMode = .survival
     @FocusState private var inputFocused: Bool
+    @State private var conversations: [Conversation] = loadConversations()
+    @State private var activeIndex = 0
+    @State private var showSidebar = false
+    @State private var showVision = false
+    @State private var showTutorial = false
 
     var body: some View {
         NavigationStack {
             ZStack {
-                Color.darkBackground.ignoresSafeArea()
-                stateContent
+                Color.appBackground.ignoresSafeArea()
+                VStack(spacing: 0) {
+                    modeSelector
+                    Divider().background(Color.prometheusBlue.opacity(0.15))
+                    stateContent
+                }
             }
             .navigationTitle("Survival Assistant")
             .toolbarBackground(Color.cardBackground, for: .navigationBar)
@@ -24,18 +60,36 @@ struct AssistantView: View {
             .toolbar { toolbarContent }
         }
         .task { await inference.start() }
+        .onAppear {
+            if !tutorialSeen { tutorialSeen = true; showTutorial = true }
+        }
+        .overlay {
+            if showTutorial {
+                TutorialOverlay(tabName: "Assistant", steps: TutorialContent.assistant) {
+                    showTutorial = false
+                }
+            }
+        }
+        .sheet(isPresented: $showSidebar) { sidebarView }
+        .onChange(of: inference.isGenerating) { _, generating in
+            if !generating { syncToConversation() }
+        }
     }
 
     // MARK: - State routing
 
     @ViewBuilder
     private var stateContent: some View {
-        switch inference.modelState {
-        case .notDownloaded:  downloadView
-        case .downloading:    progressView
-        case .loading:        loadingView
-        case .ready:          chatView
-        case .error(let msg): errorView(msg)
+        if showVision {
+            VisionPanel()
+        } else {
+            switch inference.modelState {
+            case .notDownloaded:  downloadView
+            case .downloading:    progressView
+            case .loading:        loadingView
+            case .ready:          chatViewContent
+            case .error(let msg): errorView(msg)
+            }
         }
     }
 
@@ -53,10 +107,10 @@ struct AssistantView: View {
                 VStack(spacing: 6) {
                     Text("GEMMA 4 REQUIRED")
                         .font(.headline.bold().monospaced())
-                        .foregroundColor(.white)
+                        .foregroundColor(.primary)
                     Text("Gemma 4 E2B  ·  ~2.4 GB  ·  on-device  ·  offline")
                         .font(.caption.monospaced())
-                        .foregroundColor(.gray)
+                        .foregroundColor(.secondary)
                 }
 
                 VStack(alignment: .leading, spacing: 10) {
@@ -88,7 +142,7 @@ struct AssistantView: View {
 
                 Text("Requires a Wi-Fi connection. Model is stored on-device and never leaves the phone.")
                     .font(.caption2.monospaced())
-                    .foregroundColor(.gray)
+                    .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
                     .lineSpacing(4)
 
@@ -112,7 +166,7 @@ struct AssistantView: View {
 
             Text("DOWNLOADING GEMMA 4")
                 .font(.caption.bold().monospaced())
-                .foregroundColor(.white)
+                .foregroundColor(.primary)
 
             VStack(spacing: 8) {
                 ProgressView(value: inference.downloader.progress)
@@ -123,7 +177,7 @@ struct AssistantView: View {
                 let total = (inference.downloader.totalBytes ?? 2_583_085_056) / 1_000_000
                 Text("\(dl) MB  /  \(total) MB")
                     .font(.caption.monospaced())
-                    .foregroundColor(.gray)
+                    .foregroundColor(.secondary)
 
                 Text(String(format: "%.0f%%", inference.downloader.progress * 100))
                     .font(.caption.bold().monospaced())
@@ -155,10 +209,10 @@ struct AssistantView: View {
                 .scaleEffect(1.4)
             Text("LOADING MODEL")
                 .font(.caption.bold().monospaced())
-                .foregroundColor(.white)
+                .foregroundColor(.primary)
             Text("Loading Gemma 4 into memory — this may take a moment.")
                 .font(.caption.monospaced())
-                .foregroundColor(.gray)
+                .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
             Spacer()
@@ -176,10 +230,10 @@ struct AssistantView: View {
                 .foregroundColor(.orange)
             Text(isSimulatorError ? "SIMULATOR" : "ERROR")
                 .font(.caption.bold().monospaced())
-                .foregroundColor(.white)
+                .foregroundColor(.primary)
             Text(message)
                 .font(.caption.monospaced())
-                .foregroundColor(.gray)
+                .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
             if !isSimulatorError {
@@ -202,7 +256,7 @@ struct AssistantView: View {
                         .background(Color.cardBackground)
                         .clipShape(RoundedRectangle(cornerRadius: 10))
                         .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.gray.opacity(0.3), lineWidth: 1))
-                        .foregroundColor(.gray)
+                        .foregroundColor(.secondary)
                 }
                 .buttonStyle(.plain)
             }
@@ -212,23 +266,19 @@ struct AssistantView: View {
 
     // MARK: - Chat screen
 
-    private var chatView: some View {
-        VStack(spacing: 0) {
-            modeSelector
-            Divider().background(Color.prometheusBlue.opacity(0.15))
-            messageList
-        }
-        .safeAreaInset(edge: .bottom) { inputBar }
+    private var chatViewContent: some View {
+        messageList
+            .safeAreaInset(edge: .bottom) { inputBar }
     }
 
     private var modeSelector: some View {
         HStack(spacing: 8) {
             Spacer()
-            ModeChipButton(label: "SURVIVAL CHAT", active: selectedMode == .survival) {
-                selectedMode = .survival
+            ModeChipButton(label: "SURVIVAL CHAT", active: !showVision) {
+                showVision = false
             }
-            ModeChipButton(label: "EMERGENCY BRIEF", active: selectedMode == .emergency) {
-                selectedMode = .emergency
+            ModeChipButton(label: "VISION", active: showVision) {
+                showVision = true
             }
             Spacer()
         }
@@ -269,12 +319,12 @@ struct AssistantView: View {
     private var emptyStateHint: some View {
         VStack(spacing: 12) {
             Spacer(minLength: 60)
-            Image(systemName: selectedMode == .survival ? "bubble.left.and.bubble.right.fill" : "exclamationmark.shield.fill")
+            Image(systemName: "bubble.left.and.bubble.right.fill")
                 .font(.system(size: 40))
                 .foregroundColor(.prometheusBlue.opacity(0.3))
-            Text(selectedMode == .survival ? "Ask anything about survival" : "Describe a hazard for an emergency briefing")
+            Text("Ask anything about survival")
                 .font(.caption.monospaced())
-                .foregroundColor(.gray)
+                .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
             Spacer(minLength: 60)
         }
@@ -284,7 +334,7 @@ struct AssistantView: View {
     private var inputBar: some View {
         HStack(spacing: 0) {
             TextField(
-                selectedMode == .survival ? "Ask about survival, first aid, evacuation..." : "Describe the hazard event...",
+                "Ask about survival, first aid, evacuation...",
                 text: $query,
                 axis: .vertical
             )
@@ -322,7 +372,7 @@ struct AssistantView: View {
         .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.prometheusBlue.opacity(0.3), lineWidth: 1))
         .padding(.horizontal)
         .padding(.vertical, 8)
-        .background(Color.darkBackground)
+        .background(Color.appBackground)
     }
 
     // MARK: - Toolbar
@@ -330,24 +380,139 @@ struct AssistantView: View {
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
         ToolbarItem(placement: .navigationBarLeading) {
-            if case .ready = inference.modelState {
-                HStack(spacing: 4) {
-                    Circle().fill(Color.green).frame(width: 6, height: 6)
-                    Text("GEMMA 4 · READY")
-                        .font(.caption2.monospaced())
-                        .foregroundColor(.gray)
+            HStack(spacing: 12) {
+                Button(action: { showSidebar.toggle() }) {
+                    Image(systemName: "line.3.horizontal")
+                        .foregroundColor(.prometheusBlue)
                 }
-            }
-        }
-        ToolbarItem(placement: .navigationBarTrailing) {
-            if case .ready = inference.modelState {
-                Button(action: { inference.clearHistory(mode: selectedMode) }) {
-                    Image(systemName: "square.and.pencil")
-                        .font(.body)
+                Button(action: { isDarkMode.toggle() }) {
+                    Image(systemName: isDarkMode ? "sun.max" : "moon")
+                        .font(.caption)
+                        .foregroundColor(.prometheusBlue)
+                }
+                Button(action: { showTutorial = true }) {
+                    Image(systemName: "questionmark.circle")
+                        .font(.caption)
                         .foregroundColor(.prometheusBlue)
                 }
             }
         }
+        ToolbarItem(placement: .navigationBarTrailing) {
+            HStack(spacing: 10) {
+                if case .ready = inference.modelState {
+                    HStack(spacing: 4) {
+                        Circle().fill(Color.green).frame(width: 6, height: 6)
+                        Text("GEMMA 4 · READY")
+                            .font(.caption2.monospaced())
+                            .foregroundColor(.secondary)
+                    }
+                    Button(action: { createNewConversation() }) {
+                        Image(systemName: "square.and.pencil")
+                            .font(.body)
+                            .foregroundColor(.prometheusBlue)
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Conversation management
+
+    private var sidebarView: some View {
+        NavigationStack {
+            ZStack {
+                Color.appBackground.ignoresSafeArea()
+                VStack(alignment: .leading, spacing: 0) {
+                    Button(action: { createNewConversation(); showSidebar = false }) {
+                        HStack {
+                            Image(systemName: "plus")
+                            Text("New conversation")
+                                .font(.caption.bold().monospaced())
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(12)
+                        .background(Color.prometheusBlue)
+                        .foregroundColor(.black)
+                    }
+                    .padding(.horizontal)
+                    .padding(.top, 8)
+
+                    Divider().background(Color.prometheusBlue.opacity(0.15)).padding(.vertical, 8)
+
+                    List {
+                        ForEach(Array(conversations.enumerated()), id: \.element.id) { index, conv in
+                            let title = conv.messages.first(where: { $0.role == .user })?.text.prefix(40)
+                                ?? "New conversation"
+                            let isActive = index == activeIndex
+                            HStack {
+                                Text(String(title))
+                                    .font(.caption.monospaced())
+                                    .foregroundColor(isActive ? .prometheusBlue : .primary)
+                                    .fontWeight(isActive ? .bold : .regular)
+                                Spacer()
+                                if conversations.count > 1 {
+                                    Button {
+                                        conversations.remove(at: index)
+                                        if activeIndex >= conversations.count {
+                                            activeIndex = conversations.count - 1
+                                        }
+                                        if conversations.isEmpty {
+                                            conversations = [Conversation(messages: [])]
+                                            activeIndex = 0
+                                        }
+                                        saveConversations(conversations)
+                                    } label: {
+                                        Image(systemName: "xmark")
+                                            .font(.caption2)
+                                            .foregroundColor(.secondary)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                            .padding(.vertical, 4)
+                            .contentShape(Rectangle())
+                            .onTapGesture { switchToConversation(at: index) }
+                        }
+                    }
+                    .scrollContentBackground(.hidden)
+                    .listStyle(.plain)
+                }
+            }
+            .navigationTitle("Conversations")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(Color.cardBackground, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") { showSidebar = false }
+                        .foregroundColor(.prometheusBlue)
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+    }
+
+    private func syncToConversation() {
+        guard activeIndex < conversations.count else { return }
+        conversations[activeIndex].messages = inference.messages.filter { !$0.isStreaming }
+        saveConversations(conversations)
+    }
+
+    private func createNewConversation() {
+        syncToConversation()
+        inference.clearHistory(mode: selectedMode)
+        conversations.append(Conversation(messages: []))
+        activeIndex = conversations.count - 1
+        saveConversations(conversations)
+    }
+
+    private func switchToConversation(at index: Int) {
+        guard index < conversations.count else { return }
+        syncToConversation()
+        inference.clearHistory(mode: selectedMode)
+        activeIndex = index
+        inference.restoreMessages(conversations[index].messages)
+        showSidebar = false
     }
 
     // MARK: - Actions
@@ -381,7 +546,7 @@ private struct MessageBubble: View {
 
                 Text(message.text + (message.isStreaming ? "▋" : ""))
                     .font(.caption.monospaced())
-                    .foregroundColor(.white)
+                    .foregroundColor(.primary)
                     .textSelection(.enabled)
                     .padding(12)
                     .background(isUser ? Color.prometheusBlue.opacity(0.18) : Color.cardBackground)
@@ -442,7 +607,7 @@ private struct DownloadFeatureRow: View {
                 .frame(width: 16)
             Text(text)
                 .font(.caption.monospaced())
-                .foregroundColor(.gray)
+                .foregroundColor(.secondary)
         }
     }
 }

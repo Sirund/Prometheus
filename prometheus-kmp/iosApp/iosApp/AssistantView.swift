@@ -7,7 +7,7 @@ struct Conversation: Identifiable, Codable {
 }
 
 struct AssistantView: View {
-    @State private var manager = InferenceManager()
+    @Environment(InferenceManager.self) private var manager
     @State private var query: String = ""
     @State private var conversations: [Conversation] = loadConversations()
     @State private var activeIndex = 0
@@ -25,6 +25,18 @@ struct AssistantView: View {
 
                 VStack(spacing: 0) {
                     ModeIndicatorBar()
+
+                    HStack(spacing: 4) {
+                        Circle()
+                            .fill(manager.isModelLoaded ? .green : .orange)
+                            .frame(width: 6, height: 6)
+                        Text(manager.statusMessage)
+                            .font(.caption2.monospaced())
+                            .foregroundColor(.gray)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.leading, 16)
+                    .padding(.top, 4)
 
                     if chatHistory.isEmpty {
                         Spacer()
@@ -100,16 +112,6 @@ struct AssistantView: View {
                     Button(action: { showSidebar.toggle() }) {
                         Image(systemName: "line.3.horizontal")
                             .foregroundColor(.prometheusBlue)
-                    }
-                }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    HStack(spacing: 4) {
-                        Circle()
-                            .fill(manager.isModelLoaded ? .green : .orange)
-                            .frame(width: 6, height: 6)
-                        Text(manager.statusMessage)
-                            .font(.caption2.monospaced())
-                            .foregroundColor(.gray)
                     }
                 }
             }

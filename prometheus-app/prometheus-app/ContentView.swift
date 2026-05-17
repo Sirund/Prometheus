@@ -9,6 +9,7 @@ import SwiftUI
 
 struct ContentView: View {
     @State private var inference = InferenceManager()
+    @AppStorage("isDarkMode") private var isDarkMode = false
 
     var body: some View {
         TabView {
@@ -19,14 +20,10 @@ struct ContentView: View {
                 .tabItem { Label("EVACUATE", systemImage: "map") }
 
             AssistantView()
-                .tabItem { Label("SURVIVAL", systemImage: "bubble.left.and.bubble.right") }
-
-            VisionView()
-                .tabItem { Label("VISION", systemImage: "camera.viewfinder") }
+                .tabItem { Label("ASSISTANT", systemImage: "bubble.left.and.bubble.right") }
         }
         .environment(inference)
         .tint(.prometheusBlue)
-        .preferredColorScheme(.dark)
-        .background(Color.darkBackground.ignoresSafeArea())
+        .preferredColorScheme(isDarkMode ? .dark : .light)
     }
 }

@@ -4,47 +4,65 @@ import LiteRTLMDownloader
 
 @Observable
 class InferenceManager {
-    var engine: LMEngine?
-    var conversation: LMConversation?
     var isModelLoaded = false
     var statusMessage = "Initializing..."
 
+    private var engine: LMEngine?
+    private var conversation: LMConversation?
+    private var visionConversation: LMConversation?
+    private let downloader = ModelDownloader()
+
     @MainActor
     func setupGemma() async {
+        guard !isModelLoaded, engine == nil else { return }
         do {
-            let downloader = ModelDownloader()
             statusMessage = "Checking model..."
 
-            if downloader.modelPath(for: ModelRegistry.gemma4E2B) == nil {
+            if !downloader.isDownloaded(ModelRegistry.gemma4E2B) {
                 statusMessage = "Downloading Gemma 4 (2.4GB)..."
-                try await downloader.download(model: ModelRegistry.gemma4E2B)
+                await downloader.download(model: ModelRegistry.gemma4E2B)
             }
 
-            statusMessage = "Loading to GPU..."
-            let config = EngineConfiguration(
-                modelPath: downloader.modelPath(for: ModelRegistry.gemma4E2B)!
-            )
-            .backend(.gpu)
-            .visionBackend(.cpu)
-            .audioBackend(.cpu)
+            guard let url = downloader.modelPath(for: ModelRegistry.gemma4E2B) else {
+                statusMessage = "Model file not found"
+                return
+            }
 
-            let newEngine = LMEngine(configuration: config)
-            try await newEngine.load()
+            statusMessage = "Loading model..."
+            let candidates: [(String, EngineConfiguration)] = [
+                ("GPU", EngineConfiguration(modelPath: url).backend(.gpu)),
+                ("CPU", EngineConfiguration(modelPath: url).backend(.cpu)),
+            ]
+            var loadedEngine: LMEngine?
+            for (label, config) in candidates {
+                statusMessage = "Trying \(label)..."
+                let e = LMEngine(configuration: config)
+                do {
+                    try await e.load()
+                    loadedEngine = e
+                    break
+                } catch {
+                    print("[InferenceManager] \(label) failed: \(error)")
+                }
+            }
+            guard let newEngine = loadedEngine else {
+                statusMessage = "Failed to load model on this device"
+                return
+            }
 
-            self.engine = newEngine
-            self.conversation = try await newEngine.createConversation()
-            self.isModelLoaded = true
-            self.statusMessage = "Gemma 4 Online"
+            engine = newEngine
+            conversation = try await newEngine.createConversation()
+            isModelLoaded = true
+            statusMessage = "Gemma 4 Online"
         } catch {
             statusMessage = "Error: \(error.localizedDescription)"
         }
     }
 
     func sendMessage(_ text: String, history: [ChatMessage] = [], completion: @escaping (String) -> Void) async {
-        guard let engine = engine else { return }
-
+        guard let engine else { return }
         do {
-            let survivalPrompt = """
+            let systemPrompt = """
 You are a calm, practical survival assistant embedded in a mobile app for users in Indonesia and similar tropical settings.
 
 Rules:
@@ -56,7 +74,7 @@ Rules:
 
 The user may be offline. Keep answers concise unless they ask for depth.
 """
-            var prompt = "\(survivalPrompt)\n\n"
+            var prompt = "\(systemPrompt)\n\n"
             for msg in history {
                 let role = msg.isUser ? "User" : "Assistant"
                 prompt += "\(role): \(msg.text)\n"
@@ -68,18 +86,31 @@ The user may be offline. Keep answers concise unless they ask for depth.
             conversation = newConv
 
             var fullResponse = ""
-            let stream = try await newConv.sendStream(prompt)
-
+            let stream = try newConv.sendStream(prompt)
             for try await token in stream {
                 fullResponse += token
-                await MainActor.run {
-                    completion(fullResponse)
-                }
+                await MainActor.run { completion(fullResponse) }
             }
         } catch {
-            await MainActor.run {
-                completion("Inference failed: \(error.localizedDescription)")
+            await MainActor.run { completion("Inference failed: \(error.localizedDescription)") }
+        }
+    }
+
+    func describeImage(_ data: Data, onToken: @escaping (String) -> Void) async {
+        guard let engine else { return }
+        do {
+            if visionConversation == nil {
+                visionConversation = try await engine.createConversation()
             }
+            guard let conv = visionConversation else { return }
+            var full = ""
+            let stream = try await conv.sendStream("Describe what you see.", images: [data])
+            for try await token in stream {
+                full += token
+                onToken(full)
+            }
+        } catch {
+            onToken("Vision failed: \(error.localizedDescription)")
         }
     }
 }

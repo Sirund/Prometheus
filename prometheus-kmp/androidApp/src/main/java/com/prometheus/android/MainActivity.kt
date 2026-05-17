@@ -1,6 +1,7 @@
 package com.prometheus.android
 
 import android.Manifest
+import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -24,11 +25,13 @@ import java.io.File
 import com.prometheus.android.service.BMKGPollingController
 import com.prometheus.android.service.InjectionSettings
 import com.prometheus.android.service.LocationProvider
-import com.prometheus.android.ui.theme.PrometheusColors
+import com.prometheus.android.ui.theme.LocalPrometheusColors
 import com.prometheus.android.ui.theme.PrometheusTheme
 import com.prometheus.android.navigation.PrometheusApp
 import com.prometheus.model.EarthquakeEvent
+import com.prometheus.model.NowcastAlert
 import com.prometheus.model.UserLocation
+import com.prometheus.model.WeatherInfo
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -37,18 +40,27 @@ class MainActivity : ComponentActivity() {
     private var latestEvent by mutableStateOf<String?>(null)
     private var currentEvent by mutableStateOf<EarthquakeEvent?>(null)
     private var currentLocation by mutableStateOf<UserLocation?>(null)
+    private var weatherInfo by mutableStateOf(WeatherInfo.EMPTY)
+    private var nowcastAlerts by mutableStateOf<List<NowcastAlert>>(emptyList())
     private var injectionEnabled by mutableStateOf(false)
     private var injectionIp by mutableStateOf("")
     private var injectionPort by mutableStateOf(8080)
+    private var isDarkMode by mutableStateOf(true)
 
     private val notificationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
-        if (granted) startPolling()
+        if (granted) requestStoragePermission()
         else requestStoragePermission()
     }
 
     private val storagePermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { _ ->
+        requestLocationPermission()
+    }
+
+    private val locationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { _ ->
         startPolling()
@@ -60,6 +72,9 @@ class MainActivity : ComponentActivity() {
         injectionEnabled = InjectionSettings.enabled
         injectionIp = InjectionSettings.ip
         injectionPort = InjectionSettings.port
+
+        val prefs = getSharedPreferences("theme", Context.MODE_PRIVATE)
+        isDarkMode = prefs.getBoolean("dark_mode", true)
 
         lifecycleScope.launch {
             ModelManager.init(this@MainActivity)
@@ -81,16 +96,26 @@ class MainActivity : ComponentActivity() {
                 onDispose { conversationManager.shutdown() }
             }
 
-            PrometheusTheme {
+            val p = LocalPrometheusColors.current
+            PrometheusTheme(darkTheme = isDarkMode) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
-                    color = PrometheusColors.background
+                    color = p.background
                 ) {
                     PrometheusApp(
+                        isDarkMode = isDarkMode,
+                        onToggleDarkMode = {
+                            isDarkMode = !isDarkMode
+                            getSharedPreferences("theme", Context.MODE_PRIVATE).edit()
+                                .putBoolean("dark_mode", isDarkMode)
+                                .apply()
+                        },
                         onRefreshBmkg = { pollingController?.forceCheck() },
                         latestEvent = latestEvent,
                         currentEvent = currentEvent,
                         currentLocation = currentLocation,
+                        weatherInfo = weatherInfo,
+                        nowcastAlerts = nowcastAlerts,
                         injectionEnabled = injectionEnabled,
                         injectionIp = injectionIp,
                         injectionPort = injectionPort,
@@ -123,6 +148,11 @@ class MainActivity : ComponentActivity() {
         ModelManager.shutdown()
     }
 
+    override fun onResume() {
+        super.onResume()
+        pollingController?.forceCheck()
+    }
+
     private fun requestNotificationPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
@@ -143,6 +173,16 @@ class MainActivity : ComponentActivity() {
                 storagePermissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
                 return
             }
+        }
+        requestLocationPermission()
+    }
+
+    private fun requestLocationPermission() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+            != PackageManager.PERMISSION_GRANTED
+        ) {
+            locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+            return
         }
         startPolling()
     }
@@ -167,6 +207,12 @@ class MainActivity : ComponentActivity() {
                     currentLocation = locProvider.getLastKnownLocation()
                     val mag = event.magnitudeValue?.let { "M $it" } ?: "Unknown"
                     latestEvent = "$mag — ${event._wilayah ?: "Unknown location"}"
+                }
+                onWeatherUpdate = { weather ->
+                    weatherInfo = weather
+                }
+                onNowcastUpdate = { alerts ->
+                    nowcastAlerts = alerts
                 }
                 start()
             }

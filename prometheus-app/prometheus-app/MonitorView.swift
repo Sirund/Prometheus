@@ -1,45 +1,59 @@
-//
-//  MonitorView.swift
-//  prometheus-app
-//
-//  Created by Pelangi Masita Wati on 06/05/26.
-//
-
 import SwiftUI
 
 struct MonitorView: View {
-    @State private var dangerLevel: DangerLevel = .none
-    @State private var lastRefresh: String = "Not yet refreshed"
+    @Environment(BMKGPollingService.self) private var pollingService
+    @AppStorage("isDarkMode") private var isDarkMode = false
+    @AppStorage("tutorialSeen_monitor") private var tutorialSeen = false
+    @State private var showInjectionSheet = false
+    @State private var showTutorial = false
 
     var body: some View {
         NavigationStack {
             ZStack {
-                Color.darkBackground.ignoresSafeArea()
+                Color.appBackground.ignoresSafeArea()
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: 20) {
                         DangerStatusBanner(level: dangerLevel)
 
                         SectionHeader(title: "LATEST BMKG EVENT")
-                        BMKGEventCard(
-                            magnitude: "--",
-                            location: "Waiting for data...",
-                            depth: "--",
-                            felt: "--",
-                            potential: "--",
-                            timestamp: lastRefresh
-                        )
+                        if let event = pollingService.latestEarthquakeEvent {
+                            BMKGEventCard(
+                                magnitude: event.magnitudeValue.map { "\($0)" } ?? "--",
+                                location: event.Wilayah ?? "--",
+                                depth: event.Kedalaman ?? "--",
+                                felt: event.Dirasakan ?? "--",
+                                potential: event.Potensi ?? "--",
+                                timestamp: "\(event.Tanggal ?? "") \(event.Jam ?? "")".trimmingCharacters(in: .whitespaces)
+                            )
+                        } else {
+                            BMKGEventCard(
+                                magnitude: "--",
+                                location: "Waiting for data...",
+                                depth: "--",
+                                felt: "--",
+                                potential: "--",
+                                timestamp: pollingService.lastChecked ?? "Not yet refreshed"
+                            )
+                        }
 
                         SectionHeader(title: "ALARM & BRIEFING")
                         AlarmStatusCard()
 
                         SectionHeader(title: "RECENT EVENTS")
-                        Text("No data loaded. Tap refresh to poll BMKG.")
-                            .font(.caption.monospaced())
-                            .foregroundColor(.gray)
-                            .padding(.horizontal, 4)
+                        if let latest = pollingService.latestEvent {
+                            Text(latest)
+                                .font(.caption.monospaced())
+                                .foregroundColor(.primary)
+                                .padding(.horizontal, 4)
+                        } else {
+                            Text("No data loaded. Tap refresh to poll BMKG.")
+                                .font(.caption.monospaced())
+                                .foregroundColor(.secondary)
+                                .padding(.horizontal, 4)
+                        }
 
-                        Button(action: { /* TODO: BMKGMonitor.fetch() */ }) {
+                        Button(action: { pollingService.checkNow() }) {
                             HStack {
                                 Image(systemName: "arrow.clockwise")
                                 Text("REFRESH BMKG")
@@ -53,6 +67,14 @@ struct MonitorView: View {
                             .foregroundColor(.prometheusBlue)
                         }
                         .buttonStyle(.plain)
+
+                        SectionHeader(title: "LOCAL INJECTION")
+                        InjectionStatusCard(
+                            enabled: pollingService.injectionEnabled,
+                            ip: pollingService.injectionIp,
+                            port: pollingService.injectionPort
+                        )
+                        .onTapGesture { showInjectionSheet = true }
                     }
                     .padding()
                 }
@@ -62,19 +84,57 @@ struct MonitorView: View {
             .toolbarBackground(Color.cardBackground, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Label("BMKG", systemImage: "checkmark.shield")
-                        .font(.caption.monospaced())
-                        .foregroundColor(.prometheusBlue)
+                ToolbarItem(placement: .navigationBarLeading) {
+                    HStack(spacing: 12) {
+                        Button(action: { isDarkMode.toggle() }) {
+                            Image(systemName: isDarkMode ? "sun.max" : "moon")
+                                .font(.caption)
+                                .foregroundColor(.prometheusBlue)
+                        }
+                        Button(action: { showTutorial = true }) {
+                            Image(systemName: "questionmark.circle")
+                                .font(.caption)
+                                .foregroundColor(.prometheusBlue)
+                        }
+                    }
                 }
             }
+            .onAppear {
+                if !tutorialSeen { tutorialSeen = true; showTutorial = true }
+            }
+            .overlay {
+                if showTutorial {
+                    TutorialOverlay(tabName: "Monitor", steps: TutorialContent.monitor) {
+                        showTutorial = false
+                    }
+                }
+            }
+            .sheet(isPresented: $showInjectionSheet) {
+                InjectionSettingsView(
+                    enabled: pollingService.injectionEnabled,
+                    ip: pollingService.injectionIp,
+                    port: pollingService.injectionPort
+                ) { enabled, ip, port in
+                    pollingService.injectionEnabled = enabled
+                    pollingService.injectionIp = ip
+                    pollingService.injectionPort = port
+                }
+            }
+        }
+    }
+
+    private var dangerLevel: DangerLevel {
+        switch pollingService.dangerLevel {
+        case 2: return .danger
+        case 1: return .medium
+        default: return .none
         }
     }
 }
 
 // MARK: - Supporting views
 
-enum DangerLevel { case none, watch, danger }
+enum DangerLevel { case none, watch, medium, danger }
 
 struct DangerStatusBanner: View {
     let level: DangerLevel
@@ -82,7 +142,8 @@ struct DangerStatusBanner: View {
     var color: Color {
         switch level {
         case .none:   return .prometheusBlue
-        case .watch:  return .orange
+        case .watch:  return .yellow
+        case .medium: return .orange
         case .danger: return .red
         }
     }
@@ -90,13 +151,15 @@ struct DangerStatusBanner: View {
         switch level {
         case .none:   return "NO ACTIVE ALERTS"
         case .watch:  return "WATCH — MONITOR CLOSELY"
+        case .medium: return "ELEVATED — STAY ALERT"
         case .danger: return "DANGER — TAKE ACTION NOW"
         }
     }
     var icon: String {
         switch level {
         case .none:   return "checkmark.shield.fill"
-        case .watch:  return "exclamationmark.triangle.fill"
+        case .watch:  return "eye.fill"
+        case .medium: return "exclamationmark.triangle.fill"
         case .danger: return "alarm.fill"
         }
     }
@@ -132,7 +195,7 @@ struct BMKGEventCard: View {
                         .foregroundColor(.prometheusBlue)
                     Text(location)
                         .font(.caption.monospaced())
-                        .foregroundColor(.white)
+                        .foregroundColor(.primary)
                 }
                 Spacer()
                 VStack(alignment: .trailing, spacing: 2) {
@@ -146,7 +209,7 @@ struct BMKGEventCard: View {
                 Spacer()
                 Text(timestamp)
                     .font(.caption2.monospaced())
-                    .foregroundColor(.gray)
+                    .foregroundColor(.secondary)
             }
         }
         .padding()
@@ -162,8 +225,8 @@ struct EventField: View {
     let value: String
     var body: some View {
         VStack(alignment: .leading, spacing: 1) {
-            Text(label).font(.caption2.monospaced()).foregroundColor(.gray)
-            Text(value).font(.caption.bold().monospaced()).foregroundColor(.white)
+            Text(label).font(.caption2.monospaced()).foregroundColor(.secondary)
+            Text(value).font(.caption.bold().monospaced()).foregroundColor(.primary)
         }
     }
 }
@@ -211,11 +274,109 @@ struct AlarmIndicatorRow: View {
                 .frame(width: 16)
             Text(label)
                 .font(.caption2.monospaced())
-                .foregroundColor(.gray)
+                .foregroundColor(.secondary)
             Spacer()
             Text(status)
                 .font(.caption2.bold().monospaced())
                 .foregroundColor(statusColor)
         }
+    }
+}
+
+// MARK: - Local injection
+
+struct InjectionStatusCard: View {
+    let enabled: Bool
+    let ip: String
+    let port: Int
+
+    var body: some View {
+        let active = enabled && !ip.isEmpty
+        let statusColor: Color = active ? .green : .secondary
+        let statusText = active ? "ACTIVE — \(ip):\(port)" : "DISABLED"
+
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text("INJECTION")
+                    .font(.caption2.monospaced())
+                    .foregroundColor(.secondary)
+                Spacer()
+                Text(statusText)
+                    .font(.caption2.bold().monospaced())
+                    .foregroundColor(statusColor)
+            }
+            Text("Tap to configure local earthquake data injection")
+                .font(.caption2.monospaced())
+                .foregroundColor(.secondary)
+        }
+        .padding()
+        .background(Color.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.prometheusBlue.opacity(0.3), lineWidth: 1))
+    }
+}
+
+struct InjectionSettingsView: View {
+    @State var enabled: Bool
+    @State var ip: String
+    @State var port: Int
+    let onApply: (Bool, String, Int) -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color.appBackground.ignoresSafeArea()
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Run 'python3 tools/local_injector.py' on your PC, then enter its IP and port below.")
+                        .font(.caption.monospaced())
+                        .foregroundColor(.secondary)
+
+                    Toggle("Enable Injection", isOn: $enabled)
+                        .tint(.prometheusBlue)
+                        .foregroundColor(.primary)
+                        .font(.caption.monospaced())
+
+                    TextField("PC IP Address (e.g. 192.168.1.42)", text: $ip)
+                        .textFieldStyle(.plain)
+                        .padding()
+                        .background(Color.cardBackground)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.prometheusBlue.opacity(0.3), lineWidth: 1))
+                        .foregroundColor(.primary)
+                        .font(.caption.monospaced())
+                        .disabled(!enabled)
+
+                    TextField("Port", value: $port, format: .number)
+                        .textFieldStyle(.plain)
+                        .padding()
+                        .background(Color.cardBackground)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.prometheusBlue.opacity(0.3), lineWidth: 1))
+                        .foregroundColor(.primary)
+                        .font(.caption.monospaced())
+                        .disabled(!enabled)
+
+                    Spacer()
+                }
+                .padding()
+            }
+            .navigationTitle("LOCAL INJECTION")
+            .toolbarBackground(Color.cardBackground, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("APPLY") { onApply(enabled, ip, port); dismiss() }
+                        .font(.caption.bold().monospaced())
+                        .foregroundColor(.prometheusBlue)
+                }
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("CANCEL") { dismiss() }
+                        .font(.caption.monospaced())
+                        .foregroundColor(.secondary)
+                }
+            }
+        }
+        .presentationDetents([.medium])
     }
 }

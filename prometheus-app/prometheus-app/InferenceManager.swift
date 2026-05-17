@@ -7,21 +7,22 @@ import Foundation
 import LiteRTLM
 import LiteRTLMDownloader
 import AVFoundation
+import Vision
+import UIKit
 
 // MARK: - Chat types
 
 enum ChatMode: Equatable {
     case survival
-    case emergency
 }
 
-struct ChatMessage: Identifiable {
-    let id = UUID()
+struct ChatMessage: Identifiable, Codable {
+    var id = UUID()
     let role: Role
     var text: String
     var isStreaming: Bool = false
 
-    enum Role { case user, assistant }
+    enum Role: String, Codable { case user, assistant }
 }
 
 // MARK: - InferenceManager
@@ -54,6 +55,7 @@ final class InferenceManager {
     var messages: [ChatMessage] = []
     var isGenerating = false
     var isSpeaking = false
+    private(set) var hasVisionBackend = false
 
     /// Exposed directly so views can observe download progress without mirroring.
     let downloader = ModelDownloader()
@@ -62,7 +64,6 @@ final class InferenceManager {
 
     private var engine: LMEngine?
     private var survivalConversation: LMConversation?
-    private var emergencyConversation: LMConversation?
     private let synthesizer = AVSpeechSynthesizer()
     private let ttsDelegate = TTSDelegate()
 
@@ -76,11 +77,13 @@ final class InferenceManager {
     Write plain text only — no markdown, no bullet points, no headers.
     """
 
-    static let emergencyPrompt = """
-    You are an emergency voice briefing system. Given a hazard event, \
-    respond with a spoken briefing of at most 60 words: \
-    what happened, what to do right now, and what to avoid. \
-    Plain text only — no markdown, no lists, no headers.
+    static let visionPrompt = """
+    You are a calm, practical vision assistant for visually impaired users in a disaster situation. \
+    Describe what the user's camera shows in 2-4 short sentences. Focus on: \
+    people, injuries, or hazards (fires, floods, debris, downed power lines); \
+    signage, exits, or evacuation-related text; general surroundings for spatial awareness. \
+    Use plain spoken language only — no markdown, no bullet points. \
+    Keep it brief and calm. If you cannot see anything clearly, say so honestly.
     """
 
     // MARK: Init
@@ -141,7 +144,6 @@ final class InferenceManager {
         print("[InferenceManager] redownloadAndLoad() — forcing fresh download")
         engine = nil
         survivalConversation = nil
-        emergencyConversation = nil
         modelState = .notDownloaded
         await downloadAndLoad()
     }
@@ -177,22 +179,33 @@ final class InferenceManager {
         }
         modelState = .loading
 
-        print("[InferenceManager] loadEngine() — using GPU backend (device)")
-        let config = EngineConfiguration(modelPath: url).backend(.gpu)
+        // Gemma 4 is natively multimodal — vision is in the model weights, no separate visionBackend needed.
+        // Setting visionBackend causes litert_lm_engine_create to return NULL on most devices.
+        let candidates: [(String, EngineConfiguration)] = [
+            ("GPU", EngineConfiguration(modelPath: url).backend(.gpu)),
+            ("CPU", EngineConfiguration(modelPath: url).backend(.cpu)),
+        ]
 
-        print("[InferenceManager] loadEngine() — creating LMEngine…")
-        let e = LMEngine(configuration: config)
-        do {
-            print("[InferenceManager] loadEngine() — calling e.load()…")
-            try await e.load()
-            engine = e
-            modelState = .ready
-            print("[InferenceManager] loadEngine() — engine ready")
-        } catch {
-            print("[InferenceManager] loadEngine() — FAILED: \(error)")
-            print("[InferenceManager] loadEngine() — localizedDescription: \(error.localizedDescription)")
-            modelState = .error(error.localizedDescription)
+        var lastError: Error?
+        for (label, config) in candidates {
+            print("[InferenceManager] loadEngine() — trying \(label)…")
+            let e = LMEngine(configuration: config)
+            do {
+                try await e.load()
+                engine = e
+                // gemma-4-E2B-it.litertlm is text-only; vision encoder profile is absent.
+                // Sending images crashes the C layer (EXC_BAD_ACCESS). Keep false until a
+                // vision-capable model variant is used.
+                hasVisionBackend = false
+                modelState = .ready
+                print("[InferenceManager] loadEngine() — \(label) engine ready (vision=false, text-only model)")
+                return
+            } catch {
+                print("[InferenceManager] loadEngine() — \(label) failed: \(error)")
+                lastError = error
+            }
         }
+        modelState = .error(lastError?.localizedDescription ?? "Unable to load model")
     }
 
     // MARK: Chat
@@ -219,22 +232,81 @@ final class InferenceManager {
     }
 
     func cancelGeneration(mode: ChatMode) {
-        switch mode {
-        case .survival: survivalConversation?.cancel()
-        case .emergency: emergencyConversation?.cancel()
-        }
+        survivalConversation?.cancel()
+    }
+
+    func restoreMessages(_ messages: [ChatMessage]) {
+        self.messages = messages.map { var m = $0; m.isStreaming = false; return m }
     }
 
     func clearHistory(mode: ChatMode) {
-        switch mode {
-        case .survival:
-            survivalConversation?.close()
-            survivalConversation = nil
-        case .emergency:
-            emergencyConversation?.close()
-            emergencyConversation = nil
-        }
+        survivalConversation?.close()
+        survivalConversation = nil
         messages.removeAll()
+    }
+
+    // MARK: Vision
+
+    func describeImage(_ data: Data, onToken: @escaping (String) -> Void) async {
+        guard let cgImage = UIImage(data: data)?.cgImage else {
+            onToken("Could not read image.")
+            return
+        }
+
+        let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
+        var recognizedTexts: [String] = []
+        var sceneLabels: [String] = []
+        var peopleCount = 0
+
+        let textReq = VNRecognizeTextRequest { req, _ in
+            guard let obs = req.results as? [VNRecognizedTextObservation] else { return }
+            recognizedTexts = obs.compactMap { $0.topCandidates(1).first?.string }
+        }
+        textReq.recognitionLevel = .accurate
+        textReq.usesLanguageCorrection = true
+
+        let classifyReq = VNClassifyImageRequest { req, _ in
+            guard let obs = req.results as? [VNClassificationObservation] else { return }
+            sceneLabels = obs.filter { $0.confidence > 0.4 }.prefix(4).map { $0.identifier }
+        }
+
+        let peopleReq = VNDetectHumanRectanglesRequest { req, _ in
+            peopleCount = req.results?.count ?? 0
+        }
+
+        do {
+            try handler.perform([textReq, classifyReq, peopleReq])
+        } catch {
+            onToken("Analysis failed: \(error.localizedDescription)")
+            return
+        }
+
+        var parts: [String] = []
+
+        switch peopleCount {
+        case 0: break
+        case 1: parts.append("One person visible.")
+        default: parts.append("\(peopleCount) people visible.")
+        }
+
+        let scene = sceneLabels
+            .map { $0.replacingOccurrences(of: "_", with: " ") }
+            .prefix(3)
+            .joined(separator: ", ")
+        if !scene.isEmpty {
+            parts.append("Scene: \(scene).")
+        }
+
+        let texts = recognizedTexts.prefix(6).joined(separator: " · ")
+        if !texts.isEmpty {
+            parts.append("Visible text: \(texts).")
+        }
+
+        if parts.isEmpty {
+            parts.append("No clear details detected. Try moving closer or improving the lighting.")
+        }
+
+        onToken(parts.joined(separator: " "))
     }
 
     // MARK: TTS
@@ -256,26 +328,14 @@ final class InferenceManager {
     // MARK: Private helpers
 
     private func getConversation(mode: ChatMode, engine: LMEngine) async throws -> LMConversation {
-        switch mode {
-        case .survival:
-            if let c = survivalConversation, c.isActive { return c }
-            let c = try await engine.createConversation(
-                configuration: ConversationConfiguration()
-                    .systemPrompt(Self.survivalPrompt)
-                    .maxOutputTokens(512)
-            )
-            survivalConversation = c
-            return c
-        case .emergency:
-            if let c = emergencyConversation, c.isActive { return c }
-            let c = try await engine.createConversation(
-                configuration: ConversationConfiguration()
-                    .systemPrompt(Self.emergencyPrompt)
-                    .maxOutputTokens(128)
-            )
-            emergencyConversation = c
-            return c
-        }
+        if let c = survivalConversation, c.isActive { return c }
+        let c = try await engine.createConversation(
+            configuration: ConversationConfiguration()
+                .systemPrompt(Self.survivalPrompt)
+                .maxOutputTokens(512)
+        )
+        survivalConversation = c
+        return c
     }
 }
 

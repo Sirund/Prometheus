@@ -35,5 +35,9 @@
     </array>
     <key>UIViewControllerBasedStatusBarAppearance</key>
     <false/>
+    <key>NSCameraUsageDescription</key>
+    <string>Prometheus uses your camera to describe surroundings in Vision Accessibility mode.</string>
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>Prometheus uses your location to assess earthquake danger level and proximity.</string>
 </dict>
 </plist>
