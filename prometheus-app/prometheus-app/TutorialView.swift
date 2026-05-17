@@ -117,6 +117,7 @@ struct TutorialOverlay: View {
     let steps: [TutorialStep]
     let onDismiss: () -> Void
 
+    @AppStorage("isDarkMode") private var isDarkMode = false
     @State private var page = 0
 
     var body: some View {
@@ -196,11 +197,12 @@ struct TutorialOverlay: View {
                 .padding(.horizontal, 20)
                 .padding(.bottom, 20)
             }
-            .background(Color.white)
+            .background(Color(UIColor.systemBackground))
             .clipShape(RoundedRectangle(cornerRadius: 24))
             .overlay(RoundedRectangle(cornerRadius: 24).stroke(Color.prometheusBlue.opacity(0.25), lineWidth: 1))
             .shadow(color: .black.opacity(0.4), radius: 24, x: 0, y: 8)
             .padding(.horizontal, 24)
+            .preferredColorScheme(isDarkMode ? .dark : .light)
         }
     }
 }
