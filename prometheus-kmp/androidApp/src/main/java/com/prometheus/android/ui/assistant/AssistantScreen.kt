@@ -512,7 +512,7 @@ fun AssistantScreen(
                         modifier = Modifier.fillMaxWidth().height(56.dp)
                     ) {
                         Text("\uD83D\uDCF7  Take Photo",
-                            color = Color.White,
+                            color = p.textPrimary,
                             fontWeight = FontWeight.Bold)
                     }
                     Spacer(Modifier.height(8.dp))
@@ -575,7 +575,7 @@ fun AssistantScreen(
                         modifier = Modifier.fillMaxWidth().height(56.dp)
                     ) {
                         Text("\uD83D\uDDBC\uFE0F  Gallery",
-                            color = Color.White,
+                            color = p.textPrimary,
                             fontWeight = FontWeight.Bold)
                     }
                 }

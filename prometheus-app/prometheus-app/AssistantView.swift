@@ -106,10 +106,10 @@ struct AssistantView: View {
 
                 VStack(spacing: 6) {
                     Text("GEMMA 4 REQUIRED")
-                        .font(.headline.bold().monospaced())
+                        .inter(17, weight: .bold)
                         .foregroundColor(.primary)
                     Text("Gemma 4 E2B  ·  ~2.4 GB  ·  on-device  ·  offline")
-                        .font(.caption.monospaced())
+                        .inter(12)
                         .foregroundColor(.secondary)
                 }
 
@@ -129,7 +129,7 @@ struct AssistantView: View {
                     HStack(spacing: 8) {
                         Image(systemName: "arrow.down.circle.fill")
                         Text("DOWNLOAD GEMMA 4  (~2.4 GB)")
-                            .font(.caption.bold().monospaced())
+                            .inter(12, weight: .bold)
                     }
                     .frame(maxWidth: .infinity)
                     .padding()
@@ -141,7 +141,7 @@ struct AssistantView: View {
                 .buttonStyle(.plain)
 
                 Text("Requires a Wi-Fi connection. Model is stored on-device and never leaves the phone.")
-                    .font(.caption2.monospaced())
+                    .inter(11)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
                     .lineSpacing(4)
@@ -165,7 +165,7 @@ struct AssistantView: View {
                 .symbolEffect(.pulse)
 
             Text("DOWNLOADING GEMMA 4")
-                .font(.caption.bold().monospaced())
+                .inter(12, weight: .bold)
                 .foregroundColor(.primary)
 
             VStack(spacing: 8) {
@@ -176,17 +176,17 @@ struct AssistantView: View {
                 let dl = inference.downloader.downloadedBytes / 1_000_000
                 let total = (inference.downloader.totalBytes ?? 2_583_085_056) / 1_000_000
                 Text("\(dl) MB  /  \(total) MB")
-                    .font(.caption.monospaced())
+                    .inter(12)
                     .foregroundColor(.secondary)
 
                 Text(String(format: "%.0f%%", inference.downloader.progress * 100))
-                    .font(.caption.bold().monospaced())
+                    .inter(12, weight: .bold)
                     .foregroundColor(.prometheusBlue)
             }
 
             Button(action: { inference.cancelDownload() }) {
                 Text("CANCEL")
-                    .font(.caption.bold().monospaced())
+                    .inter(12, weight: .bold)
                     .padding(.horizontal, 20)
                     .padding(.vertical, 8)
                     .foregroundColor(.red)
@@ -208,10 +208,10 @@ struct AssistantView: View {
                 .tint(.prometheusBlue)
                 .scaleEffect(1.4)
             Text("LOADING MODEL")
-                .font(.caption.bold().monospaced())
+                .inter(12, weight: .bold)
                 .foregroundColor(.primary)
             Text("Loading Gemma 4 into memory — this may take a moment.")
-                .font(.caption.monospaced())
+                .inter(12)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
@@ -229,17 +229,17 @@ struct AssistantView: View {
                 .font(.system(size: 48))
                 .foregroundColor(.orange)
             Text(isSimulatorError ? "SIMULATOR" : "ERROR")
-                .font(.caption.bold().monospaced())
+                .inter(12, weight: .bold)
                 .foregroundColor(.primary)
             Text(message)
-                .font(.caption.monospaced())
+                .inter(12)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
             if !isSimulatorError {
                 Button(action: { Task { await inference.retryLoad() } }) {
                     Text("RETRY")
-                        .font(.caption.bold().monospaced())
+                        .inter(12, weight: .bold)
                         .padding(.horizontal, 24)
                         .padding(.vertical, 10)
                         .background(Color.prometheusBlue.opacity(0.15))
@@ -250,7 +250,7 @@ struct AssistantView: View {
                 .buttonStyle(.plain)
                 Button(action: { Task { await inference.redownloadAndLoad() } }) {
                     Text("RE-DOWNLOAD MODEL")
-                        .font(.caption.bold().monospaced())
+                        .inter(12, weight: .bold)
                         .padding(.horizontal, 24)
                         .padding(.vertical, 10)
                         .background(Color.cardBackground)
@@ -323,7 +323,7 @@ struct AssistantView: View {
                 .font(.system(size: 40))
                 .foregroundColor(.prometheusBlue.opacity(0.3))
             Text("Ask anything about survival")
-                .font(.caption.monospaced())
+                .inter(12)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
             Spacer(minLength: 60)
@@ -339,7 +339,7 @@ struct AssistantView: View {
                 axis: .vertical
             )
             .textFieldStyle(.plain)
-            .font(.caption.monospaced())
+            .inter(12)
             .lineLimit(1...4)
             .padding(12)
             .focused($inputFocused)
@@ -403,7 +403,7 @@ struct AssistantView: View {
                     HStack(spacing: 4) {
                         Circle().fill(Color.green).frame(width: 6, height: 6)
                         Text("GEMMA 4 · READY")
-                            .font(.caption2.monospaced())
+                            .inter(11)
                             .foregroundColor(.secondary)
                     }
                     Button(action: { createNewConversation() }) {
@@ -427,7 +427,7 @@ struct AssistantView: View {
                         HStack {
                             Image(systemName: "plus")
                             Text("New conversation")
-                                .font(.caption.bold().monospaced())
+                                .inter(12, weight: .bold)
                         }
                         .frame(maxWidth: .infinity)
                         .padding(12)
@@ -446,7 +446,7 @@ struct AssistantView: View {
                             let isActive = index == activeIndex
                             HStack {
                                 Text(String(title))
-                                    .font(.caption.monospaced())
+                                    .inter(12)
                                     .foregroundColor(isActive ? .prometheusBlue : .primary)
                                     .fontWeight(isActive ? .bold : .regular)
                                 Spacer()
@@ -540,12 +540,12 @@ private struct MessageBubble: View {
 
             VStack(alignment: isUser ? .trailing : .leading, spacing: 4) {
                 Text(isUser ? "YOU" : "GEMMA 4")
-                    .font(.caption2.bold().monospaced())
+                    .inter(11, weight: .bold)
                     .foregroundColor(isUser ? .prometheusBlue : .gray)
                     .padding(.horizontal, 4)
 
                 Text(message.text + (message.isStreaming ? "▋" : ""))
-                    .font(.caption.monospaced())
+                    .inter(12)
                     .foregroundColor(.primary)
                     .textSelection(.enabled)
                     .padding(12)
@@ -560,7 +560,7 @@ private struct MessageBubble: View {
                     Button(action: onSpeak) {
                         HStack(spacing: 4) {
                             Image(systemName: "waveform").font(.caption2)
-                            Text("SPEAK").font(.caption2.bold().monospaced())
+                            Text("SPEAK").inter(11, weight: .bold)
                         }
                         .foregroundColor(.prometheusBlue.opacity(0.7))
                     }
@@ -583,7 +583,7 @@ private struct ModeChipButton: View {
     var body: some View {
         Button(action: action) {
             Text(label)
-                .font(.caption2.bold().monospaced())
+                .inter(11, weight: .bold)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 5)
                 .background(active ? Color.prometheusBlue.opacity(0.2) : Color.clear)
@@ -606,7 +606,7 @@ private struct DownloadFeatureRow: View {
                 .foregroundColor(.prometheusBlue.opacity(0.7))
                 .frame(width: 16)
             Text(text)
-                .font(.caption.monospaced())
+                .inter(12)
                 .foregroundColor(.secondary)
         }
     }

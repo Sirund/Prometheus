@@ -131,16 +131,16 @@ struct TutorialOverlay: View {
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("HOW TO USE")
-                            .font(.caption2.bold().monospaced())
+                            .inter(11, weight: .bold)
                             .foregroundColor(.prometheusBlue.opacity(0.7))
                         Text(tabName.uppercased())
-                            .font(.caption.bold().monospaced())
+                            .inter(12, weight: .bold)
                             .foregroundColor(.prometheusBlue)
                     }
                     Spacer()
                     Button(action: onDismiss) {
                         Text("SKIP")
-                            .font(.caption.bold().monospaced())
+                            .inter(12, weight: .bold)
                             .padding(.horizontal, 12)
                             .padding(.vertical, 5)
                             .background(Color.prometheusBlue.opacity(0.08))
@@ -185,7 +185,7 @@ struct TutorialOverlay: View {
                     }
                 }) {
                     Text(page < steps.count - 1 ? "NEXT →" : "GOT IT")
-                        .font(.caption.bold().monospaced())
+                        .inter(12, weight: .bold)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
                         .background(Color.prometheusBlue.opacity(0.15))
@@ -230,16 +230,16 @@ private struct TutorialStepCard: View {
 
             VStack(spacing: 8) {
                 Text("\(stepNumber) / \(total)")
-                    .font(.caption2.bold().monospaced())
+                    .inter(11, weight: .bold)
                     .foregroundColor(.prometheusBlue.opacity(0.5))
 
                 Text(step.title)
-                    .font(.subheadline.bold().monospaced())
+                    .inter(15, weight: .bold)
                     .foregroundColor(.primary)
                     .multilineTextAlignment(.center)
 
                 Text(step.description)
-                    .font(.caption.monospaced())
+                    .inter(12)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
                     .lineSpacing(4)

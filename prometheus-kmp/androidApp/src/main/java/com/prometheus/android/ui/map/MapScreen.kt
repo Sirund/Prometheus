@@ -299,12 +299,14 @@ fun MapScreen(
             Box(
                 modifier = Modifier.padding(horizontal = 16.dp)
             ) {
-                Column(modifier = Modifier.animateContentSize()) {
+                Column {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .background(p.surface)
-                            .clickable { showDetails = !showDetails }
+                            .clickable {
+                                showDetails = !showDetails
+                            }
                             .padding(horizontal = 20.dp, vertical = 14.dp),
                         contentAlignment = Alignment.Center
                     ) {
@@ -327,13 +329,13 @@ fun MapScreen(
                     AnimatedVisibility(
                         visible = showDetails,
                         enter = slideInVertically(
-                            initialOffsetY = { it },
-                            animationSpec = tween(300, easing = FastOutSlowInEasing)
-                        ) + fadeIn(animationSpec = tween(300)),
+                            initialOffsetY = { -it },
+                            animationSpec = tween(350, easing = FastOutSlowInEasing)
+                        ) + fadeIn(animationSpec = tween(350)),
                         exit = slideOutVertically(
-                            targetOffsetY = { it },
-                            animationSpec = tween(300, easing = FastOutSlowInEasing)
-                        ) + fadeOut(animationSpec = tween(300))
+                            targetOffsetY = { -it },
+                            animationSpec = tween(250, easing = FastOutSlowInEasing)
+                        ) + fadeOut(animationSpec = tween(250))
                     ) {
                         RoutingDetailsCard(
                             event = event,
