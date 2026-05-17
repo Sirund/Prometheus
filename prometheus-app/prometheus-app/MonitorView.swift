@@ -2,11 +2,12 @@ import SwiftUI
 
 struct MonitorView: View {
     @Environment(BMKGPollingService.self) private var pollingService
+    @AppStorage("isDarkMode") private var isDarkMode = false
 
     var body: some View {
         NavigationStack {
             ZStack {
-                Color.darkBackground.ignoresSafeArea()
+                Color.appBackground.ignoresSafeArea()
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: 20) {
@@ -40,12 +41,12 @@ struct MonitorView: View {
                         if let latest = pollingService.latestEvent {
                             Text(latest)
                                 .font(.caption.monospaced())
-                                .foregroundColor(.white)
+                                .foregroundColor(.primary)
                                 .padding(.horizontal, 4)
                         } else {
                             Text("No data loaded. Tap refresh to poll BMKG.")
                                 .font(.caption.monospaced())
-                                .foregroundColor(.gray)
+                                .foregroundColor(.secondary)
                                 .padding(.horizontal, 4)
                         }
 
@@ -72,6 +73,13 @@ struct MonitorView: View {
             .toolbarBackground(Color.cardBackground, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
             .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button(action: { isDarkMode.toggle() }) {
+                        Image(systemName: isDarkMode ? "sun.max" : "moon")
+                            .font(.caption)
+                            .foregroundColor(.prometheusBlue)
+                    }
+                }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Label("BMKG", systemImage: "checkmark.shield")
                         .font(.caption.monospaced())
@@ -153,7 +161,7 @@ struct BMKGEventCard: View {
                         .foregroundColor(.prometheusBlue)
                     Text(location)
                         .font(.caption.monospaced())
-                        .foregroundColor(.white)
+                        .foregroundColor(.primary)
                 }
                 Spacer()
                 VStack(alignment: .trailing, spacing: 2) {
@@ -167,7 +175,7 @@ struct BMKGEventCard: View {
                 Spacer()
                 Text(timestamp)
                     .font(.caption2.monospaced())
-                    .foregroundColor(.gray)
+                    .foregroundColor(.secondary)
             }
         }
         .padding()
@@ -183,8 +191,8 @@ struct EventField: View {
     let value: String
     var body: some View {
         VStack(alignment: .leading, spacing: 1) {
-            Text(label).font(.caption2.monospaced()).foregroundColor(.gray)
-            Text(value).font(.caption.bold().monospaced()).foregroundColor(.white)
+            Text(label).font(.caption2.monospaced()).foregroundColor(.secondary)
+            Text(value).font(.caption.bold().monospaced()).foregroundColor(.primary)
         }
     }
 }
@@ -232,7 +240,7 @@ struct AlarmIndicatorRow: View {
                 .frame(width: 16)
             Text(label)
                 .font(.caption2.monospaced())
-                .foregroundColor(.gray)
+                .foregroundColor(.secondary)
             Spacer()
             Text(status)
                 .font(.caption2.bold().monospaced())

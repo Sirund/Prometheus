@@ -85,20 +85,13 @@ struct VisionView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color.darkBackground.ignoresSafeArea()
+                Color.appBackground.ignoresSafeArea()
 
-                switch inference.modelState {
-                case .notDownloaded, .downloading, .loading:
-                    notReadyView
-                case .error(let msg):
-                    errorView(msg)
-                case .ready:
-                    VStack(spacing: 8) {
-                        cameraArea
-                        descriptionStrip
-                        infoCard
-                        captureButton
-                    }
+                VStack(spacing: 8) {
+                    cameraArea
+                    descriptionStrip
+                    infoCard
+                    captureButton
                 }
             }
             .navigationTitle("Vision Assist")
@@ -106,57 +99,17 @@ struct VisionView: View {
             .toolbarBackground(.visible, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    if case .ready = inference.modelState {
-                        HStack(spacing: 4) {
-                            Circle().fill(Color.green).frame(width: 6, height: 6)
-                            Text("VISION READY")
-                                .font(.caption2.monospaced())
-                                .foregroundColor(.gray)
-                        }
+                    HStack(spacing: 4) {
+                        Circle().fill(Color.green).frame(width: 6, height: 6)
+                        Text("VISION READY")
+                            .font(.caption2.monospaced())
+                            .foregroundColor(.secondary)
                     }
                 }
             }
         }
         .onAppear { camera.start() }
         .onDisappear { camera.stop() }
-    }
-
-    // MARK: - Model not ready
-
-    private var notReadyView: some View {
-        VStack(spacing: 16) {
-            Spacer()
-            Image(systemName: "brain.head.profile")
-                .font(.system(size: 48))
-                .foregroundColor(.prometheusBlue.opacity(0.4))
-            Text("MODEL NOT LOADED")
-                .font(.caption.bold().monospaced())
-                .foregroundColor(.white)
-            Text("Open the Survival Assistant tab to download and load Gemma 4 first. Vision uses the same model.")
-                .font(.caption.monospaced())
-                .foregroundColor(.gray)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 40)
-            Spacer()
-        }
-    }
-
-    private func errorView(_ message: String) -> some View {
-        VStack(spacing: 16) {
-            Spacer()
-            Image(systemName: "exclamationmark.triangle.fill")
-                .font(.system(size: 48))
-                .foregroundColor(.orange)
-            Text("MODEL ERROR")
-                .font(.caption.bold().monospaced())
-                .foregroundColor(.white)
-            Text(message)
-                .font(.caption.monospaced())
-                .foregroundColor(.gray)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 40)
-            Spacer()
-        }
     }
 
     // MARK: - Camera UI
@@ -206,7 +159,7 @@ struct VisionView: View {
                 .foregroundColor(.prometheusBlue.opacity(0.5))
             Text(description ?? "Point camera and tap Describe to hear surroundings")
                 .font(.caption.monospaced())
-                .foregroundColor(.gray)
+                .foregroundColor(.secondary)
                 .lineLimit(3)
             Spacer()
         }
@@ -221,9 +174,9 @@ struct VisionView: View {
             Text("VISION ACCESSIBILITY MODE")
                 .font(.caption2.bold().monospaced())
                 .foregroundColor(.prometheusBlue)
-            Text("Point the camera at surroundings, signage, or injuries. Gemma 4 describes what it sees in calm spoken language.")
+            Text("Point the camera at surroundings, signage, or injuries. On-device vision analysis detects people, scene type, and visible text — spoken aloud automatically.")
                 .font(.caption2.monospaced())
-                .foregroundColor(.gray)
+                .foregroundColor(.secondary)
                 .lineSpacing(4)
         }
         .padding()

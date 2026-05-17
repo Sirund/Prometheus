@@ -15,7 +15,7 @@ struct AssistantView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color.darkBackground.ignoresSafeArea()
+                Color.appBackground.ignoresSafeArea()
                 stateContent
             }
             .navigationTitle("Survival Assistant")
@@ -53,10 +53,10 @@ struct AssistantView: View {
                 VStack(spacing: 6) {
                     Text("GEMMA 4 REQUIRED")
                         .font(.headline.bold().monospaced())
-                        .foregroundColor(.white)
+                        .foregroundColor(.primary)
                     Text("Gemma 4 E2B  ·  ~2.4 GB  ·  on-device  ·  offline")
                         .font(.caption.monospaced())
-                        .foregroundColor(.gray)
+                        .foregroundColor(.secondary)
                 }
 
                 VStack(alignment: .leading, spacing: 10) {
@@ -88,7 +88,7 @@ struct AssistantView: View {
 
                 Text("Requires a Wi-Fi connection. Model is stored on-device and never leaves the phone.")
                     .font(.caption2.monospaced())
-                    .foregroundColor(.gray)
+                    .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
                     .lineSpacing(4)
 
@@ -112,7 +112,7 @@ struct AssistantView: View {
 
             Text("DOWNLOADING GEMMA 4")
                 .font(.caption.bold().monospaced())
-                .foregroundColor(.white)
+                .foregroundColor(.primary)
 
             VStack(spacing: 8) {
                 ProgressView(value: inference.downloader.progress)
@@ -123,7 +123,7 @@ struct AssistantView: View {
                 let total = (inference.downloader.totalBytes ?? 2_583_085_056) / 1_000_000
                 Text("\(dl) MB  /  \(total) MB")
                     .font(.caption.monospaced())
-                    .foregroundColor(.gray)
+                    .foregroundColor(.secondary)
 
                 Text(String(format: "%.0f%%", inference.downloader.progress * 100))
                     .font(.caption.bold().monospaced())
@@ -155,10 +155,10 @@ struct AssistantView: View {
                 .scaleEffect(1.4)
             Text("LOADING MODEL")
                 .font(.caption.bold().monospaced())
-                .foregroundColor(.white)
+                .foregroundColor(.primary)
             Text("Loading Gemma 4 into memory — this may take a moment.")
                 .font(.caption.monospaced())
-                .foregroundColor(.gray)
+                .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
             Spacer()
@@ -176,10 +176,10 @@ struct AssistantView: View {
                 .foregroundColor(.orange)
             Text(isSimulatorError ? "SIMULATOR" : "ERROR")
                 .font(.caption.bold().monospaced())
-                .foregroundColor(.white)
+                .foregroundColor(.primary)
             Text(message)
                 .font(.caption.monospaced())
-                .foregroundColor(.gray)
+                .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
             if !isSimulatorError {
@@ -202,7 +202,7 @@ struct AssistantView: View {
                         .background(Color.cardBackground)
                         .clipShape(RoundedRectangle(cornerRadius: 10))
                         .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.gray.opacity(0.3), lineWidth: 1))
-                        .foregroundColor(.gray)
+                        .foregroundColor(.secondary)
                 }
                 .buttonStyle(.plain)
             }
@@ -274,7 +274,7 @@ struct AssistantView: View {
                 .foregroundColor(.prometheusBlue.opacity(0.3))
             Text(selectedMode == .survival ? "Ask anything about survival" : "Describe a hazard for an emergency briefing")
                 .font(.caption.monospaced())
-                .foregroundColor(.gray)
+                .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
             Spacer(minLength: 60)
         }
@@ -322,7 +322,7 @@ struct AssistantView: View {
         .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.prometheusBlue.opacity(0.3), lineWidth: 1))
         .padding(.horizontal)
         .padding(.vertical, 8)
-        .background(Color.darkBackground)
+        .background(Color.appBackground)
     }
 
     // MARK: - Toolbar
@@ -335,7 +335,7 @@ struct AssistantView: View {
                     Circle().fill(Color.green).frame(width: 6, height: 6)
                     Text("GEMMA 4 · READY")
                         .font(.caption2.monospaced())
-                        .foregroundColor(.gray)
+                        .foregroundColor(.secondary)
                 }
             }
         }
@@ -381,7 +381,7 @@ private struct MessageBubble: View {
 
                 Text(message.text + (message.isStreaming ? "▋" : ""))
                     .font(.caption.monospaced())
-                    .foregroundColor(.white)
+                    .foregroundColor(.primary)
                     .textSelection(.enabled)
                     .padding(12)
                     .background(isUser ? Color.prometheusBlue.opacity(0.18) : Color.cardBackground)
@@ -442,7 +442,7 @@ private struct DownloadFeatureRow: View {
                 .frame(width: 16)
             Text(text)
                 .font(.caption.monospaced())
-                .foregroundColor(.gray)
+                .foregroundColor(.secondary)
         }
     }
 }

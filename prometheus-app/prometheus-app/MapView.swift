@@ -9,7 +9,7 @@ struct MapView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color.darkBackground.ignoresSafeArea()
+                Color.appBackground.ignoresSafeArea()
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: 20) {
@@ -69,14 +69,14 @@ private struct MapPlaceholder: View {
                     .foregroundColor(.prometheusBlue.opacity(0.35))
                 Text("Google Maps SDK")
                     .font(.caption.bold().monospaced())
-                    .foregroundColor(.white)
+                    .foregroundColor(.primary)
                 VStack(spacing: 4) {
                     Text("Epicentre pin  ·  safe-radius overlay")
                         .font(.caption2.monospaced())
-                        .foregroundColor(.gray)
+                        .foregroundColor(.secondary)
                     Text("Route appears when a dangerous event is classified")
                         .font(.caption2.monospaced())
-                        .foregroundColor(.gray)
+                        .foregroundColor(.secondary)
                 }
             }
             .padding(32)
@@ -118,7 +118,7 @@ private struct EvacuationInfoNote: View {
                 .foregroundColor(.prometheusBlue)
             Text("On a dangerous classification, the BMKG epicentre is pinned on the map. The shortest driving or walking route from your location to outside the hazard radius is computed via Google Maps Directions API. Gemma 4 delivers a spoken briefing with direction and what to avoid.")
                 .font(.caption2.monospaced())
-                .foregroundColor(.gray)
+                .foregroundColor(.secondary)
                 .lineSpacing(4)
         }
         .padding()
@@ -136,11 +136,11 @@ struct RouteInfoRow: View {
         HStack(alignment: .top) {
             Text(label)
                 .font(.caption2.monospaced())
-                .foregroundColor(.gray)
+                .foregroundColor(.secondary)
                 .frame(width: 128, alignment: .leading)
             Text(value)
                 .font(.caption.monospaced())
-                .foregroundColor(.white)
+                .foregroundColor(.primary)
             Spacer()
         }
     }

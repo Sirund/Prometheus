@@ -9,6 +9,7 @@ import SwiftUI
 
 struct ContentView: View {
     @State private var inference = InferenceManager()
+    @AppStorage("isDarkMode") private var isDarkMode = false
 
     var body: some View {
         TabView {
@@ -26,7 +27,6 @@ struct ContentView: View {
         }
         .environment(inference)
         .tint(.prometheusBlue)
-        .preferredColorScheme(.dark)
-        .background(Color.darkBackground.ignoresSafeArea())
+        .preferredColorScheme(isDarkMode ? .dark : .light)
     }
 }

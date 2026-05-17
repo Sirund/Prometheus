@@ -7,6 +7,8 @@ import Foundation
 import LiteRTLM
 import LiteRTLMDownloader
 import AVFoundation
+import Vision
+import UIKit
 
 // MARK: - Chat types
 
@@ -262,30 +264,65 @@ final class InferenceManager {
     // MARK: Vision
 
     func describeImage(_ data: Data, onToken: @escaping (String) -> Void) async {
-        guard let engine else { return }
-        guard hasVisionBackend else {
-            onToken("Vision is not supported by this model. The current model (Gemma 4 E2B) is text-only. A multimodal model variant is required for image descriptions.")
+        guard let cgImage = UIImage(data: data)?.cgImage else {
+            onToken("Could not read image.")
             return
         }
-        do {
-            if visionConversation == nil || visionConversation?.isActive == false {
-                visionConversation = try await engine.createConversation(
-                    configuration: ConversationConfiguration()
-                        .systemPrompt(Self.visionPrompt)
-                        .maxOutputTokens(150)
-                        .maxImageDimension(512)
-                )
-            }
-            guard let conv = visionConversation else { return }
-            var full = ""
-            let stream = try await conv.sendStream("Describe what you see.", images: [data])
-            for try await token in stream {
-                full += token
-                onToken(full)
-            }
-        } catch {
-            onToken("Vision failed: \(error.localizedDescription)")
+
+        let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
+        var recognizedTexts: [String] = []
+        var sceneLabels: [String] = []
+        var peopleCount = 0
+
+        let textReq = VNRecognizeTextRequest { req, _ in
+            guard let obs = req.results as? [VNRecognizedTextObservation] else { return }
+            recognizedTexts = obs.compactMap { $0.topCandidates(1).first?.string }
         }
+        textReq.recognitionLevel = .accurate
+        textReq.usesLanguageCorrection = true
+
+        let classifyReq = VNClassifyImageRequest { req, _ in
+            guard let obs = req.results as? [VNClassificationObservation] else { return }
+            sceneLabels = obs.filter { $0.confidence > 0.4 }.prefix(4).map { $0.identifier }
+        }
+
+        let peopleReq = VNDetectHumanRectanglesRequest { req, _ in
+            peopleCount = req.results?.count ?? 0
+        }
+
+        do {
+            try handler.perform([textReq, classifyReq, peopleReq])
+        } catch {
+            onToken("Analysis failed: \(error.localizedDescription)")
+            return
+        }
+
+        var parts: [String] = []
+
+        switch peopleCount {
+        case 0: break
+        case 1: parts.append("One person visible.")
+        default: parts.append("\(peopleCount) people visible.")
+        }
+
+        let scene = sceneLabels
+            .map { $0.replacingOccurrences(of: "_", with: " ") }
+            .prefix(3)
+            .joined(separator: ", ")
+        if !scene.isEmpty {
+            parts.append("Scene: \(scene).")
+        }
+
+        let texts = recognizedTexts.prefix(6).joined(separator: " · ")
+        if !texts.isEmpty {
+            parts.append("Visible text: \(texts).")
+        }
+
+        if parts.isEmpty {
+            parts.append("No clear details detected. Try moving closer or improving the lighting.")
+        }
+
+        onToken(parts.joined(separator: " "))
     }
 
     // MARK: TTS
