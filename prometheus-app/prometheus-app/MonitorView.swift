@@ -80,7 +80,8 @@ struct MonitorView: View {
                 }
                 .scrollContentBackground(.hidden)
             }
-            .navigationTitle("Prometheus")
+            .navigationTitle("Monitor")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(Color.cardBackground, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
             .toolbar {

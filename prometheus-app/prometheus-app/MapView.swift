@@ -78,41 +78,7 @@ struct MapView: View {
                     .padding(.vertical, 12)
                     .tint(.prometheusBlue)
 
-                    HStack(spacing: 8) {
-                        Button(action: { showEvacuationGuide = true }) {
-                            HStack(spacing: 6) {
-                                Image(systemName: routeLoading ? "hourglass.circle.fill" : "arrow.triangle.turn.up.right.circle.fill")
-                                    .font(.body)
-                                Text(isDangerous ? "EVACUATE NOW" : routeLoading ? "COMPUTING..." : "VIEW ROUTE")
-                                    .font(.caption.bold().monospaced())
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(isDangerous ? Color.red.opacity(0.15) : Color.prometheusBlue.opacity(0.12))
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                            .overlay(RoundedRectangle(cornerRadius: 12).stroke(
-                                isDangerous ? Color.red.opacity(0.6) : Color.prometheusBlue.opacity(0.4),
-                                lineWidth: isDangerous ? 2 : 1
-                            ))
-                            .foregroundColor(isDangerous ? .red : .prometheusBlue)
-                        }
-                        .buttonStyle(.plain)
-
-                        Button(action: openInMaps) {
-                            HStack(spacing: 6) {
-                                Image(systemName: "map.fill").font(.body)
-                                Text("NAVIGATE").font(.caption.bold().monospaced())
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.green.opacity(evacuationRoute != nil ? 0.15 : 0.06))
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.green.opacity(evacuationRoute != nil ? 0.6 : 0.2), lineWidth: 1))
-                            .foregroundColor(evacuationRoute != nil ? .green : .gray)
-                        }
-                        .buttonStyle(.plain)
-                        .disabled(evacuationRoute == nil)
-                    }
+                    actionButtonRow
                     .padding(.horizontal, 16)
                     .padding(.bottom, 8)
 
@@ -123,7 +89,8 @@ struct MapView: View {
                     Spacer(minLength: 0)
                 }
             }
-            .navigationTitle("Evacuation")
+            .navigationTitle("Evacuation Route")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(Color.cardBackground, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
             .toolbar {
@@ -168,6 +135,46 @@ struct MapView: View {
     }
 
     @available(iOS 17.0, *)
+    private var actionButtonRow: some View {
+        let routeIcon = routeLoading ? "hourglass.circle.fill" : "arrow.triangle.turn.up.right.circle.fill"
+        let routeLabel: String = isDangerous ? "EVACUATE NOW" : routeLoading ? "COMPUTING..." : "VIEW ROUTE"
+        let routeColor: Color = isDangerous ? .red : .prometheusBlue
+        let routeBg: Color = isDangerous ? Color.red.opacity(0.15) : Color.prometheusBlue.opacity(0.12)
+        let routeBorder: Color = isDangerous ? Color.red.opacity(0.6) : Color.prometheusBlue.opacity(0.4)
+        let routeBorderWidth: CGFloat = isDangerous ? 2 : 1
+        let hasRoute = evacuationRoute != nil
+        return HStack(spacing: 8) {
+            Button(action: { showEvacuationGuide = true }) {
+                HStack(spacing: 6) {
+                    Image(systemName: routeIcon).font(.body)
+                    Text(routeLabel).font(.caption.bold().monospaced())
+                }
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(routeBg)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .overlay(RoundedRectangle(cornerRadius: 12).stroke(routeBorder, lineWidth: routeBorderWidth))
+                .foregroundColor(routeColor)
+            }
+            .buttonStyle(.plain)
+
+            Button(action: openInMaps) {
+                HStack(spacing: 6) {
+                    Image(systemName: "map.fill").font(.body)
+                    Text("NAVIGATE").font(.caption.bold().monospaced())
+                }
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(Color.green.opacity(hasRoute ? 0.15 : 0.06))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.green.opacity(hasRoute ? 0.6 : 0.2), lineWidth: 1))
+                .foregroundColor(hasRoute ? .green : .gray)
+            }
+            .buttonStyle(.plain)
+            .disabled(!hasRoute)
+        }
+    }
+
     private var mapContent: some View {
         Map(position: $mapPosition) {
             if let epi = epicenter {
