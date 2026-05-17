@@ -20,7 +20,7 @@ struct ContentView: View {
                 .tabItem { Label("EVACUATE", systemImage: "map") }
 
             AssistantView()
-                .tabItem { Label("SURVIVAL", systemImage: "bubble.left.and.bubble.right") }
+                .tabItem { Label("ASSISTANT", systemImage: "bubble.left.and.bubble.right") }
         }
         .environment(inference)
         .tint(.prometheusBlue)

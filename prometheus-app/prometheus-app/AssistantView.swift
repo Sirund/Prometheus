@@ -33,6 +33,7 @@ private func loadConversations() -> [Conversation] {
 
 struct AssistantView: View {
     @Environment(InferenceManager.self) private var inference
+    @AppStorage("isDarkMode") private var isDarkMode = false
     @State private var query = ""
     @State private var selectedMode: ChatMode = .survival
     @FocusState private var inputFocused: Bool
@@ -367,9 +368,16 @@ struct AssistantView: View {
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
         ToolbarItem(placement: .navigationBarLeading) {
-            Button(action: { showSidebar.toggle() }) {
-                Image(systemName: "line.3.horizontal")
-                    .foregroundColor(.prometheusBlue)
+            HStack(spacing: 12) {
+                Button(action: { showSidebar.toggle() }) {
+                    Image(systemName: "line.3.horizontal")
+                        .foregroundColor(.prometheusBlue)
+                }
+                Button(action: { isDarkMode.toggle() }) {
+                    Image(systemName: isDarkMode ? "sun.max" : "moon")
+                        .font(.caption)
+                        .foregroundColor(.prometheusBlue)
+                }
             }
         }
         ToolbarItem(placement: .navigationBarTrailing) {
