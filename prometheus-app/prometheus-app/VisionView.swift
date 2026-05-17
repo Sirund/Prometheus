@@ -36,15 +36,16 @@ extension CameraService: AVCapturePhotoCaptureDelegate {
     func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
         guard error == nil,
               let data = photo.fileDataRepresentation(),
-              let provider = CGDataProvider(data: data as CFData),
-              let cgImage = CGImage(jpegDataProviderSource: provider, decode: nil,
-                                    shouldInterpolate: false, intent: .defaultIntent)
+              let uiImage = UIImage(data: data)
         else {
             captureContinuation?.resume(returning: nil)
             captureContinuation = nil
             return
         }
-        captureContinuation?.resume(returning: cgImage)
+        // Draw into a renderer so EXIF orientation is baked into the CGImage.
+        let renderer = UIGraphicsImageRenderer(size: uiImage.size)
+        let normalized = renderer.image { _ in uiImage.draw(at: .zero) }
+        captureContinuation?.resume(returning: normalized.cgImage)
         captureContinuation = nil
     }
 }
@@ -55,18 +56,19 @@ extension CameraService: AVCapturePhotoCaptureDelegate {
 struct CameraPreviewView: UIViewRepresentable {
     let session: AVCaptureSession
 
-    func makeUIView(context: Context) -> UIView {
-        let view = UIView(frame: .zero)
+    func makeUIView(context: Context) -> PreviewUIView {
+        let view = PreviewUIView()
         view.backgroundColor = .black
-        let layer = AVCaptureVideoPreviewLayer(session: session)
-        layer.videoGravity = .resizeAspectFill
-        view.layer.addSublayer(layer)
+        view.previewLayer.session = session
+        view.previewLayer.videoGravity = .resizeAspectFill
         return view
     }
 
-    func updateUIView(_ uiView: UIView, context: Context) {
-        guard let layer = uiView.layer.sublayers?.first as? AVCaptureVideoPreviewLayer else { return }
-        layer.frame = uiView.bounds
+    func updateUIView(_ uiView: PreviewUIView, context: Context) {}
+
+    class PreviewUIView: UIView {
+        override class var layerClass: AnyClass { AVCaptureVideoPreviewLayer.self }
+        var previewLayer: AVCaptureVideoPreviewLayer { layer as! AVCaptureVideoPreviewLayer }
     }
 }
 #endif

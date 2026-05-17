@@ -33,6 +33,15 @@ final class BMKGPollingService {
     var lastChecked: String?
     var dangerLevel: Int = 0
 
+    var injectionEnabled = false
+    var injectionIp = ""
+    var injectionPort = 8080
+
+    var currentLocation: (lat: Double, lon: Double)? {
+        guard let lat = userLat, let lon = userLon else { return nil }
+        return (lat, lon)
+    }
+
     init() {
         locationDelegate.onLocation = { [weak self] lat, lon in
             Task { @MainActor [weak self] in
@@ -69,7 +78,10 @@ final class BMKGPollingService {
 
         Task {
             do {
-                let url = URL(string: "https://data.bmkg.go.id/DataMKG/TEWS/autogempa.json")!
+                let urlString = injectionEnabled && !injectionIp.isEmpty
+                    ? "http://\(injectionIp):\(injectionPort)/autogempa.json"
+                    : "https://data.bmkg.go.id/DataMKG/TEWS/autogempa.json"
+                guard let url = URL(string: urlString) else { return }
                 let (data, _) = try await URLSession.shared.data(from: url)
                 let decoded = try JSONDecoder().decode(BMKGResponse.self, from: data)
                 if let latest = decoded.events.first {

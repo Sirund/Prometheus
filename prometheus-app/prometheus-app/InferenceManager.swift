@@ -17,13 +17,13 @@ enum ChatMode: Equatable {
     case emergency
 }
 
-struct ChatMessage: Identifiable {
-    let id = UUID()
+struct ChatMessage: Identifiable, Codable {
+    var id = UUID()
     let role: Role
     var text: String
     var isStreaming: Bool = false
 
-    enum Role { case user, assistant }
+    enum Role: String, Codable { case user, assistant }
 }
 
 // MARK: - InferenceManager
@@ -247,6 +247,10 @@ final class InferenceManager {
         case .survival: survivalConversation?.cancel()
         case .emergency: emergencyConversation?.cancel()
         }
+    }
+
+    func restoreMessages(_ messages: [ChatMessage]) {
+        self.messages = messages.map { var m = $0; m.isStreaming = false; return m }
     }
 
     func clearHistory(mode: ChatMode) {

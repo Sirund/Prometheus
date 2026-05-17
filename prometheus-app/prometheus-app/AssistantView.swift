@@ -6,11 +6,39 @@
 import SwiftUI
 import LiteRTLMDownloader
 
+// MARK: - Conversation model
+
+struct Conversation: Identifiable, Codable {
+    var id = UUID()
+    var messages: [ChatMessage]
+}
+
+private let conversationsKey = "prometheus_conversations"
+
+private func saveConversations(_ conversations: [Conversation]) {
+    if let data = try? JSONEncoder().encode(conversations) {
+        UserDefaults.standard.set(data, forKey: conversationsKey)
+    }
+}
+
+private func loadConversations() -> [Conversation] {
+    guard let data = UserDefaults.standard.data(forKey: conversationsKey),
+          let decoded = try? JSONDecoder().decode([Conversation].self, from: data),
+          !decoded.isEmpty
+    else { return [Conversation(messages: [])] }
+    return decoded
+}
+
+// MARK: - View
+
 struct AssistantView: View {
     @Environment(InferenceManager.self) private var inference
     @State private var query = ""
     @State private var selectedMode: ChatMode = .survival
     @FocusState private var inputFocused: Bool
+    @State private var conversations: [Conversation] = loadConversations()
+    @State private var activeIndex = 0
+    @State private var showSidebar = false
 
     var body: some View {
         NavigationStack {
@@ -24,6 +52,10 @@ struct AssistantView: View {
             .toolbar { toolbarContent }
         }
         .task { await inference.start() }
+        .sheet(isPresented: $showSidebar) { sidebarView }
+        .onChange(of: inference.isGenerating) { _, generating in
+            if !generating { syncToConversation() }
+        }
     }
 
     // MARK: - State routing
@@ -330,24 +362,127 @@ struct AssistantView: View {
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
         ToolbarItem(placement: .navigationBarLeading) {
-            if case .ready = inference.modelState {
-                HStack(spacing: 4) {
-                    Circle().fill(Color.green).frame(width: 6, height: 6)
-                    Text("GEMMA 4 · READY")
-                        .font(.caption2.monospaced())
-                        .foregroundColor(.secondary)
-                }
+            Button(action: { showSidebar.toggle() }) {
+                Image(systemName: "line.3.horizontal")
+                    .foregroundColor(.prometheusBlue)
             }
         }
         ToolbarItem(placement: .navigationBarTrailing) {
-            if case .ready = inference.modelState {
-                Button(action: { inference.clearHistory(mode: selectedMode) }) {
-                    Image(systemName: "square.and.pencil")
-                        .font(.body)
+            HStack(spacing: 10) {
+                if case .ready = inference.modelState {
+                    HStack(spacing: 4) {
+                        Circle().fill(Color.green).frame(width: 6, height: 6)
+                        Text("GEMMA 4 · READY")
+                            .font(.caption2.monospaced())
+                            .foregroundColor(.secondary)
+                    }
+                    Button(action: { createNewConversation() }) {
+                        Image(systemName: "square.and.pencil")
+                            .font(.body)
+                            .foregroundColor(.prometheusBlue)
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Conversation management
+
+    private var sidebarView: some View {
+        NavigationStack {
+            ZStack {
+                Color.appBackground.ignoresSafeArea()
+                VStack(alignment: .leading, spacing: 0) {
+                    Button(action: { createNewConversation(); showSidebar = false }) {
+                        HStack {
+                            Image(systemName: "plus")
+                            Text("New conversation")
+                                .font(.caption.bold().monospaced())
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(12)
+                        .background(Color.prometheusBlue)
+                        .foregroundColor(.black)
+                    }
+                    .padding(.horizontal)
+                    .padding(.top, 8)
+
+                    Divider().background(Color.prometheusBlue.opacity(0.15)).padding(.vertical, 8)
+
+                    List {
+                        ForEach(Array(conversations.enumerated()), id: \.element.id) { index, conv in
+                            let title = conv.messages.first(where: { $0.role == .user })?.text.prefix(40)
+                                ?? "New conversation"
+                            let isActive = index == activeIndex
+                            HStack {
+                                Text(String(title))
+                                    .font(.caption.monospaced())
+                                    .foregroundColor(isActive ? .prometheusBlue : .primary)
+                                    .fontWeight(isActive ? .bold : .regular)
+                                Spacer()
+                                if conversations.count > 1 {
+                                    Button {
+                                        conversations.remove(at: index)
+                                        if activeIndex >= conversations.count {
+                                            activeIndex = conversations.count - 1
+                                        }
+                                        if conversations.isEmpty {
+                                            conversations = [Conversation(messages: [])]
+                                            activeIndex = 0
+                                        }
+                                        saveConversations(conversations)
+                                    } label: {
+                                        Image(systemName: "xmark")
+                                            .font(.caption2)
+                                            .foregroundColor(.secondary)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                            .padding(.vertical, 4)
+                            .contentShape(Rectangle())
+                            .onTapGesture { switchToConversation(at: index) }
+                        }
+                    }
+                    .scrollContentBackground(.hidden)
+                    .listStyle(.plain)
+                }
+            }
+            .navigationTitle("Conversations")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(Color.cardBackground, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") { showSidebar = false }
                         .foregroundColor(.prometheusBlue)
                 }
             }
         }
+        .presentationDetents([.medium, .large])
+    }
+
+    private func syncToConversation() {
+        guard activeIndex < conversations.count else { return }
+        conversations[activeIndex].messages = inference.messages.filter { !$0.isStreaming }
+        saveConversations(conversations)
+    }
+
+    private func createNewConversation() {
+        syncToConversation()
+        inference.clearHistory(mode: selectedMode)
+        conversations.append(Conversation(messages: []))
+        activeIndex = conversations.count - 1
+        saveConversations(conversations)
+    }
+
+    private func switchToConversation(at index: Int) {
+        guard index < conversations.count else { return }
+        syncToConversation()
+        inference.clearHistory(mode: selectedMode)
+        activeIndex = index
+        inference.restoreMessages(conversations[index].messages)
+        showSidebar = false
     }
 
     // MARK: - Actions
