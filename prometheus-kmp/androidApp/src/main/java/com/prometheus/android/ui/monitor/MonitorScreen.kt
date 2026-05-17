@@ -245,14 +245,14 @@ private fun HeroEventCard(
                 }
             }
         }
-        Spacer(Modifier.height(12.dp))
-        HorizontalDivider(color = p.surfaceElevated)
         Spacer(Modifier.height(8.dp))
-        Text(text = potential, style = MaterialTheme.typography.bodyMedium, color = p.textPrimary)
-        Spacer(Modifier.height(12.dp))
         HorizontalDivider(color = p.surfaceElevated)
+        Spacer(Modifier.height(6.dp))
+        Text(text = potential, style = MaterialTheme.typography.labelLarge, color = p.textPrimary, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(8.dp))
-        Text(text = location, style = MaterialTheme.typography.bodyMedium, color = p.textPrimary)
+        HorizontalDivider(color = p.surfaceElevated)
+        Spacer(Modifier.height(6.dp))
+        Text(text = location, style = MaterialTheme.typography.labelLarge, color = p.textPrimary, fontWeight = FontWeight.Bold)
         if (timestamp.isNotBlank()) {
             Spacer(Modifier.height(12.dp))
             Text(
@@ -483,7 +483,7 @@ private fun InjectionDialog(
                     style = MaterialTheme.typography.bodySmall,
                     color = p.textSecondary
                 )
-                Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(8.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = "Enable",
