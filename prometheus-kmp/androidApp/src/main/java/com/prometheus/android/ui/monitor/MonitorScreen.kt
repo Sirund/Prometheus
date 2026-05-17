@@ -110,11 +110,13 @@ fun MonitorScreen(
             Column {
                 SectionHeader(text = "EARTHQUAKE INFO")
                 Spacer(Modifier.height(8.dp))
+                val latLon = if (event != null) "${event.Lintang ?: "--"}, ${event.Bujur ?: "--"}" else "--"
                 HeroEventCard(
                     magnitude = event?._magnitude ?: "--",
                     location = event?._wilayah ?: if (event != null) "Unknown location" else "Waiting for data...",
                     depth = event?._kedalaman ?: "--",
                     felt = event?._dirasakan ?: "--",
+                    latLon = latLon,
                     potential = event?._potensi ?: "--",
                     level = dangerLevel,
                     timestamp = lastRefresh
@@ -196,6 +198,7 @@ private fun HeroEventCard(
     location: String,
     depth: String,
     felt: String,
+    latLon: String,
     potential: String,
     level: DangerLevel,
     timestamp: String
@@ -224,22 +227,34 @@ private fun HeroEventCard(
                 label = "DEPTH",
                 valueColor = p.textPrimary
             )
-            StatColumn(
-                modifier = Modifier.weight(1f),
-                icon = "\uD83D\uDCCD",
-                value = location,
-                label = "LOCATION",
-                valueColor = p.textPrimary
-            )
+            Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(text = "\uD83D\uDCCD", fontSize = 20.sp)
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = felt,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = p.textPrimary,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 2
+                )
+                if (latLon != "--") {
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = latLon,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = p.textSecondary
+                    )
+                }
+            }
         }
         Spacer(Modifier.height(12.dp))
         HorizontalDivider(color = p.surfaceElevated)
         Spacer(Modifier.height(8.dp))
         Row(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = "FELT", style = MaterialTheme.typography.labelSmall, color = p.textSecondary)
+                Text(text = "LOCATION", style = MaterialTheme.typography.labelSmall, color = p.textSecondary)
                 Spacer(Modifier.height(2.dp))
-                Text(text = felt, style = MaterialTheme.typography.labelLarge, color = p.textPrimary)
+                Text(text = location, style = MaterialTheme.typography.labelLarge, color = p.textPrimary)
             }
             Spacer(Modifier.width(12.dp))
             Column(horizontalAlignment = Alignment.End, modifier = Modifier.weight(1f)) {
