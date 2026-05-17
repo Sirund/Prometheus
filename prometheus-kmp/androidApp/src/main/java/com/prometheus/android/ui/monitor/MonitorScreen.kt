@@ -22,7 +22,6 @@ import com.prometheus.android.ui.shared.EntranceAnimation
 import com.prometheus.android.ui.shared.PrometheusCard
 import com.prometheus.android.ui.shared.SectionHeader
 import com.prometheus.android.ui.shared.StatusDot
-import com.prometheus.android.ui.shared.ThreatLevelBanner
 import com.prometheus.android.ui.theme.LocalPrometheusColors
 import com.prometheus.model.EarthquakeEvent
 import com.prometheus.model.NowcastAlert
@@ -78,13 +77,18 @@ fun MonitorScreen(
             .padding(16.dp)
             .verticalScroll(rememberScrollState())
     ) {
-        DangerBanner(level = dangerLevel)
+        Spacer(Modifier.height(4.dp))
 
-        Spacer(Modifier.height(20.dp))
+        val classification = when (dangerLevel) {
+            DangerLevel.None -> "ALL CLEAR"
+            DangerLevel.Watch -> "WATCH"
+            DangerLevel.Medium -> "MEDIUM ALERT"
+            DangerLevel.Danger -> "DANGER"
+        }
 
         EntranceAnimation(visible = true, index = 0) {
             Column {
-                SectionHeader(text = "EARTHQUAKE INFO")
+                SectionHeader(text = "EARTHQUAKE INFO — $classification")
                 Spacer(Modifier.height(8.dp))
                 val latLon = if (event != null) "${event.Lintang ?: "--"}, ${event.Bujur ?: "--"}" else "--"
                 val eventTime = if (event != null) "${event.tanggal_ ?: ""} ${event.jam_ ?: ""}".trim() else ""
@@ -103,9 +107,14 @@ fun MonitorScreen(
 
         Spacer(Modifier.height(16.dp))
 
+        val weatherLabel = if (weatherInfo.weatherDesc.isNotBlank() && weatherInfo.weatherDesc != "--") {
+            "WEATHER — ${weatherInfo.weatherDesc}"
+        } else {
+            "WEATHER"
+        }
         EntranceAnimation(visible = true, index = 1) {
             Column {
-                SectionHeader(text = "WEATHER")
+                SectionHeader(text = weatherLabel)
                 Spacer(Modifier.height(8.dp))
                 WeatherInfoCard(weather = weatherInfo)
             }
@@ -178,17 +187,6 @@ fun MonitorScreen(
     }
 }
 
-@Composable
-private fun DangerBanner(level: DangerLevel) {
-    val p = LocalPrometheusColors.current
-    val (color, icon, label) = when (level) {
-        DangerLevel.None -> Triple(p.success, "\u2705", "ALL CLEAR \u2014 No active alerts")
-        DangerLevel.Watch -> Triple(p.warning, "\u26A0\uFE0F", "WATCH \u2014 Monitor closely")
-        DangerLevel.Medium -> Triple(Color(0xFFFF8C00), "\u26A0\uFE0F", "MEDIUM ALERT \u2014 Notified")
-        DangerLevel.Danger -> Triple(p.danger, "\u26A0\uFE0F", "DANGER \u2014 Take action now")
-    }
-    ThreatLevelBanner(color = color, label = label, icon = icon)
-}
 
 @Composable
 private fun HeroEventCard(
@@ -248,21 +246,29 @@ private fun HeroEventCard(
         Spacer(Modifier.height(8.dp))
         HorizontalDivider(color = p.surfaceElevated)
         Spacer(Modifier.height(6.dp))
-        Text(
-            text = potential,
-            style = MaterialTheme.typography.labelLarge,
-            color = p.textPrimary,
-            fontWeight = FontWeight.Bold
-        )
+        Column {
+            Text(text = "TSUNAMI POTENTIAL", style = MaterialTheme.typography.labelSmall, color = p.textSecondary)
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = potential,
+                style = MaterialTheme.typography.labelLarge,
+                color = p.textPrimary,
+                fontWeight = FontWeight.Bold
+            )
+        }
         Spacer(Modifier.height(8.dp))
         HorizontalDivider(color = p.surfaceElevated)
         Spacer(Modifier.height(6.dp))
-        Text(
-            text = location,
-            style = MaterialTheme.typography.labelLarge,
-            color = p.textPrimary,
-            fontWeight = FontWeight.Bold
-        )
+        Column {
+            Text(text = "LOCATION", style = MaterialTheme.typography.labelSmall, color = p.textSecondary)
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = location,
+                style = MaterialTheme.typography.labelLarge,
+                color = p.textPrimary,
+                fontWeight = FontWeight.Bold
+            )
+        }
         if (timestamp.isNotBlank()) {
             Spacer(Modifier.height(12.dp))
             Text(
@@ -327,16 +333,6 @@ private fun WeatherInfoCard(weather: WeatherInfo) {
                 icon = "\uD83D\uDCA8",
                 value = "${weather.windSpeed} km/j",
                 label = "WIND"
-            )
-        }
-        if (weather.weatherDesc.isNotBlank() && weather.weatherDesc != "--") {
-            Spacer(Modifier.height(8.dp))
-            HorizontalDivider(color = p.surfaceElevated)
-            Spacer(Modifier.height(6.dp))
-            Text(
-                text = weather.weatherDesc,
-                style = MaterialTheme.typography.bodySmall,
-                color = p.textSecondary
             )
         }
     }
