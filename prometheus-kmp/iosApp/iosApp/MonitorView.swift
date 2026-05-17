@@ -100,16 +100,9 @@ struct MonitorView: View {
                 }
                 .scrollContentBackground(.hidden)
             }
-            .navigationTitle("Prometheus")
+            .navigationTitle("Monitor")
             .toolbarBackground(Color.cardBackground, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Label("BMKG", systemImage: "checkmark.shield")
-                        .font(.caption.monospaced())
-                        .foregroundColor(.prometheusBlue)
-                }
-            }
             .sheet(isPresented: $showInjectionSheet) {
                 InjectionSettingsView(
                     enabled: pollingService.injectionEnabled,
@@ -175,15 +168,9 @@ struct BMKGEventCard: View {
                 .frame(maxWidth: .infinity)
             }
             Divider().background(Color.prometheusBlue.opacity(0.3))
-            VStack(alignment: .leading, spacing: 2) {
-                Text("TSUNAMI POTENTIAL").font(.caption2.monospaced()).foregroundColor(.gray)
-                Text(potential).font(.caption.bold().monospaced()).foregroundColor(.white)
-            }
+            Text(potential).font(.caption2.monospaced()).foregroundColor(.gray)
             Divider().background(Color.prometheusBlue.opacity(0.3))
-            VStack(alignment: .leading, spacing: 2) {
-                Text("LOCATION").font(.caption2.monospaced()).foregroundColor(.gray)
-                Text(location).font(.caption.bold().monospaced()).foregroundColor(.white)
-            }
+            Text(location).font(.caption2.monospaced()).foregroundColor(.gray)
             if !timestamp.isEmpty {
                 HStack {
                     Spacer()
@@ -279,8 +266,8 @@ struct NowcastAlertCard: View {
                     .padding(.top, 2)
             }
         }
-        .padding()
         .frame(maxWidth: .infinity, alignment: .leading)
+        .padding()
         .background(Color.cardBackground)
         .overlay(Rectangle().stroke(Color.prometheusBlue.opacity(0.3), lineWidth: 1))
         .onTapGesture { expanded.toggle() }
@@ -296,6 +283,7 @@ struct NowcastClearCard: View {
                 .font(.caption2.monospaced())
                 .foregroundColor(.green)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
         .background(Color.cardBackground)
         .overlay(Rectangle().stroke(Color.prometheusBlue.opacity(0.3), lineWidth: 1))

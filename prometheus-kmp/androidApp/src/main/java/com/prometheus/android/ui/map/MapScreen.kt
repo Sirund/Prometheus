@@ -194,14 +194,7 @@ fun MapScreen(
                 title = { Text("Evacuation", color = p.blue) },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = p.surface
-                ),
-                actions = {
-                    Text(
-                        text = if (isDangerous) "\u26A0\uFE0F" else "\uD83D\uDDFA\uFE0F",
-                        color = if (isDangerous) Color.Red else p.blue,
-                        style = MaterialTheme.typography.labelSmall
-                    )
-                }
+                )
             )
         },
         containerColor = p.background

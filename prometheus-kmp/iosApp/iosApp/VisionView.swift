@@ -87,6 +87,18 @@ struct VisionView: View {
                 Color.darkBackground.ignoresSafeArea()
 
                 VStack(spacing: 8) {
+                    HStack(spacing: 4) {
+                        Circle()
+                            .fill(inference.isModelLoaded ? Color.green : Color.orange)
+                            .frame(width: 6, height: 6)
+                        Text(inference.isModelLoaded ? "VISION READY" : inference.statusMessage)
+                            .font(.caption2.monospaced())
+                            .foregroundColor(.gray)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.leading, 16)
+                    .padding(.top, 4)
+
                     cameraArea
                     descriptionStrip
                     infoCard
@@ -96,18 +108,6 @@ struct VisionView: View {
             .navigationTitle("Vision Assist")
             .toolbarBackground(Color.cardBackground, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    HStack(spacing: 4) {
-                        Circle()
-                            .fill(inference.isModelLoaded ? Color.green : Color.orange)
-                            .frame(width: 6, height: 6)
-                        Text(inference.isModelLoaded ? "VISION READY" : inference.statusMessage)
-                            .font(.caption2.monospaced())
-                            .foregroundColor(.gray)
-                    }
-                }
-            }
         }
         .onAppear { camera.start() }
         .onDisappear { camera.stop() }

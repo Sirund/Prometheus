@@ -137,7 +137,8 @@ fun PrometheusApp(
             Box(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .padding(top = 48.dp, end = 12.dp)
+                    .statusBarsPadding()
+                    .padding(top = 8.dp, end = 12.dp)
                     .size(48.dp)
                     .clip(CircleShape)
                     .background(p.surfaceElevated)
