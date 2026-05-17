@@ -49,7 +49,7 @@ class BMKGPollingService: NSObject, CLLocationManagerDelegate {
     func start() {
         isMonitoring = true
         checkNow()
-        timer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
+        timer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in
             self?.checkNow()
         }
         startWeatherPolling()
@@ -93,7 +93,7 @@ class BMKGPollingService: NSObject, CLLocationManagerDelegate {
 
     private func startWeatherPolling() {
         Task { await pollWeather() }
-        weatherTimer = Timer.scheduledTimer(withTimeInterval: 300, repeats: true) { [weak self] _ in
+        weatherTimer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in
             Task { [weak self] in await self?.pollWeather() }
         }
     }
@@ -111,7 +111,7 @@ class BMKGPollingService: NSObject, CLLocationManagerDelegate {
 
     private func startNowcastPolling() {
         Task { await pollNowcast() }
-        nowcastTimer = Timer.scheduledTimer(withTimeInterval: 300, repeats: true) { [weak self] _ in
+        nowcastTimer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in
             Task { [weak self] in await self?.pollNowcast() }
         }
     }
