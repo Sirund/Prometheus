@@ -171,6 +171,10 @@ struct BMKGEventCard: View {
     let potential: String
     let timestamp: String
 
+    private var hasTsunami: Bool {
+        potential.contains("berpotensi") || potential.contains("warning") || potential.contains("ya")
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 0) {
@@ -202,19 +206,12 @@ struct BMKGEventCard: View {
                 .frame(maxWidth: .infinity)
             }
             Divider().background(Color.prometheusBlue.opacity(0.3))
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    let hasTsunami = potential.contains("berpotensi") || potential.contains("warning") || potential.contains("ya")
-                    Text("TSUNAMI POTENTIAL").font(.caption2.monospaced()).foregroundColor(.gray)
-                    Text(hasTsunami ? "YES" : "NO").font(.caption.bold().monospaced())
-                        .foregroundColor(hasTsunami ? .red : .white)
-                }
-                Spacer()
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text("LOCATION").font(.caption2.monospaced()).foregroundColor(.gray)
-                    Text(location).font(.caption.bold().monospaced()).foregroundColor(.white)
-                }
-            }
+            Text("TSUNAMI POTENTIAL").font(.caption2.monospaced()).foregroundColor(.gray)
+            Text(hasTsunami ? "YES" : "NO").font(.caption.bold().monospaced())
+                .foregroundColor(hasTsunami ? .red : .white)
+            Divider().background(Color.prometheusBlue.opacity(0.3))
+            Text("LOCATION").font(.caption2.monospaced()).foregroundColor(.gray)
+            Text(location).font(.caption.bold().monospaced()).foregroundColor(.white)
             HStack {
                 Spacer()
                 Text(timestamp)

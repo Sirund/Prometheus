@@ -251,22 +251,18 @@ private fun HeroEventCard(
         Spacer(Modifier.height(12.dp))
         HorizontalDivider(color = p.surfaceElevated)
         Spacer(Modifier.height(8.dp))
-        Row(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.weight(1f)) {
-                val hasTsunami = potential.contains("berpotensi", ignoreCase = true) ||
-                    potential.contains("warning", ignoreCase = true) ||
-                    potential.contains("ya", ignoreCase = true)
-                Text(text = "TSUNAMI POTENTIAL", style = MaterialTheme.typography.labelSmall, color = p.textSecondary)
-                Spacer(Modifier.height(2.dp))
-                Text(text = if (hasTsunami) "YES" else "NO", style = MaterialTheme.typography.labelLarge, color = if (hasTsunami) p.danger else p.textPrimary)
-            }
-            Spacer(Modifier.width(12.dp))
-            Column(horizontalAlignment = Alignment.End, modifier = Modifier.weight(1f)) {
-                Text(text = "LOCATION", style = MaterialTheme.typography.labelSmall, color = p.textSecondary)
-                Spacer(Modifier.height(2.dp))
-                Text(text = location, style = MaterialTheme.typography.labelLarge, color = p.textPrimary)
-            }
-        }
+        val hasTsunami = potential.contains("berpotensi", ignoreCase = true) ||
+            potential.contains("warning", ignoreCase = true) ||
+            potential.contains("ya", ignoreCase = true)
+        Text(text = "TSUNAMI POTENTIAL", style = MaterialTheme.typography.labelSmall, color = p.textSecondary)
+        Spacer(Modifier.height(2.dp))
+        Text(text = if (hasTsunami) "YES" else "NO", style = MaterialTheme.typography.labelLarge, color = if (hasTsunami) p.danger else p.textPrimary)
+        Spacer(Modifier.height(12.dp))
+        HorizontalDivider(color = p.surfaceElevated)
+        Spacer(Modifier.height(8.dp))
+        Text(text = "LOCATION", style = MaterialTheme.typography.labelSmall, color = p.textSecondary)
+        Spacer(Modifier.height(2.dp))
+        Text(text = location, style = MaterialTheme.typography.labelLarge, color = p.textPrimary)
         Spacer(Modifier.height(12.dp))
         Text(
             text = "Updated $timestamp",
