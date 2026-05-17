@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import com.prometheus.android.inference.InferenceManager
 import com.prometheus.android.inference.ModelManager
 import com.prometheus.android.inference.VisionInferenceManager
+import com.prometheus.android.ui.theme.LocalPrometheusColors
 import com.prometheus.android.ui.theme.PrometheusColors
 import com.prometheus.model.ChatMessage
 import com.prometheus.prompt.SystemPrompts
@@ -617,7 +618,7 @@ fun AssistantScreen() {
             onDismissRequest = { showImageSourceDialog = false },
             title = {
                 Text("Choose Image Source",
-                    color = PrometheusColors.blue,
+                    color = p.blue,
                     fontWeight = FontWeight.Bold)
             },
             text = {
@@ -711,6 +712,7 @@ private fun CapabilityPill(text: String) {
 
 @Composable
 private fun ChatBubble(message: ChatMessage) {
+    val p = LocalPrometheusColors.current
     AnimatedVisibility(
         visible = true,
         enter = slideInHorizontally(
@@ -736,7 +738,7 @@ private fun ChatBubble(message: ChatMessage) {
                             .widthIn(max = 240.dp)
                             .aspectRatio(4f / 3f)
                             .clip(RoundedCornerShape(12.dp))
-                            .border(1.dp, PrometheusColors.blue.copy(alpha = 0.3f), RoundedCornerShape(12.dp)),
+                            .border(1.dp, p.blue.copy(alpha = 0.3f), RoundedCornerShape(12.dp)),
                         contentScale = ContentScale.Crop
                     )
                     Spacer(Modifier.height(6.dp))
