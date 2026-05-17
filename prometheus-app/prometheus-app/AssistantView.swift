@@ -54,7 +54,8 @@ struct AssistantView: View {
                     stateContent
                 }
             }
-            .navigationTitle("Survival Assistant")
+            .navigationTitle("Gemma Assistant")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(Color.cardBackground, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
             .toolbar { toolbarContent }
@@ -274,7 +275,7 @@ struct AssistantView: View {
     private var modeSelector: some View {
         HStack(spacing: 8) {
             Spacer()
-            ModeChipButton(label: "SURVIVAL CHAT", active: !showVision) {
+            ModeChipButton(label: "CHAT", active: !showVision) {
                 showVision = false
             }
             ModeChipButton(label: "VISION", active: showVision) {
