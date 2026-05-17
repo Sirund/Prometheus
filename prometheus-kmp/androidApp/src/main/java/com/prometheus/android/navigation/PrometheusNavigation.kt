@@ -4,6 +4,7 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -95,51 +96,54 @@ fun PrometheusApp(
                         alwaysShowLabel = false
                     )
                 }
-                Box(
-                    modifier = Modifier
-                        .clickable(onClick = onToggleDarkMode)
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(p.surfaceElevated.copy(alpha = 0.3f))
-                        .padding(10.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = if (isDarkMode) Icons.Filled.LightMode else Icons.Filled.DarkMode,
-                        contentDescription = if (isDarkMode) "Switch to light mode" else "Switch to dark mode",
-                        tint = p.textSecondary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
             }
         },
         containerColor = p.background
     ) { padding ->
-        Box(modifier = Modifier.padding(padding)) {
-            AnimatedContent(
-                targetState = selectedScreen,
-                transitionSpec = {
-                    fadeIn(animationSpec = tween(300)) togetherWith fadeOut(animationSpec = tween(300))
-                },
-                label = "screen_transition"
-            ) { screen ->
-                when (screen) {
-                    Screen.Monitor -> MonitorScreen(
-                        onRefresh = onRefreshBmkg,
-                        event = currentEvent,
-                        latestEvent = latestEvent,
-                        injectionEnabled = injectionEnabled,
-                        injectionIp = injectionIp,
-                        injectionPort = injectionPort,
-                        onApplyInjection = onApplyInjection
-                    )
-                    Screen.Evacuate -> MapScreen(
-                        event = currentEvent,
-                        userLocation = currentLocation
-                    )
-                    Screen.Chat -> AssistantScreen()
-                    Screen.Vision -> VisionScreen()
+        Box(modifier = Modifier.fillMaxSize()) {
+            Box(modifier = Modifier.padding(padding)) {
+                AnimatedContent(
+                    targetState = selectedScreen,
+                    transitionSpec = {
+                        fadeIn(animationSpec = tween(300)) togetherWith fadeOut(animationSpec = tween(300))
+                    },
+                    label = "screen_transition"
+                ) { screen ->
+                    when (screen) {
+                        Screen.Monitor -> MonitorScreen(
+                            onRefresh = onRefreshBmkg,
+                            event = currentEvent,
+                            latestEvent = latestEvent,
+                            injectionEnabled = injectionEnabled,
+                            injectionIp = injectionIp,
+                            injectionPort = injectionPort,
+                            onApplyInjection = onApplyInjection
+                        )
+                        Screen.Evacuate -> MapScreen(
+                            event = currentEvent,
+                            userLocation = currentLocation
+                        )
+                        Screen.Chat -> AssistantScreen()
+                        Screen.Vision -> VisionScreen()
+                    }
                 }
+            }
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 48.dp, end = 12.dp)
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(p.surfaceElevated)
+                    .clickable(onClick = onToggleDarkMode),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = if (isDarkMode) Icons.Filled.LightMode else Icons.Filled.DarkMode,
+                    contentDescription = if (isDarkMode) "Switch to light mode" else "Switch to dark mode",
+                    tint = p.blue,
+                    modifier = Modifier.size(26.dp)
+                )
             }
         }
     }
