@@ -122,10 +122,7 @@ class BMKGPollingService: NSObject, CLLocationManagerDelegate {
         do {
             let alerts = try await weatherClient.fetchNowcastAlerts()
             await MainActor.run {
-                let nearest: shared.NowcastAlert? = {
-                    guard let loc = currentLocation else { return alerts.max(by: { $0.guid < $1.guid }) }
-                    return shared.NowcastAlert.nearestAlert(alerts: alerts, userLat: loc.latitude, userLon: loc.longitude)
-                }()
+                let nearest = weatherInfo.matchingNowcastAlert(alerts: alerts)
                 nowcastAlerts = nearest.map { [$0] } ?? []
                 if let alert = nearest, alert.isBadWeather, !knownAlertLinks.contains(alert.link) {
                     knownAlertLinks.insert(alert.link)

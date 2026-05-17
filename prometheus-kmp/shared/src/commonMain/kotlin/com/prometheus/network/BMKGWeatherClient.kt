@@ -24,13 +24,15 @@ class BMKGWeatherClient {
             val todaySlots = cuacaArray?.firstOrNull()?.jsonArray
             val current = todaySlots?.firstOrNull()?.jsonObject ?: return WeatherInfo.EMPTY
 
+            val provinsi = body["lokasi"]?.jsonObject?.get("provinsi")?.jsonPrimitive?.content ?: ""
             WeatherInfo(
                 temperature = "${current["t"]?.jsonPrimitive?.content ?: "--"}",
                 humidity = "${current["hu"]?.jsonPrimitive?.content ?: "--"}",
                 windSpeed = current["ws"]?.jsonPrimitive?.content ?: "--",
                 windDirection = current["wd"]?.jsonPrimitive?.content ?: "--",
                 weatherDesc = current["weather_desc"]?.jsonPrimitive?.content ?: "--",
-                visibility = current["vs_text"]?.jsonPrimitive?.content ?: "--"
+                visibility = current["vs_text"]?.jsonPrimitive?.content ?: "--",
+                province = provinsi
             )
         } catch (e: Exception) {
             WeatherInfo.EMPTY
