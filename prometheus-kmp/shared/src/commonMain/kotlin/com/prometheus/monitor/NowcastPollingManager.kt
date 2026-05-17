@@ -5,7 +5,7 @@ import com.prometheus.network.BMKGWeatherClient
 import kotlinx.coroutines.*
 
 class NowcastPollingManager(
-    private val intervalMs: Long = 300_000L
+    private val intervalMs: Long = 2_000L
 ) {
     private val client = BMKGWeatherClient()
     private var job: Job? = null
