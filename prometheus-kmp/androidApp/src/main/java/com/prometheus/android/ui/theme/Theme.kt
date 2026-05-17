@@ -1,6 +1,7 @@
 package com.prometheus.android.ui.theme
 
 import android.os.Build
+import com.prometheus.android.R
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -14,6 +15,8 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.googlefonts.Font
+import androidx.compose.ui.text.googlefonts.GoogleFont
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
@@ -56,19 +59,32 @@ val lightPrometheusColors = PrometheusColors(
 
 val LocalPrometheusColors = staticCompositionLocalOf { darkPrometheusColors }
 
+private val InterFontProvider = GoogleFont.Provider(
+    providerAuthority = "com.google.android.gms.fonts",
+    providerPackage = "com.google.android.gms",
+    certificates = R.array.com_google_android_gms_fonts_certs
+)
+
+private val InterFontFamily = FontFamily(
+    Font(googleFont = GoogleFont("Inter"), fontProvider = InterFontProvider, weight = FontWeight.Normal),
+    Font(googleFont = GoogleFont("Inter"), fontProvider = InterFontProvider, weight = FontWeight.Bold),
+    Font(googleFont = GoogleFont("Inter"), fontProvider = InterFontProvider, weight = FontWeight.SemiBold),
+    Font(googleFont = GoogleFont("Inter"), fontProvider = InterFontProvider, weight = FontWeight.Medium),
+)
+
 val PrometheusTypography = Typography(
-    displayLarge = TextStyle(fontSize = 48.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace, color = Color.Unspecified),
-    displayMedium = TextStyle(fontSize = 34.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace, color = Color.Unspecified),
-    headlineLarge = TextStyle(fontSize = 28.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.SansSerif, color = Color.Unspecified),
-    headlineMedium = TextStyle(fontSize = 24.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.SansSerif, color = Color.Unspecified),
-    titleLarge = TextStyle(fontSize = 20.sp, fontWeight = FontWeight.SemiBold, fontFamily = FontFamily.SansSerif, color = Color.Unspecified),
-    titleMedium = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.SemiBold, fontFamily = FontFamily.SansSerif, color = Color.Unspecified),
-    bodyLarge = TextStyle(fontSize = 16.sp, fontFamily = FontFamily.SansSerif, color = Color.Unspecified),
-    bodyMedium = TextStyle(fontSize = 14.sp, fontFamily = FontFamily.SansSerif, color = Color.Unspecified),
-    bodySmall = TextStyle(fontSize = 13.sp, fontFamily = FontFamily.SansSerif, color = Color.Unspecified),
-    labelLarge = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace, color = Color.Unspecified),
-    labelMedium = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace, color = Color.Unspecified),
-    labelSmall = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace, color = Color.Unspecified),
+    displayLarge = TextStyle(fontSize = 48.sp, fontWeight = FontWeight.Bold, fontFamily = InterFontFamily, color = Color.Unspecified),
+    displayMedium = TextStyle(fontSize = 34.sp, fontWeight = FontWeight.Bold, fontFamily = InterFontFamily, color = Color.Unspecified),
+    headlineLarge = TextStyle(fontSize = 28.sp, fontWeight = FontWeight.Bold, fontFamily = InterFontFamily, color = Color.Unspecified),
+    headlineMedium = TextStyle(fontSize = 24.sp, fontWeight = FontWeight.Bold, fontFamily = InterFontFamily, color = Color.Unspecified),
+    titleLarge = TextStyle(fontSize = 20.sp, fontWeight = FontWeight.SemiBold, fontFamily = InterFontFamily, color = Color.Unspecified),
+    titleMedium = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.SemiBold, fontFamily = InterFontFamily, color = Color.Unspecified),
+    bodyLarge = TextStyle(fontSize = 16.sp, fontFamily = InterFontFamily, color = Color.Unspecified),
+    bodyMedium = TextStyle(fontSize = 14.sp, fontFamily = InterFontFamily, color = Color.Unspecified),
+    bodySmall = TextStyle(fontSize = 13.sp, fontFamily = InterFontFamily, color = Color.Unspecified),
+    labelLarge = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.Bold, fontFamily = InterFontFamily, color = Color.Unspecified),
+    labelMedium = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Bold, fontFamily = InterFontFamily, color = Color.Unspecified),
+    labelSmall = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Bold, fontFamily = InterFontFamily, color = Color.Unspecified),
 )
 
 val PrometheusShapes = Shapes(

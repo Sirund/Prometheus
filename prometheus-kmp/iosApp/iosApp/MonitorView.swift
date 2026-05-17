@@ -64,12 +64,12 @@ struct MonitorView: View {
                         SectionHeader(title: "RECENT EVENTS")
                         if let latest = pollingService.latestEvent {
                             Text(latest)
-                                .font(.caption.monospaced())
+                                .inter(12)
                                 .foregroundColor(.white)
                                 .padding(.horizontal, 4)
                         } else {
                             Text("No data loaded. Tap refresh to poll BMKG.")
-                                .font(.caption.monospaced())
+                                .inter(12)
                                 .foregroundColor(.gray)
                                 .padding(.horizontal, 4)
                         }
@@ -78,7 +78,7 @@ struct MonitorView: View {
                             HStack {
                                 Image(systemName: "arrow.clockwise")
                                 Text("REFRESH BMKG")
-                                    .font(.caption.bold().monospaced())
+                                    .inter(12, weight: .bold)
                             }
                             .frame(maxWidth: .infinity)
                             .padding()
@@ -155,27 +155,27 @@ struct BMKGEventCard: View {
                 VStack(alignment: .center, spacing: 2) {
                     Text("\u{1F4CD}").font(.title3)
                     Text(felt)
-                        .font(.caption.bold().monospaced())
+                        .inter(12, weight: .bold)
                         .foregroundColor(.white)
                         .multilineTextAlignment(.center)
                         .lineLimit(2)
                     if latLon != "--" {
                         Text(latLon)
-                            .font(.caption2.monospaced())
+                            .inter(11)
                             .foregroundColor(.gray)
                     }
                 }
                 .frame(maxWidth: .infinity)
             }
             Divider().background(Color.prometheusBlue.opacity(0.3))
-            Text(potential).font(.caption2.monospaced()).foregroundColor(.gray)
+            Text(potential).inter(11).foregroundColor(.gray)
             Divider().background(Color.prometheusBlue.opacity(0.3))
-            Text(location).font(.caption2.monospaced()).foregroundColor(.gray)
+            Text(location).inter(11).foregroundColor(.gray)
             if !timestamp.isEmpty {
                 HStack {
                     Spacer()
                     Text(timestamp)
-                        .font(.caption2.monospaced())
+                        .inter(11)
                         .foregroundColor(.gray)
                 }
             }
@@ -196,12 +196,12 @@ struct StatColumn: View {
         VStack(spacing: 2) {
             Text(icon).font(.title3)
             Text(value)
-                .font(.caption.bold().monospaced())
+                .inter(12, weight: .bold)
                 .foregroundColor(valueColor)
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
             Text(label)
-                .font(.caption2.monospaced())
+                .inter(11)
                 .foregroundColor(.gray)
         }
         .frame(maxWidth: .infinity)
@@ -234,10 +234,10 @@ struct WeatherStatColumn: View {
         VStack(spacing: 2) {
             Text(icon).font(.title3)
             Text(value)
-                .font(.caption.bold().monospaced())
+                .inter(12, weight: .bold)
                 .foregroundColor(.white)
             Text(label)
-                .font(.caption2.monospaced())
+                .inter(11)
                 .foregroundColor(.gray)
         }
         .frame(maxWidth: .infinity)
@@ -254,14 +254,14 @@ struct NowcastAlertCard: View {
                 .font(.title3)
             VStack(alignment: .leading, spacing: 2) {
                 Text(alert.eventType)
-                    .font(.caption.bold().monospaced())
+                    .inter(12, weight: .bold)
                     .foregroundColor(alert.isBadWeather ? .red : .orange)
                 Text(alert.summary)
-                    .font(.caption2.monospaced())
+                    .inter(11)
                     .foregroundColor(.gray)
                     .lineLimit(expanded ? nil : 2)
                 Text(expanded ? "\u{25B2} Tap to collapse" : "\u{25BC} Tap to expand")
-                    .font(.caption2.monospaced())
+                    .inter(11)
                     .foregroundColor(.gray)
                     .padding(.top, 2)
             }
@@ -280,7 +280,7 @@ struct NowcastClearCard: View {
             Text("\u{2600}\u{FE0F}")
                 .font(.title3)
             Text("Cuaca baik \u2014 Tidak ada peringatan")
-                .font(.caption2.monospaced())
+                .inter(11)
                 .foregroundColor(.green)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -302,15 +302,15 @@ struct InjectionStatusCard: View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
                 Text("INJECTION")
-                    .font(.caption2.monospaced())
+                    .inter(11)
                     .foregroundColor(.gray)
                 Spacer()
                 Text(statusText)
-                    .font(.caption2.bold().monospaced())
+                    .inter(11, weight: .bold)
                     .foregroundColor(statusColor)
             }
             Text("Tap to configure local earthquake data injection")
-                .font(.caption2.monospaced())
+                .inter(11)
                 .foregroundColor(.gray)
         }
         .padding()
@@ -332,13 +332,13 @@ struct InjectionSettingsView: View {
                 Color.darkBackground.ignoresSafeArea()
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Run 'python3 tools/local_injector.py' on your PC, then enter its IP and port below.")
-                        .font(.caption.monospaced())
+                        .inter(12)
                         .foregroundColor(.gray)
 
                     Toggle("Enable Injection", isOn: $enabled)
                         .tint(.prometheusBlue)
                         .foregroundColor(.white)
-                        .font(.caption.monospaced())
+                        .inter(12)
 
                     TextField("PC IP Address (e.g. 192.168.1.42)", text: $ip)
                         .textFieldStyle(.plain)
@@ -346,7 +346,7 @@ struct InjectionSettingsView: View {
                         .background(Color.cardBackground)
                         .overlay(Rectangle().stroke(Color.prometheusBlue.opacity(0.3), lineWidth: 1))
                         .foregroundColor(.white)
-                        .font(.caption.monospaced())
+                        .inter(12)
                         .disabled(!enabled)
 
                     TextField("Port", value: $port, format: .number)
@@ -355,7 +355,7 @@ struct InjectionSettingsView: View {
                         .background(Color.cardBackground)
                         .overlay(Rectangle().stroke(Color.prometheusBlue.opacity(0.3), lineWidth: 1))
                         .foregroundColor(.white)
-                        .font(.caption.monospaced())
+                        .inter(12)
                         .disabled(!enabled)
 
                     Spacer()
@@ -371,14 +371,14 @@ struct InjectionSettingsView: View {
                         onApply(enabled, ip, port)
                         dismiss()
                     }
-                    .font(.caption.bold().monospaced())
+                    .inter(12, weight: .bold)
                     .foregroundColor(.prometheusBlue)
                 }
                 ToolbarItem(placement: .cancellationAction) {
                     Button("CANCEL") {
                         dismiss()
                     }
-                    .font(.caption.monospaced())
+                    .inter(12)
                     .foregroundColor(.gray)
                 }
             }
@@ -391,8 +391,8 @@ struct EventField: View {
     let value: String
     var body: some View {
         VStack(alignment: .leading, spacing: 1) {
-            Text(label).font(.caption2.monospaced()).foregroundColor(.gray)
-            Text(value).font(.caption.bold().monospaced()).foregroundColor(.white)
+            Text(label).inter(11).foregroundColor(.gray)
+            Text(value).inter(12, weight: .bold).foregroundColor(.white)
         }
     }
 }
@@ -401,7 +401,7 @@ struct SectionHeader: View {
     let title: String
     var body: some View {
         Text(title)
-            .font(.caption.bold().monospaced())
+            .inter(12, weight: .bold)
             .foregroundColor(.prometheusBlue)
             .padding(.top, 4)
     }
