@@ -339,26 +339,7 @@ fun AssistantScreen() {
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = p.surface
-                    ),
-                    actions = {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(end = 8.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(6.dp)
-                                    .clip(RoundedCornerShape(3.dp))
-                                    .background(if (isModelLoaded) Color.Green else Color(0xFFFFA500))
-                            )
-                            Spacer(Modifier.width(4.dp))
-                            Text(
-                                text = statusMessage,
-                                color = Color.Gray,
-                                style = MaterialTheme.typography.labelSmall
-                            )
-                        }
-                    }
+                    )
                 )
             },
             containerColor = p.background
@@ -368,6 +349,24 @@ fun AssistantScreen() {
                     .fillMaxSize()
                     .padding(padding)
             ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(start = 16.dp, top = 4.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(6.dp)
+                            .clip(RoundedCornerShape(3.dp))
+                            .background(if (isModelLoaded) Color.Green else Color(0xFFFFA500))
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        text = statusMessage,
+                        color = Color.Gray,
+                        style = MaterialTheme.typography.labelSmall
+                    )
+                }
+
                 ModeIndicatorBar(
                     currentMode = chatMode,
                     onModeChange = { chatMode = it }

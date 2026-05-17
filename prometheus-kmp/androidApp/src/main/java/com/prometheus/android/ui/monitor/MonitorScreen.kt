@@ -29,6 +29,7 @@ import com.prometheus.model.WeatherInfo
 
 private enum class DangerLevel { None, Watch, Medium, Danger }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MonitorScreen(
     onRefresh: (() -> Unit)? = null,
@@ -70,16 +71,25 @@ fun MonitorScreen(
     }
 
     val p = LocalPrometheusColors.current
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(p.background)
-            .padding(16.dp)
-            .verticalScroll(rememberScrollState())
-    ) {
-        Spacer(Modifier.height(4.dp))
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Monitor", color = p.blue) },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = p.surface)
+            )
+        },
+        containerColor = p.background
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(horizontal = 16.dp)
+                .verticalScroll(rememberScrollState())
+        ) {
+            Spacer(Modifier.height(4.dp))
 
-        val classification = when (dangerLevel) {
+            val classification = when (dangerLevel) {
             DangerLevel.None -> "ALL CLEAR"
             DangerLevel.Watch -> "WATCH"
             DangerLevel.Medium -> "MEDIUM ALERT"
@@ -187,6 +197,7 @@ fun MonitorScreen(
     }
 }
 
+}
 
 @Composable
 private fun HeroEventCard(
@@ -247,26 +258,20 @@ private fun HeroEventCard(
         HorizontalDivider(color = p.surfaceElevated)
         Spacer(Modifier.height(6.dp))
         Column {
-            Text(text = "TSUNAMI POTENTIAL", style = MaterialTheme.typography.labelSmall, color = p.textSecondary)
-            Spacer(Modifier.height(2.dp))
             Text(
                 text = potential,
-                style = MaterialTheme.typography.labelLarge,
-                color = p.textPrimary,
-                fontWeight = FontWeight.Bold
+                style = MaterialTheme.typography.labelSmall,
+                color = p.textSecondary
             )
         }
         Spacer(Modifier.height(8.dp))
         HorizontalDivider(color = p.surfaceElevated)
         Spacer(Modifier.height(6.dp))
         Column {
-            Text(text = "LOCATION", style = MaterialTheme.typography.labelSmall, color = p.textSecondary)
-            Spacer(Modifier.height(2.dp))
             Text(
                 text = location,
-                style = MaterialTheme.typography.labelLarge,
-                color = p.textPrimary,
-                fontWeight = FontWeight.Bold
+                style = MaterialTheme.typography.labelSmall,
+                color = p.textSecondary
             )
         }
         if (timestamp.isNotBlank()) {
@@ -372,8 +377,8 @@ private fun NowcastAlertCard(alert: NowcastAlert) {
     val p = LocalPrometheusColors.current
     val alertColor = if (alert.isBadWeather) p.danger else p.warning
     var expanded by remember { mutableStateOf(false) }
-    PrometheusCard(modifier = Modifier.clickable { expanded = !expanded }) {
-        Row(verticalAlignment = Alignment.Top) {
+    PrometheusCard(modifier = Modifier.fillMaxWidth().clickable { expanded = !expanded }) {
+        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
             Text(text = if (alert.isBadWeather) "\u26A0\uFE0F" else "\uD83D\uDEE1\uFE0F", fontSize = 20.sp)
             Spacer(Modifier.width(10.dp))
             Column(modifier = Modifier.weight(1f)) {
@@ -404,8 +409,8 @@ private fun NowcastAlertCard(alert: NowcastAlert) {
 @Composable
 private fun NowcastClearCard() {
     val p = LocalPrometheusColors.current
-    PrometheusCard {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+    PrometheusCard(modifier = Modifier.fillMaxWidth()) {
+        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text(text = "\u2600\uFE0F", fontSize = 20.sp)
             Spacer(Modifier.width(10.dp))
             Text(
