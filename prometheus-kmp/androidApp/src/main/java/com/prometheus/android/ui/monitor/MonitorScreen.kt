@@ -212,7 +212,7 @@ fun MonitorScreen(
                             imageVector = Icons.Filled.Call,
                             contentDescription = "Emergency",
                             tint = p.blue,
-                            modifier = Modifier.size(36.dp)
+                            modifier = Modifier.size(48.dp)
                         )
                         Spacer(Modifier.width(12.dp))
                         Column {
@@ -472,9 +472,9 @@ private fun NowcastAlertCard(alert: NowcastAlert) {
                 imageVector = if (alert.isBadWeather) Icons.Filled.Warning else Icons.Filled.Shield,
                 contentDescription = if (alert.isBadWeather) "Warning" else "Clear",
                 tint = alertColor,
-                modifier = Modifier.size(40.dp)
+                modifier = Modifier.size(48.dp)
             )
-            Spacer(Modifier.width(10.dp))
+            Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 InfoRow(label = "Intensity", value = alert.intensity)
                 InfoRow(label = "Potensi", value = alert.potential)
