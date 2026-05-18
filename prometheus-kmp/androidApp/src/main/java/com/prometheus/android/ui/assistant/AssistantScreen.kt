@@ -455,11 +455,11 @@ fun AssistantScreen(
                                 }
 
                                 val sysPrompt = when (chatMode) {
-                                    "EMERGENCY_BRIEF" -> SystemPrompts.EMERGENCY_BRIEFING
+                                    "EMERGENCY_BRIEF" -> SystemPrompts.EMERGENCY_COORDINATOR
                                     else -> {
-                                        val bmkgCtx = SystemPrompts.buildBmkgContext(currentEvent)
-                                        if (bmkgCtx.isNotBlank()) "$bmkgCtx\n\n${SystemPrompts.GENERAL_PROMPT}"
-                                        else SystemPrompts.GENERAL_PROMPT
+                                        val bmkgCtx = SystemPrompts.buildSituationContext(currentEvent, emptyList(), null)
+                                        if (bmkgCtx.isNotBlank()) "$bmkgCtx\n\n${SystemPrompts.MITIGATION_ANALYST}"
+                                        else SystemPrompts.MITIGATION_ANALYST
                                     }
                                 }
 
@@ -557,11 +557,11 @@ fun AssistantScreen(
                                 }
 
                                 val sysPrompt = when (chatMode) {
-                                    "EMERGENCY_BRIEF" -> SystemPrompts.EMERGENCY_BRIEFING
+                                    "EMERGENCY_BRIEF" -> SystemPrompts.EMERGENCY_COORDINATOR
                                     else -> {
-                                        val bmkgCtx = SystemPrompts.buildBmkgContext(currentEvent)
-                                        if (bmkgCtx.isNotBlank()) "$bmkgCtx\n\n${SystemPrompts.GENERAL_PROMPT}"
-                                        else SystemPrompts.GENERAL_PROMPT
+                                        val bmkgCtx = SystemPrompts.buildSituationContext(currentEvent, emptyList(), null)
+                                        if (bmkgCtx.isNotBlank()) "$bmkgCtx\n\n${SystemPrompts.MITIGATION_ANALYST}"
+                                        else SystemPrompts.MITIGATION_ANALYST
                                     }
                                 }
 

@@ -135,7 +135,9 @@ fun PrometheusApp(
                             conversationManager = conversationManager,
                             onConversationsChange = onConversationsChange,
                             onActiveIndexChange = onActiveIndexChange,
-                            currentEvent = currentEvent
+                            currentEvent = currentEvent,
+                            nowcastAlerts = nowcastAlerts,
+                            userLocation = currentLocation
                         )
                     }
                 }
