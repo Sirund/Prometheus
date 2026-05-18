@@ -49,9 +49,7 @@
             android:excludeFromRecents="true"
             android:noHistory="true"
             android:showWhenLocked="true"
-            android:turnScreenOn="true"
-            android:showForAllUsers="true"
-            android:theme="@android:style/Theme.NoDisplay" />
+            android:turnScreenOn="true" />
         <service
             android:name=".service.PollingService"
             android:foregroundServiceType="dataSync"
