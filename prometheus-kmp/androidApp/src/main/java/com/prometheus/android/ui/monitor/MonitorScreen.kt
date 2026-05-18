@@ -190,7 +190,7 @@ fun MonitorScreen(
                 PrometheusCard {
                     Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
                         listOf(
-                            "Ambulan" to "118 and 119",
+                            "Ambulans" to "118 and 119",
                             "Basarnas" to "115",
                             "Posko Bencana Alam" to "129",
                             "PLN" to "123"
@@ -460,10 +460,12 @@ private fun NowcastAlertCard(alert: NowcastAlert) {
             Spacer(Modifier.width(10.dp))
             Column(modifier = Modifier.weight(1f)) {
                 InfoRow(label = "Intensity", value = alert.intensity)
+                InfoRow(label = "Potensi", value = alert.potential)
                 InfoRow(label = "Date", value = alert.alertDate)
                 InfoRow(label = "Time", value = alert.alertTime)
                 InfoRow(label = "Est. completion", value = alert.estimatedEnd)
                 InfoRow(label = "Location", value = alert.provinceName)
+                InfoRow(label = "Area", value = alert.specificLocation)
             }
         }
     }
