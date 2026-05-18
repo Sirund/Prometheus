@@ -1,6 +1,7 @@
 package com.prometheus.android.ui.monitor
 
 import androidx.compose.animation.*
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -22,6 +23,7 @@ import androidx.compose.material.icons.filled.Warning
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.prometheus.android.R
 import com.prometheus.android.ui.shared.EntranceAnimation
 import com.prometheus.android.ui.shared.PrometheusCard
 import com.prometheus.android.ui.shared.SectionHeader
@@ -80,10 +82,28 @@ fun MonitorScreen(
             DangerLevel.Medium -> "MEDIUM ALERT"
             DangerLevel.Danger -> "DANGER"
         }
+        val classificationColor = when (dangerLevel) {
+            DangerLevel.None -> p.blue
+            DangerLevel.Watch -> p.warning
+            DangerLevel.Medium -> Color(0xFFFF8C00)
+            DangerLevel.Danger -> p.danger
+        }
 
         EntranceAnimation(visible = true, index = 0) {
             Column {
-                SectionHeader(text = "EARTHQUAKE INFO — $classification")
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "EARTHQUAKE INFO \u2014 ",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = p.textSecondary
+                    )
+                    Text(
+                        text = classification,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = classificationColor,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
                 Spacer(Modifier.height(8.dp))
                 val latLon = if (event != null) "${event.Lintang ?: "--"}, ${event.Bujur ?: "--"}" else "--"
                 val eventTime = if (event != null) "${event.tanggal_ ?: ""} ${event.jam_ ?: ""}".trim() else ""
@@ -102,14 +122,47 @@ fun MonitorScreen(
 
         Spacer(Modifier.height(16.dp))
 
-        val weatherLabel = if (weatherInfo.weatherDesc.isNotBlank() && weatherInfo.weatherDesc != "--") {
-            "WEATHER — ${weatherInfo.weatherDesc}"
-        } else {
-            "WEATHER"
-        }
         EntranceAnimation(visible = true, index = 1) {
             Column {
-                SectionHeader(text = weatherLabel)
+                SectionHeader(text = "RECENT EVENTS")
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    text = latestEvent ?: "No data loaded. Tap refresh to poll BMKG.",
+                    color = p.textSecondary,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        val weatherLabel = if (weatherInfo.weatherDesc.isNotBlank() && weatherInfo.weatherDesc != "--") {
+            weatherInfo.weatherDesc
+        } else {
+            null
+        }
+        EntranceAnimation(visible = true, index = 2) {
+            Column {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "WEATHER",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = p.textSecondary
+                    )
+                    if (weatherLabel != null) {
+                        Text(
+                            text = " \u2014 ",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = p.textSecondary
+                        )
+                        Text(
+                            text = weatherLabel,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = p.blue,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
                 Spacer(Modifier.height(8.dp))
                 WeatherInfoCard(weather = weatherInfo)
             }
@@ -117,7 +170,7 @@ fun MonitorScreen(
 
         Spacer(Modifier.height(16.dp))
 
-        EntranceAnimation(visible = true, index = 2) {
+        EntranceAnimation(visible = true, index = 3) {
             val latestAlert = nowcastAlerts.maxOrNull()
             Column {
                 SectionHeader(text = "WEATHER WARNING")
@@ -127,19 +180,6 @@ fun MonitorScreen(
                 } else {
                     NowcastClearCard()
                 }
-            }
-        }
-        Spacer(Modifier.height(16.dp))
-
-        EntranceAnimation(visible = true, index = 3) {
-            Column {
-                SectionHeader(text = "RECENT EVENTS")
-                Spacer(Modifier.height(10.dp))
-                Text(
-                    text = latestEvent ?: "No data loaded. Tap refresh to poll BMKG.",
-                    color = p.textSecondary,
-                    style = MaterialTheme.typography.bodyMedium
-                )
             }
         }
 
@@ -192,20 +232,36 @@ private fun HeroEventCard(
         Row(modifier = Modifier.fillMaxWidth()) {
             StatColumn(
                 modifier = Modifier.weight(1f),
-                icon = "\uD83D\uDCCA",
+                icon = {
+                    Image(
+                        painter = painterResource(R.drawable.magnitude),
+                        contentDescription = "Magnitude",
+                        modifier = Modifier.size(32.dp)
+                    )
+                },
                 value = magnitude.let { if (it.startsWith("M ")) it else "M $it" },
                 label = "MAGNITUDE",
                 valueColor = accentColor
             )
             StatColumn(
                 modifier = Modifier.weight(1f),
-                icon = "\u2B07\uFE0F",
+                icon = {
+                    Image(
+                        painter = painterResource(R.drawable.depth),
+                        contentDescription = "Depth",
+                        modifier = Modifier.size(32.dp)
+                    )
+                },
                 value = depth,
                 label = "DEPTH",
                 valueColor = p.textPrimary
             )
             Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(text = "\uD83D\uDCCD", fontSize = 20.sp)
+                Image(
+                    painter = painterResource(R.drawable.location),
+                    contentDescription = "Location",
+                    modifier = Modifier.size(32.dp)
+                )
                 Spacer(Modifier.height(2.dp))
                 Text(
                     text = felt,
@@ -258,7 +314,7 @@ private fun HeroEventCard(
 @Composable
 private fun RowScope.StatColumn(
     modifier: Modifier = Modifier,
-    icon: String,
+    icon: @Composable () -> Unit,
     value: String,
     label: String,
     valueColor: Color
@@ -268,7 +324,7 @@ private fun RowScope.StatColumn(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(text = icon, fontSize = 20.sp)
+        icon()
         Spacer(Modifier.height(2.dp))
         Text(
             text = value,
@@ -293,19 +349,37 @@ private fun WeatherInfoCard(weather: WeatherInfo) {
         Row(modifier = Modifier.fillMaxWidth()) {
             WeatherStatColumn(
                 modifier = Modifier.weight(1f),
-                icon = "\uD83C\uDF21\uFE0F",
+                icon = {
+                    Image(
+                        painter = painterResource(R.drawable.temp),
+                        contentDescription = "Temperature",
+                        modifier = Modifier.size(32.dp)
+                    )
+                },
                 value = "${weather.temperature}\u00B0",
                 label = "TEMP"
             )
             WeatherStatColumn(
                 modifier = Modifier.weight(1f),
-                icon = "\uD83D\uDCA7",
+                icon = {
+                    Image(
+                        painter = painterResource(R.drawable.humidity),
+                        contentDescription = "Humidity",
+                        modifier = Modifier.size(32.dp)
+                    )
+                },
                 value = "${weather.humidity}%",
                 label = "HUMIDITY"
             )
             WeatherStatColumn(
                 modifier = Modifier.weight(1f),
-                icon = "\uD83D\uDCA8",
+                icon = {
+                    Image(
+                        painter = painterResource(R.drawable.wind),
+                        contentDescription = "Wind",
+                        modifier = Modifier.size(32.dp)
+                    )
+                },
                 value = "${weather.windSpeed} km/j",
                 label = "WIND"
             )
@@ -316,7 +390,7 @@ private fun WeatherInfoCard(weather: WeatherInfo) {
 @Composable
 private fun RowScope.WeatherStatColumn(
     modifier: Modifier = Modifier,
-    icon: String,
+    icon: @Composable () -> Unit,
     value: String,
     label: String
 ) {
@@ -325,7 +399,7 @@ private fun RowScope.WeatherStatColumn(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(text = icon, fontSize = 20.sp)
+        icon()
         Spacer(Modifier.height(2.dp))
         Text(
             text = value,
@@ -349,7 +423,11 @@ private fun NowcastAlertCard(alert: NowcastAlert) {
     var expanded by remember { mutableStateOf(false) }
     PrometheusCard(modifier = Modifier.fillMaxWidth().clickable { expanded = !expanded }) {
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
-            Text(text = if (alert.isBadWeather) "\u26A0\uFE0F" else "\uD83D\uDEE1\uFE0F", fontSize = 20.sp)
+            Icon(
+                imageVector = if (alert.isBadWeather) Icons.Filled.Warning else Icons.Filled.Shield,
+                contentDescription = if (alert.isBadWeather) "Warning" else "Clear",
+                modifier = Modifier.size(32.dp)
+            )
             Spacer(Modifier.width(10.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -365,12 +443,20 @@ private fun NowcastAlertCard(alert: NowcastAlert) {
                     maxLines = if (expanded) Int.MAX_VALUE else 2,
                     overflow = TextOverflow.Ellipsis
                 )
-                Text(
-                    text = if (expanded) "\u25B2 Tap to collapse" else "\u25BC Tap to expand",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = p.textSecondary,
-                    modifier = Modifier.padding(top = 4.dp)
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
+                        contentDescription = if (expanded) "Collapse" else "Expand",
+                        modifier = Modifier.size(24.dp),
+                        tint = p.textSecondary
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        text = if (expanded) "Tap to collapse" else "Tap to expand",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = p.textSecondary
+                    )
+                }
             }
         }
     }
@@ -381,7 +467,11 @@ private fun NowcastClearCard() {
     val p = LocalPrometheusColors.current
     PrometheusCard(modifier = Modifier.fillMaxWidth()) {
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(text = "\u2600\uFE0F", fontSize = 20.sp)
+            Image(
+                painter = painterResource(R.drawable.clear_weather),
+                contentDescription = "Clear weather",
+                modifier = Modifier.size(36.dp)
+            )
             Spacer(Modifier.width(10.dp))
             Text(
                 text = "Cuaca baik \u2014 Tidak ada peringatan",
