@@ -7,10 +7,12 @@ import android.content.Context
 import android.content.Intent
 import android.media.AudioAttributes
 import android.media.MediaPlayer
+import android.media.RingtoneManager
 import android.net.Uri
 import android.speech.tts.TextToSpeech
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import com.prometheus.android.ui.alert.EarthquakeAlertActivity
 import com.prometheus.model.EarthquakeEvent
 import com.prometheus.model.NowcastAlert
 import com.prometheus.monitor.EmergencyBriefingFormatter
@@ -37,16 +39,20 @@ class PrometheusAlarmManager(private val context: Context) {
     }
 
     private fun createChannels() {
+        val alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+            ?: Uri.parse("android.resource://android/raw/notification_audible_buzz")
         val alertChannel = NotificationChannel(
             CHANNEL_ALERT, "Earthquake Alerts", NotificationManager.IMPORTANCE_HIGH
         ).apply {
             description = "Critical earthquake and tsunami alerts"
             enableVibration(true)
+            setBypassDnd(true)
             setSound(
-                Uri.parse("android.resource://android/raw/notification_audible_buzz"),
+                alarmUri,
                 AudioAttributes.Builder()
                     .setUsage(AudioAttributes.USAGE_ALARM)
                     .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .setFlags(AudioAttributes.FLAG_AUDIBILITY_ENFORCED)
                     .build()
             )
         }
@@ -95,6 +101,13 @@ class PrometheusAlarmManager(private val context: Context) {
 
     fun triggerAlert(event: EarthquakeEvent, gemmaBriefing: String? = null) {
         val briefing = gemmaBriefing ?: EmergencyBriefingFormatter.buildBriefingText(event)
+
+        val alertIntent = EarthquakeAlertActivity.createIntent(context, event)
+        val alertPendingIntent = PendingIntent.getActivity(
+            context.applicationContext, ID_ALERT, alertIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
         val mag = event.magnitudeValue?.let { "%.1f".format(it) } ?: "?"
         val loc = event._wilayah?.take(50) ?: "Unknown location"
         val depth = event._kedalaman ?: "?"
@@ -107,6 +120,10 @@ class PrometheusAlarmManager(private val context: Context) {
 
         val detail = "M$mag | Depth: $depth | $time$tsunami$felt"
 
+        try {
+            context.startActivity(alertIntent)
+        } catch (_: Exception) { }
+
         val n = NotificationCompat.Builder(context, CHANNEL_ALERT)
             .setSmallIcon(android.R.drawable.ic_dialog_alert)
             .setContentTitle("\uD83D\uDEA8 EARTHQUAKE DETECTED — M$mag")
@@ -115,8 +132,9 @@ class PrometheusAlarmManager(private val context: Context) {
             .setPriority(NotificationManager.IMPORTANCE_MAX)
             .setAutoCancel(true)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
-            .setContentIntent(openAppIntent())
-            .setFullScreenIntent(openAppIntent(), true)
+            .setDefaults(NotificationCompat.DEFAULT_ALL)
+            .setContentIntent(alertPendingIntent)
+            .setFullScreenIntent(alertPendingIntent, true)
             .build()
         NotificationManagerCompat.from(context).notify(ID_ALERT, n)
 
@@ -151,20 +169,22 @@ class PrometheusAlarmManager(private val context: Context) {
 
     private fun playAlarm() {
         try {
-            val uri = Uri.parse("android.resource://android/raw/notification_audible_buzz")
+            val uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+                ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
             mediaPlayer?.release()
             mediaPlayer = MediaPlayer().apply {
                 setAudioAttributes(
                     AudioAttributes.Builder()
                         .setUsage(AudioAttributes.USAGE_ALARM)
                         .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                        .setFlags(AudioAttributes.FLAG_AUDIBILITY_ENFORCED)
                         .build()
                 )
                 setDataSource(context, uri)
+                isLooping = true
                 setVolume(1.0f, 1.0f)
                 prepare()
                 start()
-                setOnCompletionListener { release() }
             }
         } catch (_: Exception) { }
     }
