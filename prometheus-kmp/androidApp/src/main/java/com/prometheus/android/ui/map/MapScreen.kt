@@ -57,6 +57,7 @@ import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.Polyline
 import com.google.maps.android.compose.rememberCameraPositionState
+import com.prometheus.android.R
 import com.prometheus.android.service.LocationProvider
 import com.prometheus.android.ui.shared.LoadingOverlay
 import com.prometheus.android.ui.theme.LocalPrometheusColors
@@ -276,7 +277,7 @@ fun MapScreen(
                                     state = MarkerState(position = epicenter),
                                     title = "Epicenter",
                                     snippet = event?._wilayah ?: "",
-                                    icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)
+                                    icon = BitmapDescriptorFactory.fromResource(R.drawable.earthquake)
                                 )
                             }
                             if (userLatLng != null) {
@@ -284,7 +285,7 @@ fun MapScreen(
                                     state = MarkerState(position = userLatLng),
                                     title = "You",
                                     snippet = "Current location",
-                                    icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE)
+                                    icon = BitmapDescriptorFactory.fromResource(R.drawable.location)
                                 )
                             }
                             if (epicenter != null && dangerRadiusKm != null) {
@@ -313,64 +314,7 @@ fun MapScreen(
 
             Spacer(Modifier.height(12.dp))
 
-            Box(
-                modifier = Modifier.padding(horizontal = 16.dp)
-            ) {
-                Column(modifier = Modifier.animateContentSize()) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(PaleCyan)
-                            .border(1.dp, PaleCyanBorder, RoundedCornerShape(12.dp))
-                            .clickable { showDetails = !showDetails }
-                            .padding(horizontal = 16.dp, vertical = 12.dp)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = "ROUTING DETAILS",
-                                color = BrightBlue,
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.Medium
-                            )
-                            Spacer(Modifier.weight(1f))
-                            Icon(
-                                imageVector = if (showDetails) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
-                                contentDescription = if (showDetails) "Collapse" else "Expand",
-                                tint = BrightBlue,
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
-                    }
-
-                    AnimatedVisibility(
-                        visible = showDetails,
-                        enter = slideInVertically(
-                            initialOffsetY = { -it },
-                            animationSpec = tween(350, easing = FastOutSlowInEasing)
-                        ) + fadeIn(animationSpec = tween(350)),
-                        exit = slideOutVertically(
-                            targetOffsetY = { -it },
-                            animationSpec = tween(250, easing = FastOutSlowInEasing)
-                        ) + fadeOut(animationSpec = tween(250))
-                    ) {
-                        RoutingDetailsCard(
-                            event = event,
-                            userLocation = currentLocation,
-                            isDangerous = isDangerous,
-                            dangerRadiusKm = dangerRadiusKm,
-                            evacDirection = evacDirection,
-                            ruleName = highestSev?.ruleName,
-                            evacuationRoute = evacuationRoute,
-                            routeLoading = routeLoading
-                        )
-                    }
-                }
-            }
-
-            Spacer(Modifier.height(12.dp))
-
-            if (isDangerous && evacuationRoute != null) {
+            if (evacuationRoute != null) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -433,6 +377,63 @@ fun MapScreen(
 
                 Spacer(Modifier.height(12.dp))
             }
+
+            Box(
+                modifier = Modifier.padding(horizontal = 16.dp)
+            ) {
+                Column(modifier = Modifier.animateContentSize()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(PaleCyan)
+                            .border(1.dp, PaleCyanBorder, RoundedCornerShape(12.dp))
+                            .clickable { showDetails = !showDetails }
+                            .padding(horizontal = 16.dp, vertical = 12.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "ROUTING DETAILS",
+                                color = BrightBlue,
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Spacer(Modifier.weight(1f))
+                            Icon(
+                                imageVector = if (showDetails) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
+                                contentDescription = if (showDetails) "Collapse" else "Expand",
+                                tint = BrightBlue,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                    }
+
+                    AnimatedVisibility(
+                        visible = showDetails,
+                        enter = slideInVertically(
+                            initialOffsetY = { -it },
+                            animationSpec = tween(350, easing = FastOutSlowInEasing)
+                        ) + fadeIn(animationSpec = tween(350)),
+                        exit = slideOutVertically(
+                            targetOffsetY = { -it },
+                            animationSpec = tween(250, easing = FastOutSlowInEasing)
+                        ) + fadeOut(animationSpec = tween(250))
+                    ) {
+                        RoutingDetailsCard(
+                            event = event,
+                            userLocation = currentLocation,
+                            isDangerous = isDangerous,
+                            dangerRadiusKm = dangerRadiusKm,
+                            evacDirection = evacDirection,
+                            ruleName = highestSev?.ruleName,
+                            evacuationRoute = evacuationRoute,
+                            routeLoading = routeLoading
+                        )
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
 
             Box(
                 modifier = Modifier.padding(horizontal = 16.dp)

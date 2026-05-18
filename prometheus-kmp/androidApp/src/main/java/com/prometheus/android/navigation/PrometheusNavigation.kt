@@ -146,7 +146,7 @@ fun PrometheusApp(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .statusBarsPadding()
-                    .padding(top = 8.dp, end = 12.dp),
+                    .padding(top = 16.dp, end = 12.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 var showHelp by remember { mutableStateOf(false) }
