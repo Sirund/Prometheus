@@ -2,6 +2,7 @@ package com.prometheus.android
 
 import android.Manifest
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -22,8 +23,8 @@ import com.prometheus.android.ui.assistant.saveConversations
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
-import com.prometheus.android.service.BMKGPollingController
 import com.prometheus.android.service.InjectionSettings
+import com.prometheus.android.service.PollingService
 import com.prometheus.android.service.LocationProvider
 import com.prometheus.android.ui.theme.LocalPrometheusColors
 import com.prometheus.android.ui.theme.PrometheusTheme
@@ -36,7 +37,6 @@ import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
-    private var pollingController: BMKGPollingController? = null
     private var latestEvent by mutableStateOf<String?>(null)
     private var currentEvent by mutableStateOf<EarthquakeEvent?>(null)
     private var currentLocation by mutableStateOf<UserLocation?>(null)
@@ -110,7 +110,7 @@ class MainActivity : ComponentActivity() {
                                 .putBoolean("dark_mode", isDarkMode)
                                 .apply()
                         },
-                        onRefreshBmkg = { pollingController?.forceCheck() },
+                        onRefreshBmkg = { PollingService.forceCheck() },
                         latestEvent = latestEvent,
                         currentEvent = currentEvent,
                         currentLocation = currentLocation,
@@ -143,14 +143,18 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        pollingController?.stop()
-        pollingController = null
+        PollingService.onPoll = null
+        PollingService.onNewEvent = null
+        PollingService.onWeatherUpdate = null
+        PollingService.onNowcastUpdate = null
+        PollingService.onBadWeather = null
+        stopService(Intent(this, PollingService::class.java))
         ModelManager.shutdown()
     }
 
     override fun onResume() {
         super.onResume()
-        pollingController?.forceCheck()
+        PollingService.forceCheck()
     }
 
     private fun requestNotificationPermission() {
@@ -188,38 +192,42 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun startPolling() {
-        if (pollingController == null) {
-            val locProvider = LocationProvider(this)
-            currentLocation = locProvider.getLastKnownLocation()
-            pollingController = BMKGPollingController(
-                this,
-                baseUrlOverride = InjectionSettings.baseUrl
-            ).apply {
-                onPoll = { events ->
-                    val event = events.firstOrNull()
-                    currentEvent = event
-                    currentLocation = locProvider.getLastKnownLocation()
-                    val mag = event?.magnitudeValue?.let { "M $it" } ?: "Unknown"
-                    latestEvent = "$mag — ${event?._wilayah ?: "Unknown location"}"
-                }
-                onNewEvent = { event ->
-                    currentEvent = event
-                    currentLocation = locProvider.getLastKnownLocation()
-                    val mag = event.magnitudeValue?.let { "M $it" } ?: "Unknown"
-                    latestEvent = "$mag — ${event._wilayah ?: "Unknown location"}"
-                }
-                onWeatherUpdate = { weather ->
-                    weatherInfo = weather
-                }
-                onNowcastUpdate = { alerts ->
-                    nowcastAlerts = alerts
-                }
-                start()
-            }
+        val intent = Intent(this, PollingService::class.java).apply {
+            action = PollingService.ACTION_START
         }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(intent)
+        } else {
+            startService(intent)
+        }
+
+        PollingService.onPoll = { events ->
+            val event = events.firstOrNull()
+            currentEvent = event
+            val locProvider = LocationProvider(this@MainActivity)
+            currentLocation = locProvider.getLastKnownLocation()
+            val mag = event?.magnitudeValue?.let { "M $it" } ?: "Unknown"
+            latestEvent = "$mag — ${event?._wilayah ?: "Unknown location"}"
+        }
+        PollingService.onNewEvent = { event ->
+            currentEvent = event
+            val locProvider = LocationProvider(this@MainActivity)
+            currentLocation = locProvider.getLastKnownLocation()
+            val mag = event.magnitudeValue?.let { "M $it" } ?: "Unknown"
+            latestEvent = "$mag — ${event._wilayah ?: "Unknown location"}"
+        }
+        PollingService.onWeatherUpdate = { weather ->
+            weatherInfo = weather
+        }
+        PollingService.onNowcastUpdate = { alerts ->
+            nowcastAlerts = alerts
+        }
+
+        val locProvider = LocationProvider(this)
+        currentLocation = locProvider.getLastKnownLocation()
     }
 
     private fun applyInjectionUrl() {
-        pollingController?.updateInjectionUrl(InjectionSettings.baseUrl)
+        PollingService.updateInjectionUrl(InjectionSettings.baseUrl)
     }
 }
