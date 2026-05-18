@@ -22,4 +22,5 @@ extension Color {
     static let success = Color(red: 0.4, green: 0.73, blue: 0.42)
     static let textPrimary = Color(white: 0.88)
     static let textSecondary = Color(white: 0.62)
+    static let cardBackground = Color(white: 0.12)
 }
