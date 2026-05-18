@@ -229,6 +229,18 @@ private fun HeroEventCard(
         DangerLevel.Danger -> p.danger
     }
 
+    val potentialText = when {
+        potential.contains("tidak berpotensi tsunami", ignoreCase = true) ||
+        potential.contains("gempa ini dirasakan", ignoreCase = true) -> "Tidak berpotensi tsunami"
+        else -> potential
+    }
+    val potentialColor = when {
+        potential.contains("berpotensi tsunami", ignoreCase = true) ||
+        potential.contains("waspada tsunami", ignoreCase = true) -> p.danger
+        potentialText == "tidak berpotensi tsunami" -> p.success
+        else -> p.textSecondary
+    }
+
     PrometheusCard(elevated = true) {
         Row(modifier = Modifier.fillMaxWidth()) {
             StatColumn(
@@ -237,7 +249,7 @@ private fun HeroEventCard(
                     Image(
                         painter = painterResource(R.drawable.magnitude),
                         contentDescription = "Magnitude",
-                        modifier = Modifier.size(32.dp)
+                        modifier = Modifier.size(40.dp)
                     )
                 },
                 value = magnitude.let { if (it.startsWith("M ")) it else "M $it" },
@@ -250,7 +262,7 @@ private fun HeroEventCard(
                     Image(
                         painter = painterResource(R.drawable.depth),
                         contentDescription = "Depth",
-                        modifier = Modifier.size(32.dp)
+                        modifier = Modifier.size(40.dp)
                     )
                 },
                 value = depth,
@@ -261,7 +273,7 @@ private fun HeroEventCard(
                 Image(
                     painter = painterResource(R.drawable.location),
                     contentDescription = "Location",
-                    modifier = Modifier.size(32.dp).align(Alignment.CenterHorizontally)
+                    modifier = Modifier.size(40.dp).align(Alignment.CenterHorizontally)
                 )
                 Spacer(Modifier.height(2.dp))
                 Text(
@@ -283,26 +295,26 @@ private fun HeroEventCard(
                 }
             }
         }
-        Spacer(Modifier.height(8.dp))
         HorizontalDivider(color = p.surfaceElevated)
-        Spacer(Modifier.height(6.dp))
-        Column {
-            Text(
-                text = potential,
-                style = MaterialTheme.typography.labelSmall,
-                color = p.textSecondary
-            )
-        }
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(4.dp))
+        Text(
+            text = potentialText,
+            style = MaterialTheme.typography.bodyMedium,
+            color = potentialColor,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(Modifier.height(4.dp))
         HorizontalDivider(color = p.surfaceElevated)
-        Spacer(Modifier.height(6.dp))
-        Column {
-            Text(
-                text = location,
-                style = MaterialTheme.typography.labelSmall,
-                color = p.textSecondary
-            )
-        }
+        Spacer(Modifier.height(4.dp))
+        Text(
+            text = location,
+            style = MaterialTheme.typography.bodyMedium,
+            color = p.textSecondary,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth()
+        )
         if (timestamp.isNotBlank()) {
             Spacer(Modifier.height(12.dp))
             Text(
@@ -356,7 +368,7 @@ private fun WeatherInfoCard(weather: WeatherInfo) {
                     Image(
                         painter = painterResource(R.drawable.temp),
                         contentDescription = "Temperature",
-                        modifier = Modifier.size(32.dp)
+                        modifier = Modifier.size(40.dp)
                     )
                 },
                 value = "${weather.temperature}\u00B0",
@@ -368,7 +380,7 @@ private fun WeatherInfoCard(weather: WeatherInfo) {
                     Image(
                         painter = painterResource(R.drawable.humidity),
                         contentDescription = "Humidity",
-                        modifier = Modifier.size(32.dp)
+                        modifier = Modifier.size(40.dp)
                     )
                 },
                 value = "${weather.humidity}%",
@@ -380,7 +392,7 @@ private fun WeatherInfoCard(weather: WeatherInfo) {
                     Image(
                         painter = painterResource(R.drawable.wind),
                         contentDescription = "Wind",
-                        modifier = Modifier.size(32.dp)
+                        modifier = Modifier.size(40.dp)
                     )
                 },
                 value = "${weather.windSpeed} km/j",
@@ -429,7 +441,7 @@ private fun NowcastAlertCard(alert: NowcastAlert) {
             Icon(
                 imageVector = if (alert.isBadWeather) Icons.Filled.Warning else Icons.Filled.Shield,
                 contentDescription = if (alert.isBadWeather) "Warning" else "Clear",
-                modifier = Modifier.size(32.dp)
+                modifier = Modifier.size(40.dp)
             )
             Spacer(Modifier.width(10.dp))
             Column(modifier = Modifier.weight(1f)) {
@@ -473,7 +485,7 @@ private fun NowcastClearCard() {
             Image(
                 painter = painterResource(R.drawable.clear_weather),
                 contentDescription = "Clear weather",
-                modifier = Modifier.size(36.dp)
+                modifier = Modifier.size(40.dp)
             )
             Spacer(Modifier.width(10.dp))
             Text(
