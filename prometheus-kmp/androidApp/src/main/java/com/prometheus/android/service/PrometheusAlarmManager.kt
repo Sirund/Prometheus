@@ -165,18 +165,12 @@ class PrometheusAlarmManager(private val context: Context) {
         if (ttsReady) tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "alert")
     }
 
-    fun sendNowcastNotification(alert: NowcastAlert) {
-        val n = NotificationCompat.Builder(context, CHANNEL_WEATHER)
-            .setSmallIcon(android.R.drawable.ic_dialog_alert)
-            .setContentTitle("\u26A0\uFE0F Weather Warning — ${alert.eventType}")
-            .setContentText(alert.summary.take(100))
-            .setStyle(NotificationCompat.BigTextStyle().bigText(alert.summary))
-            .setPriority(NotificationManager.IMPORTANCE_HIGH)
-            .setAutoCancel(true)
-            .setCategory(NotificationCompat.CATEGORY_ALARM)
-            .setContentIntent(openAppIntent())
-            .build()
-        NotificationManagerCompat.from(context).notify(ID_WEATHER, n)
+    private fun playAlarm() {
+        try {
+            val uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+            val ringtone = RingtoneManager.getRingtone(context, uri)
+            ringtone.play()
+        } catch (_: Exception) {}
     }
 
     fun sendNowcastNotification(alert: NowcastAlert) {

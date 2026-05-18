@@ -529,6 +529,7 @@ private fun InjectionSettingsDialog(
         containerColor = p.surface
     )
 }
+@Composable
 private fun RowScope.StatColumn(
     modifier: Modifier = Modifier,
     icon: @Composable () -> Unit,
