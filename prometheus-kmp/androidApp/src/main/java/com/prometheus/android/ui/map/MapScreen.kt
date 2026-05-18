@@ -308,7 +308,7 @@ fun MapScreen(
             Box(
                 modifier = Modifier.padding(horizontal = 16.dp)
             ) {
-                Column {
+                Column(modifier = Modifier.animateContentSize()) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -331,7 +331,7 @@ fun MapScreen(
                                 imageVector = if (showDetails) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
                                 contentDescription = if (showDetails) "Collapse" else "Expand",
                                 tint = p.blue,
-                                modifier = Modifier.size(24.dp)
+                                modifier = Modifier.size(32.dp)
                             )
                         }
                     }
