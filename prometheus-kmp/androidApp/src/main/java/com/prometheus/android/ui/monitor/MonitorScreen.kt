@@ -239,10 +239,10 @@ fun MonitorScreen(
         EntranceAnimation(visible = true, index = 5) {
             Button(
                 onClick = { onRefresh?.invoke() },
-                modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.small,
+                modifier = Modifier.fillMaxWidth().height(48.dp),
+                shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = p.surfaceElevated,
+                    containerColor = p.blue.copy(alpha = 0.12f),
                     contentColor = p.blue
                 )
             ) {
@@ -285,75 +285,83 @@ private fun HeroEventCard(
     val potentialColor = when {
         potential.contains("berpotensi tsunami", ignoreCase = true) ||
         potential.contains("waspada tsunami", ignoreCase = true) -> p.danger
-        potentialText == "tidak berpotensi tsunami" -> p.success
+        potentialText.contains("tidak berpotensi", ignoreCase = true) ||
+        potentialText.contains("gempa ini", ignoreCase = true) -> p.success
         else -> p.textSecondary
     }
 
-    PrometheusCard(elevated = true) {
-        Row(modifier = Modifier.fillMaxWidth()) {
-            StatColumn(
-                modifier = Modifier.weight(1f),
-                icon = {
-                    Image(
-                        painter = painterResource(R.drawable.magnitude),
-                        contentDescription = "Magnitude",
-                        modifier = Modifier.size(40.dp)
-                    )
-                },
-                value = magnitude.let { if (it.startsWith("M ")) it else "M $it" },
-                label = "MAGNITUDE",
-                valueColor = accentColor
-            )
-            StatColumn(
-                modifier = Modifier.weight(1f),
-                icon = {
-                    Image(
-                        painter = painterResource(R.drawable.depth),
-                        contentDescription = "Depth",
-                        modifier = Modifier.size(40.dp)
-                    )
-                },
-                value = depth,
-                label = "DEPTH",
-                valueColor = p.textPrimary
-            )
-            Column(modifier = Modifier.weight(1f).padding(horizontal = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Image(
-                    painter = painterResource(R.drawable.location),
-                    contentDescription = "Location",
-                    modifier = Modifier.size(40.dp).align(Alignment.CenterHorizontally)
+    Surface(
+        color = p.surfaceElevated,
+        shape = RoundedCornerShape(16.dp),
+        tonalElevation = 4.dp,
+        shadowElevation = 6.dp,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Row(modifier = Modifier.fillMaxWidth()) {
+                StatColumn(
+                    modifier = Modifier.weight(1f),
+                    icon = {
+                        Image(
+                            painter = painterResource(R.drawable.magnitude),
+                            contentDescription = "Magnitude",
+                            modifier = Modifier.size(40.dp)
+                        )
+                    },
+                    value = magnitude.let { if (it.startsWith("M ")) it else "M $it" },
+                    label = "MAGNITUDE",
+                    valueColor = accentColor
                 )
-                Spacer(Modifier.height(2.dp))
-                Text(
-                    text = felt,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = p.textPrimary,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 2,
-                    textAlign = TextAlign.Center
+                StatColumn(
+                    modifier = Modifier.weight(1f),
+                    icon = {
+                        Image(
+                            painter = painterResource(R.drawable.depth),
+                            contentDescription = "Depth",
+                            modifier = Modifier.size(40.dp)
+                        )
+                    },
+                    value = depth,
+                    label = "DEPTH",
+                    valueColor = p.textPrimary
                 )
-                if (latLon != "--") {
+                Column(modifier = Modifier.weight(1f).padding(horizontal = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Image(
+                        painter = painterResource(R.drawable.location),
+                        contentDescription = "Location",
+                        modifier = Modifier.size(40.dp).align(Alignment.CenterHorizontally)
+                    )
                     Spacer(Modifier.height(2.dp))
                     Text(
-                        text = latLon,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = p.textSecondary,
+                        text = felt,
+                        style = MaterialTheme.typography.labelLarge,
+                        color = p.textPrimary,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 2,
                         textAlign = TextAlign.Center
                     )
+                    if (latLon != "--") {
+                        Spacer(Modifier.height(2.dp))
+                        Text(
+                            text = latLon,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = p.textSecondary,
+                            textAlign = TextAlign.Center
+                        )
+                    }
                 }
             }
+            HorizontalDivider(color = p.surfaceElevated)
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = potentialText,
+                style = MaterialTheme.typography.bodyMedium,
+                color = potentialColor,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
         }
-        HorizontalDivider(color = p.surfaceElevated)
-        Spacer(Modifier.height(4.dp))
-        Text(
-            text = potentialText,
-            style = MaterialTheme.typography.bodyMedium,
-            color = potentialColor,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth()
-        )
-
     }
 }
 
@@ -399,7 +407,7 @@ private fun WeatherInfoCard(weather: WeatherInfo) {
                     Image(
                         painter = painterResource(R.drawable.temp),
                         contentDescription = "Temperature",
-                        modifier = Modifier.size(40.dp)
+                        modifier = Modifier.size(32.dp)
                     )
                 },
                 value = "${weather.temperature}\u00B0",
@@ -411,7 +419,7 @@ private fun WeatherInfoCard(weather: WeatherInfo) {
                     Image(
                         painter = painterResource(R.drawable.humidity),
                         contentDescription = "Humidity",
-                        modifier = Modifier.size(40.dp)
+                        modifier = Modifier.size(32.dp)
                     )
                 },
                 value = "${weather.humidity}%",
@@ -423,7 +431,7 @@ private fun WeatherInfoCard(weather: WeatherInfo) {
                     Image(
                         painter = painterResource(R.drawable.wind),
                         contentDescription = "Wind",
-                        modifier = Modifier.size(40.dp)
+                        modifier = Modifier.size(32.dp)
                     )
                 },
                 value = "${weather.windSpeed} km/j",
@@ -446,7 +454,6 @@ private fun RowScope.WeatherStatColumn(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         icon()
-        Spacer(Modifier.height(2.dp))
         Text(
             text = value,
             style = MaterialTheme.typography.labelLarge,

@@ -40,6 +40,8 @@ import com.google.android.gms.maps.model.CircleOptions
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.Manifest
 import android.content.pm.PackageManager
@@ -67,6 +69,14 @@ import com.prometheus.model.UserLocation
 import com.prometheus.network.EvacuationRouter
 import com.prometheus.network.EvacuationRoute
 import kotlin.math.*
+
+private fun scaledMarkerIcon(context: android.content.Context, drawableRes: Int, targetDp: Int): com.google.android.gms.maps.model.BitmapDescriptor {
+    val bitmap = BitmapFactory.decodeResource(context.resources, drawableRes)
+    val density = context.resources.displayMetrics.density
+    val targetPx = (targetDp * density).toInt()
+    val scaled = Bitmap.createScaledBitmap(bitmap, targetPx, targetPx, true)
+    return BitmapDescriptorFactory.fromBitmap(scaled)
+}
 
 private val PaleCyan = Color(0xFFE0F2F9)
 private val PaleCyanBorder = Color(0xFFB3E0F2)
@@ -259,6 +269,9 @@ fun MapScreen(
                             context, Manifest.permission.ACCESS_COARSE_LOCATION
                         ) == PackageManager.PERMISSION_GRANTED
 
+                        val epicenterIcon = remember { scaledMarkerIcon(context, R.drawable.earthquake, 48) }
+                        val userIcon = remember { scaledMarkerIcon(context, R.drawable.location, 40) }
+
                         GoogleMap(
                             modifier = Modifier.fillMaxSize(),
                             cameraPositionState = cameraState,
@@ -277,7 +290,7 @@ fun MapScreen(
                                     state = MarkerState(position = epicenter),
                                     title = "Epicenter",
                                     snippet = event?._wilayah ?: "",
-                                    icon = BitmapDescriptorFactory.fromResource(R.drawable.earthquake)
+                                    icon = epicenterIcon
                                 )
                             }
                             if (userLatLng != null) {
@@ -285,7 +298,7 @@ fun MapScreen(
                                     state = MarkerState(position = userLatLng),
                                     title = "You",
                                     snippet = "Current location",
-                                    icon = BitmapDescriptorFactory.fromResource(R.drawable.location)
+                                    icon = userIcon
                                 )
                             }
                             if (epicenter != null && dangerRadiusKm != null) {

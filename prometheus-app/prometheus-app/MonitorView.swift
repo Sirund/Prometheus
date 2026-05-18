@@ -74,9 +74,9 @@ struct MonitorView: View {
                             }
                             .frame(maxWidth: .infinity)
                             .padding()
-                            .background(Color.prometheusBlue.opacity(0.15))
+                            .background(Color.prometheusBlue.opacity(0.2))
                             .clipShape(RoundedRectangle(cornerRadius: 12))
-                            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.prometheusBlue.opacity(0.5), lineWidth: 1))
+                            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.prometheusBlue, lineWidth: 1))
                             .foregroundColor(.prometheusBlue)
                         }
                         .buttonStyle(.plain)
@@ -200,6 +200,15 @@ struct BMKGEventCard: View {
     let potential: String
     let timestamp: String
 
+    private var potentialColor: Color {
+        if potential.lowercased().contains("berpotensi tsunami") || potential.lowercased().contains("waspada tsunami") {
+            return .red
+        } else if potential.lowercased().contains("tidak berpotensi") || potential.lowercased().contains("gempa ini") {
+            return .green
+        }
+        return .primary
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .top) {
@@ -219,7 +228,10 @@ struct BMKGEventCard: View {
             }
             Divider().background(Color.prometheusBlue.opacity(0.3))
             HStack {
-                EventField(label: "TSUNAMI POTENTIAL", value: potential)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("TSUNAMI POTENTIAL").inter(11).foregroundColor(.secondary)
+                    Text(potential).inter(12, weight: .bold).foregroundColor(potentialColor)
+                }
                 Spacer()
                 Text(timestamp)
                     .inter(11)
@@ -340,11 +352,11 @@ private struct WeatherStatColumn: View {
     let label: String
 
     var body: some View {
-        VStack(spacing: 4) {
+        VStack(spacing: 2) {
             Image(systemName: icon)
-                .font(.title2)
+                .font(.callout)
                 .foregroundColor(.prometheusBlue.opacity(0.7))
-                .frame(height: 36)
+                .frame(height: 28)
             Text(value)
                 .inter(14, weight: .bold)
                 .foregroundColor(.primary)
@@ -353,7 +365,7 @@ private struct WeatherStatColumn: View {
                 .foregroundColor(.secondary)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 4)
+        .padding(.vertical, 2)
     }
 }
 
