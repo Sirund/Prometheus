@@ -112,7 +112,7 @@ fun AssistantScreen(
     // LOCAL state — bypass AnimatedContent barrier, langsung recompose
     var localConversations by remember { mutableStateOf(conversations) }
 
-    val chatHistory by remember { derivedStateOf { localConversations.getOrNull(activeIndex)?.messages ?: emptyList() } }
+    val chatHistory by remember(activeIndex, localConversations) { derivedStateOf { localConversations.getOrNull(activeIndex)?.messages ?: emptyList() } }
 
     LaunchedEffect(Unit) {
         isModelLoaded = ModelManager.isLoaded.value

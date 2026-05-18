@@ -6,6 +6,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Build
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -160,7 +161,7 @@ fun AskScreen(
 
     // Shared: local conversations — bypass AnimatedContent barrier
     var localConversations by remember { mutableStateOf(conversations) }
-    val chatHistory by remember {
+    val chatHistory by remember(activeIndex, localConversations) {
         derivedStateOf { localConversations.getOrNull(activeIndex)?.messages ?: emptyList() }
     }
 
@@ -248,21 +249,30 @@ fun AskScreen(
     fun isCasual(text: String): Boolean {
         if (text.length > 120) return false
         val casual = Regex("(?i).*(halo|hai|hi|hey|apa kabar|hello|good morning|pagi|siang|sore|malam|selamat|terima kasih|thank|thanks|bye|dadah|siapa kamu|apa yang bisa kamu|bisa bantu|tanya dong|prometheus).*")
-        return text.matches(casual)
+        val result = text.matches(casual)
+        Log.d("PersonaRouter", "isCasual(\"${text.take(50)}\") = $result")
+        return result
     }
 
-    fun selectPersona(isCrisis: Boolean, hasImage: Boolean, text: String): String = when {
-        isCrisis && hasImage -> SystemPrompts.HAZARD_SCANNER
-        isCrisis && !hasImage -> SystemPrompts.EMERGENCY_COORDINATOR
-        !isCrisis && isCasual(text) -> SystemPrompts.CASUAL_GATEKEEPER
-        else -> SystemPrompts.MITIGATION_ANALYST
+    fun selectPersona(isCrisis: Boolean, hasImage: Boolean, text: String): String {
+        val persona = when {
+            isCrisis && hasImage -> SystemPrompts.HAZARD_SCANNER
+            isCrisis && !hasImage -> SystemPrompts.EMERGENCY_COORDINATOR
+            !isCrisis && isCasual(text) -> SystemPrompts.CASUAL_GATEKEEPER
+            else -> SystemPrompts.MITIGATION_ANALYST
+        }
+        val label = persona.lines().first().take(60)
+        Log.d("PersonaRouter", "selectPersona(isCrisis=$isCrisis, hasImage=$hasImage, text=\"${text.take(50)}\") → $label")
+        return persona
     }
 
     fun buildSysPrompt(event: EarthquakeEvent?, alerts: List<NowcastAlert>, location: UserLocation?, hasImage: Boolean, text: String): String {
         val ctx = SystemPrompts.buildSituationContext(event, alerts, location)
         val isCrisis = ctx.isNotBlank()
         val persona = selectPersona(isCrisis, hasImage, text)
-        return if (ctx.isNotBlank()) "$ctx\n\n$persona" else persona
+        val assembled = if (ctx.isNotBlank()) "$ctx\n\n$persona" else persona
+        Log.d("PersonaRouter", "buildSysPrompt: hasCtx=${ctx.isNotBlank()}, fullPrompt=${assembled.take(200)}…")
+        return assembled
     }
 
     // ──────────────────────────────────────────────────────────
