@@ -20,6 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
@@ -199,31 +200,32 @@ fun MonitorScreen(
                                 data = Uri.parse("tel:112")
                             }
                             context.startActivity(intent)
-                        }
+                        },
+                    elevated = true
                 ) {
                     Row(
-                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                        modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center
                     ) {
                         Icon(
-                            imageVector = Icons.Filled.Warning,
+                            imageVector = Icons.Filled.Call,
                             contentDescription = "Emergency",
-                            tint = p.danger,
-                            modifier = Modifier.size(28.dp)
+                            tint = p.blue,
+                            modifier = Modifier.size(36.dp)
                         )
-                        Spacer(Modifier.width(10.dp))
+                        Spacer(Modifier.width(12.dp))
                         Column {
                             Text(
                                 text = "Layanan Darurat Terpadu",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = p.textPrimary,
+                                style = MaterialTheme.typography.titleMedium,
+                                color = p.blue,
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
                                 text = "112",
-                                style = MaterialTheme.typography.titleLarge,
-                                color = p.danger,
+                                style = MaterialTheme.typography.displayMedium,
+                                color = p.blue,
                                 fontWeight = FontWeight.Bold
                             )
                         }
