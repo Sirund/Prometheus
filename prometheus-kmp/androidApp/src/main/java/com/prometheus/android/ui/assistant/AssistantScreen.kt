@@ -21,8 +21,22 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ChatBubble
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.HourglassEmpty
 import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Science
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.WaterDrop
 import androidx.compose.material3.*
+import androidx.compose.ui.res.painterResource
+import com.prometheus.android.R
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -191,7 +205,7 @@ fun AssistantScreen(
                                     },
                                     modifier = Modifier.size(32.dp)
                                 ) {
-                                    Text("\u2716", color = Color.Gray, style = MaterialTheme.typography.labelSmall)
+                                    Icon(Icons.Filled.Close, contentDescription = "Delete conversation", tint = Color.Gray, modifier = Modifier.size(18.dp))
                                 }
                             }
                         }
@@ -206,7 +220,7 @@ fun AssistantScreen(
                     title = {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             IconButton(onClick = { scope.launch { if (drawerState.isClosed) drawerState.open() else drawerState.close() } }) {
-                                Text("\u2630", color = p.blue, style = MaterialTheme.typography.titleMedium)
+                                Icon(Icons.Filled.Menu, contentDescription = "Menu", tint = p.blue, modifier = Modifier.size(24.dp))
                             }
                             Text("Survival Assistant", color = p.blue)
                         }
@@ -254,9 +268,11 @@ fun AssistantScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = "\uD83D\uDCAC",
-                                style = MaterialTheme.typography.displaySmall
+                            Icon(
+                                imageVector = Icons.Filled.ChatBubble,
+                                contentDescription = "Chat",
+                                modifier = Modifier.size(48.dp),
+                                tint = p.blue.copy(alpha = 0.6f)
                             )
                             Spacer(Modifier.height(8.dp))
                             Text(
@@ -272,10 +288,10 @@ fun AssistantScreen(
                             )
                             Spacer(Modifier.height(8.dp))
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                CapabilityPill(text = "\uD83E\uDDEA  first aid")
-                                CapabilityPill(text = "\uD83C\uDFE0  shelter & evacuation")
-                                CapabilityPill(text = "\uD83D\uDCA7  water & supplies")
-                                CapabilityPill(text = "\u26A0\uFE0F  Indonesia hazards")
+                                CapabilityPill(icon = Icons.Filled.Science, text = "first aid")
+                                CapabilityPill(icon = Icons.Filled.Home, text = "shelter & evacuation")
+                                CapabilityPill(icon = Icons.Filled.WaterDrop, text = "water & supplies")
+                                CapabilityPill(icon = Icons.Filled.Warning, text = "Indonesia hazards")
                             }
                             if (showDownload) {
                                 Spacer(Modifier.height(16.dp))
@@ -286,12 +302,23 @@ fun AssistantScreen(
                                     isPaused -> Color(0xFFFFA500).copy(alpha = 0.6f)
                                     else -> p.blue.copy(alpha = 0.6f)
                                 }
+                                @Composable
+                                fun DownloadIcon() {
+                                    val icon = when {
+                                        !isDownloading -> Icons.Filled.Download
+                                        isPaused -> Icons.Filled.PlayArrow
+                                        downloadProgress < 0 -> Icons.Filled.HourglassEmpty
+                                        downloadProgress >= 100 -> Icons.Filled.CheckCircle
+                                        else -> Icons.Filled.Pause
+                                    }
+                                    Icon(imageVector = icon, contentDescription = null, modifier = Modifier.size(20.dp))
+                                }
                                 val btnText = when {
-                                    !isDownloading -> "\u2B07\uFE0F  DOWNLOAD MODEL (2.4 GB)"
-                                    isPaused -> "\u25B6\uFE0F  Download Paused: $downloadProgress%"
-                                    downloadProgress < 0 -> "\u23F3  Starting..."
-                                    downloadProgress >= 100 -> "\u2705  Moving file..."
-                                    else -> "\u23F8\uFE0F  Downloading: $downloadProgress%"
+                                    !isDownloading -> "DOWNLOAD MODEL (2.4 GB)"
+                                    isPaused -> "Download Paused: $downloadProgress%"
+                                    downloadProgress < 0 -> "Starting..."
+                                    downloadProgress >= 100 -> "Moving file..."
+                                    else -> "Downloading: $downloadProgress%"
                                 }
                                 Button(
                                     onClick = {
@@ -322,7 +349,11 @@ fun AssistantScreen(
                                                 trackColor = Color.Transparent
                                             )
                                         }
-                                        Text(btnText, fontWeight = FontWeight.Bold)
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            DownloadIcon()
+                                            Spacer(Modifier.width(6.dp))
+                                            Text(btnText, fontWeight = FontWeight.Bold)
+                                        }
                                     }
                                 }
                             }
@@ -372,9 +403,10 @@ fun AssistantScreen(
                                     .clickable { selectedImageBitmap = null },
                                 contentAlignment = Alignment.Center
                             ) {
-                                Text("\u2716",
-                                    color = Color.White,
-                                    style = MaterialTheme.typography.labelSmall
+                                Icon(Icons.Filled.Close,
+                                    contentDescription = "Remove image",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(12.dp)
                                 )
                             }
                         }
@@ -484,9 +516,10 @@ fun AssistantScreen(
                         ),
                         contentPadding = PaddingValues(14.dp)
                     ) {
-                        Text(
-                            text = "\u2708\uFE0F",
-                            style = MaterialTheme.typography.bodyLarge
+                        Image(
+                            painter = painterResource(R.drawable.paper_plane),
+                            contentDescription = "Send",
+                            modifier = Modifier.size(24.dp)
                         )
                     }
                 }
@@ -511,9 +544,13 @@ fun AssistantScreen(
                         },
                         modifier = Modifier.fillMaxWidth().height(56.dp)
                     ) {
-                        Text("\uD83D\uDCF7  Take Photo",
-                            color = p.textPrimary,
-                            fontWeight = FontWeight.Bold)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Image(painter = painterResource(R.drawable.camera), contentDescription = null, modifier = Modifier.size(24.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("Take Photo",
+                                color = p.textPrimary,
+                                fontWeight = FontWeight.Bold)
+                        }
                     }
                     Spacer(Modifier.height(8.dp))
                     TextButton(
@@ -574,9 +611,13 @@ fun AssistantScreen(
                         },
                         modifier = Modifier.fillMaxWidth().height(56.dp)
                     ) {
-                        Text("\uD83D\uDDBC\uFE0F  Gallery",
-                            color = p.textPrimary,
-                            fontWeight = FontWeight.Bold)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Filled.Image, contentDescription = null, modifier = Modifier.size(24.dp), tint = p.textPrimary)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Gallery",
+                                color = p.textPrimary,
+                                fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
             },
@@ -632,14 +673,20 @@ private fun ModeChip(label: String, active: Boolean, onClick: () -> Unit) {
 }
 
 @Composable
-private fun CapabilityPill(text: String) {
+private fun CapabilityPill(icon: androidx.compose.ui.graphics.vector.ImageVector, text: String) {
     val p = LocalPrometheusColors.current
-    Text(
-        text = text,
-        color = p.textSecondary,
-        style = MaterialTheme.typography.labelSmall,
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.padding(vertical = 2.dp)
-    )
+    ) {
+        Icon(imageVector = icon, contentDescription = null, modifier = Modifier.size(16.dp), tint = p.textSecondary)
+        Spacer(Modifier.width(4.dp))
+        Text(
+            text = text,
+            color = p.textSecondary,
+            style = MaterialTheme.typography.labelSmall
+        )
+    }
 }
 
 @Composable

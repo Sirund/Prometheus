@@ -7,6 +7,7 @@ import android.graphics.BitmapFactory
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -17,7 +18,15 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.HourglassEmpty
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.SmartToy
+import androidx.compose.ui.res.painterResource
+import com.prometheus.android.R
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -354,12 +363,39 @@ fun VisionScreen(
                         color = p.textSecondary,
                         style = MaterialTheme.typography.bodySmall
                     )
-                    TalkMode.Transcribing -> Text(
-                        text = pendingSttResult ?: "...",
-                        color = p.blue,
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                    TalkMode.Sending, TalkMode.Result -> Text(
+                    TalkMode.Recording -> Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.align(Alignment.Center)
+                    ) {
+                        Icon(Icons.Filled.Mic, contentDescription = "Mic", modifier = Modifier.size(24.dp), tint = p.blue)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Listening...", color = p.blue, fontWeight = FontWeight.Bold)
+                    }
+                    TalkMode.Transcribing -> Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.align(Alignment.Center)
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                            color = p.blue
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text("Transcribing voice...", color = p.textSecondary)
+                    }
+                    TalkMode.Sending -> Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.align(Alignment.Center)
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                            color = p.blue
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text("Analyzing...", color = p.textSecondary)
+                    }
+                    TalkMode.Result -> Text(
                         text = description ?: "",
                         color = Color.White,
                         style = MaterialTheme.typography.bodySmall,
@@ -463,7 +499,11 @@ private fun PermissionGate(
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("\uD83D\uDCF7\uD83C\uDF99\uFE0F", style = MaterialTheme.typography.displaySmall)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Image(painter = painterResource(R.drawable.camera), contentDescription = "Camera", modifier = Modifier.size(36.dp))
+                Spacer(Modifier.width(8.dp))
+                Icon(Icons.Filled.Mic, contentDescription = "Mic", modifier = Modifier.size(36.dp), tint = p.blue)
+            }
             Spacer(Modifier.height(12.dp))
             Text("PERMISSIONS REQUIRED", color = p.textPrimary,
                 style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
@@ -498,7 +538,7 @@ private fun DownloadPrompt(
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("\uD83E\uDD16", style = MaterialTheme.typography.displaySmall)
+            Icon(Icons.Filled.SmartToy, contentDescription = "Model", modifier = Modifier.size(48.dp), tint = p.blue)
             Spacer(Modifier.height(8.dp))
             Text("MODEL NOT FOUND", color = p.textPrimary,
                 style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
@@ -514,11 +554,11 @@ private fun DownloadPrompt(
                 else -> p.blue.copy(alpha = 0.6f)
             }
             val btnText = when {
-                !isDownloading -> "\u2B07\uFE0F  DOWNLOAD MODEL (2.4 GB)"
-                isPaused -> "\u25B6\uFE0F  Download Paused: $downloadProgress%"
-                downloadProgress < 0 -> "\u23F3  Starting..."
-                downloadProgress >= 100 -> "\u2705  Moving file..."
-                else -> "\u23F8\uFE0F  Downloading: $downloadProgress%"
+                !isDownloading -> "DOWNLOAD MODEL (2.4 GB)"
+                isPaused -> "Download Paused: $downloadProgress%"
+                downloadProgress < 0 -> "Starting..."
+                downloadProgress >= 100 -> "Moving file..."
+                else -> "Downloading: $downloadProgress%"
             }
             Button(
                 onClick = {
@@ -557,7 +597,18 @@ private fun DownloadPrompt(
                             trackColor = Color.Transparent
                         )
                     }
-                    Text(btnText, fontWeight = FontWeight.Bold)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        val icon = when {
+                            !isDownloading -> Icons.Filled.Download
+                            isPaused -> Icons.Filled.PlayArrow
+                            downloadProgress < 0 -> Icons.Filled.HourglassEmpty
+                            downloadProgress >= 100 -> Icons.Filled.CheckCircle
+                            else -> Icons.Filled.Pause
+                        }
+                        Icon(imageVector = icon, contentDescription = null, modifier = Modifier.size(20.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(btnText, fontWeight = FontWeight.Bold)
+                    }
                 }
             }
         }

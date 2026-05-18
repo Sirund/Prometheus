@@ -73,18 +73,18 @@ private val InterFontFamily = FontFamily(
 )
 
 val PrometheusTypography = Typography(
-    displayLarge = TextStyle(fontSize = 48.sp, fontWeight = FontWeight.Bold, fontFamily = InterFontFamily, color = Color.Unspecified),
-    displayMedium = TextStyle(fontSize = 34.sp, fontWeight = FontWeight.Bold, fontFamily = InterFontFamily, color = Color.Unspecified),
-    headlineLarge = TextStyle(fontSize = 28.sp, fontWeight = FontWeight.Bold, fontFamily = InterFontFamily, color = Color.Unspecified),
-    headlineMedium = TextStyle(fontSize = 24.sp, fontWeight = FontWeight.Bold, fontFamily = InterFontFamily, color = Color.Unspecified),
-    titleLarge = TextStyle(fontSize = 20.sp, fontWeight = FontWeight.SemiBold, fontFamily = InterFontFamily, color = Color.Unspecified),
-    titleMedium = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.SemiBold, fontFamily = InterFontFamily, color = Color.Unspecified),
-    bodyLarge = TextStyle(fontSize = 16.sp, fontFamily = InterFontFamily, color = Color.Unspecified),
-    bodyMedium = TextStyle(fontSize = 14.sp, fontFamily = InterFontFamily, color = Color.Unspecified),
-    bodySmall = TextStyle(fontSize = 13.sp, fontFamily = InterFontFamily, color = Color.Unspecified),
-    labelLarge = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.Bold, fontFamily = InterFontFamily, color = Color.Unspecified),
-    labelMedium = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Bold, fontFamily = InterFontFamily, color = Color.Unspecified),
-    labelSmall = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Bold, fontFamily = InterFontFamily, color = Color.Unspecified),
+    displayLarge = TextStyle(fontSize = 52.sp, fontWeight = FontWeight.Bold, fontFamily = InterFontFamily, color = Color.Unspecified),
+    displayMedium = TextStyle(fontSize = 38.sp, fontWeight = FontWeight.Bold, fontFamily = InterFontFamily, color = Color.Unspecified),
+    headlineLarge = TextStyle(fontSize = 30.sp, fontWeight = FontWeight.Bold, fontFamily = InterFontFamily, color = Color.Unspecified),
+    headlineMedium = TextStyle(fontSize = 26.sp, fontWeight = FontWeight.Bold, fontFamily = InterFontFamily, color = Color.Unspecified),
+    titleLarge = TextStyle(fontSize = 22.sp, fontWeight = FontWeight.SemiBold, fontFamily = InterFontFamily, color = Color.Unspecified),
+    titleMedium = TextStyle(fontSize = 18.sp, fontWeight = FontWeight.SemiBold, fontFamily = InterFontFamily, color = Color.Unspecified),
+    bodyLarge = TextStyle(fontSize = 18.sp, fontFamily = InterFontFamily, color = Color.Unspecified),
+    bodyMedium = TextStyle(fontSize = 16.sp, fontFamily = InterFontFamily, color = Color.Unspecified),
+    bodySmall = TextStyle(fontSize = 15.sp, fontFamily = InterFontFamily, color = Color.Unspecified),
+    labelLarge = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.Bold, fontFamily = InterFontFamily, color = Color.Unspecified),
+    labelMedium = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Bold, fontFamily = InterFontFamily, color = Color.Unspecified),
+    labelSmall = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.Bold, fontFamily = InterFontFamily, color = Color.Unspecified),
 )
 
 val PrometheusShapes = Shapes(
