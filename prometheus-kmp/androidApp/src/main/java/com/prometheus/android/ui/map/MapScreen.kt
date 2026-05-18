@@ -34,6 +34,7 @@ import androidx.compose.material.icons.filled.Motorcycle
 import androidx.compose.material.icons.filled.NearMe
 import androidx.compose.material.icons.filled.Public
 import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.model.BitmapDescriptor
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.CircleOptions
@@ -271,8 +272,15 @@ fun MapScreen(
                             context, Manifest.permission.ACCESS_COARSE_LOCATION
                         ) == PackageManager.PERMISSION_GRANTED
 
-                        val epicenterIcon = remember { scaledMarkerIcon(context, R.drawable.earthquake, 48) }
-                        val userIcon = remember { scaledMarkerIcon(context, R.drawable.location, 40) }
+                        var epicenterIcon by remember { mutableStateOf<BitmapDescriptor?>(null) }
+                        var userIcon by remember { mutableStateOf<BitmapDescriptor?>(null) }
+
+                        LaunchedEffect(Unit) {
+                            try {
+                                epicenterIcon = scaledMarkerIcon(context, R.drawable.earthquake, 48)
+                                userIcon = scaledMarkerIcon(context, R.drawable.location, 40)
+                            } catch (_: Exception) { }
+                        }
 
                         GoogleMap(
                             modifier = Modifier.fillMaxSize(),
@@ -292,7 +300,7 @@ fun MapScreen(
                                     state = MarkerState(position = epicenter),
                                     title = "Epicenter",
                                     snippet = event?._wilayah ?: "",
-                                    icon = epicenterIcon
+                                    icon = epicenterIcon ?: BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)
                                 )
                             }
                             if (userLatLng != null) {
@@ -300,7 +308,7 @@ fun MapScreen(
                                     state = MarkerState(position = userLatLng),
                                     title = "You",
                                     snippet = "Current location",
-                                    icon = userIcon
+                                    icon = userIcon ?: BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE)
                                 )
                             }
                             if (epicenter != null && dangerRadiusKm != null) {
@@ -365,12 +373,20 @@ fun MapScreen(
                     ActionButton(
                         modifier = Modifier.weight(1f),
                         icon = {
-                            Icon(
-                                imageVector = Icons.Filled.Map,
-                                contentDescription = null,
-                                tint = DarkGreen,
-                                modifier = Modifier.size(24.dp)
-                            )
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(DarkGreen),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.Map,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
                         },
                         label = "Maps",
                         bgColor = PaleGreen,

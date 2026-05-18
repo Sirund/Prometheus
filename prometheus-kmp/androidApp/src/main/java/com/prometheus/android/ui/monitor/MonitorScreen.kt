@@ -8,27 +8,25 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material.icons.filled.Shield
-import androidx.compose.material.icons.filled.Call
-import androidx.compose.material.icons.filled.Warning
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.prometheus.android.R
-import android.content.Intent
-import android.net.Uri
-import androidx.compose.ui.platform.LocalContext
 import com.prometheus.android.ui.shared.EntranceAnimation
 import com.prometheus.android.ui.shared.PrometheusCard
 import com.prometheus.android.ui.shared.SectionHeader
@@ -36,6 +34,8 @@ import com.prometheus.android.ui.theme.LocalPrometheusColors
 import com.prometheus.model.EarthquakeEvent
 import com.prometheus.model.NowcastAlert
 import com.prometheus.model.WeatherInfo
+import android.content.Intent
+import android.net.Uri
 
 private enum class DangerLevel { None, Watch, Medium, Danger }
 
@@ -46,7 +46,11 @@ fun MonitorScreen(
     event: EarthquakeEvent? = null,
     latestEvent: String? = null,
     weatherInfo: WeatherInfo = WeatherInfo.EMPTY,
-    nowcastAlerts: List<NowcastAlert> = emptyList()
+    nowcastAlerts: List<NowcastAlert> = emptyList(),
+    injectionEnabled: Boolean = false,
+    injectionIp: String = "",
+    injectionPort: Int = 8080,
+    onApplyInjection: ((Boolean, String, Int) -> Unit)? = null
 ) {
     val dangerLevel = when {
         event == null -> DangerLevel.None
@@ -63,6 +67,7 @@ fun MonitorScreen(
 
 
     val p = LocalPrometheusColors.current
+    var showInjectionDialog by remember { mutableStateOf(false) }
     Scaffold(
         topBar = {
             TopAppBar(
@@ -237,6 +242,34 @@ fun MonitorScreen(
         Spacer(Modifier.height(16.dp))
 
         EntranceAnimation(visible = true, index = 5) {
+            Column {
+                SectionHeader(text = "LOCAL INJECTION")
+                Spacer(Modifier.height(8.dp))
+                InjectionStatusCard(
+                    enabled = injectionEnabled,
+                    ip = injectionIp,
+                    port = injectionPort,
+                    onClick = { showInjectionDialog = true }
+                )
+            }
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        if (showInjectionDialog) {
+            InjectionSettingsDialog(
+                enabled = injectionEnabled,
+                ip = injectionIp,
+                port = injectionPort,
+                onDismiss = { showInjectionDialog = false },
+                onApply = { enabled, ip, port ->
+                    onApplyInjection?.invoke(enabled, ip, port)
+                    showInjectionDialog = false
+                }
+            )
+        }
+
+        EntranceAnimation(visible = true, index = 6) {
             Button(
                 onClick = { onRefresh?.invoke() },
                 modifier = Modifier.fillMaxWidth().height(48.dp),
@@ -258,6 +291,146 @@ fun MonitorScreen(
     }
 }
  
+}
+
+@Composable
+private fun InjectionStatusCard(
+    enabled: Boolean,
+    ip: String,
+    port: Int,
+    onClick: () -> Unit
+) {
+    val p = LocalPrometheusColors.current
+    val active = enabled && ip.isNotBlank()
+    val statusColor = if (active) p.success else p.textSecondary
+    val statusText = if (active) "ACTIVE \u2014 $ip:$port" else "DISABLED"
+
+    PrometheusCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        elevated = true
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "INJECTION",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = p.textSecondary
+                )
+                Spacer(Modifier.weight(1f))
+                Text(
+                    text = statusText,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = statusColor
+                )
+            }
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = "Tap to configure local earthquake data injection",
+                style = MaterialTheme.typography.bodySmall,
+                color = p.textSecondary
+            )
+        }
+    }
+}
+
+@Composable
+private fun InjectionSettingsDialog(
+    enabled: Boolean,
+    ip: String,
+    port: Int,
+    onDismiss: () -> Unit,
+    onApply: (Boolean, String, Int) -> Unit
+) {
+    val p = LocalPrometheusColors.current
+    var editEnabled by remember { mutableStateOf(enabled) }
+    var editIp by remember { mutableStateOf(ip) }
+    var editPort by remember { mutableStateOf(port.toString()) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text("LOCAL INJECTION", color = p.blue, fontWeight = FontWeight.Bold)
+        },
+        text = {
+            Column {
+                Text(
+                    text = "Run 'python3 tools/local_injector.py' on your PC, then enter its IP and port below.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = p.textSecondary
+                )
+                Spacer(Modifier.height(12.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Enable Injection",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = p.textPrimary,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Switch(
+                        checked = editEnabled,
+                        onCheckedChange = { editEnabled = it },
+                        colors = SwitchDefaults.colors(checkedTrackColor = p.blue)
+                    )
+                }
+                Spacer(Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = editIp,
+                    onValueChange = { editIp = it },
+                    label = { Text("PC IP Address") },
+                    placeholder = { Text("e.g. 192.168.1.42") },
+                    enabled = editEnabled,
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = p.blue,
+                        unfocusedBorderColor = p.textSecondary.copy(alpha = 0.5f),
+                        focusedTextColor = p.textPrimary,
+                        unfocusedTextColor = p.textPrimary,
+                        cursorColor = p.blue
+                    )
+                )
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = editPort,
+                    onValueChange = { editPort = it.filter { c -> c.isDigit() } },
+                    label = { Text("Port") },
+                    enabled = editEnabled,
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = p.blue,
+                        unfocusedBorderColor = p.textSecondary.copy(alpha = 0.5f),
+                        focusedTextColor = p.textPrimary,
+                        unfocusedTextColor = p.textPrimary,
+                        cursorColor = p.blue
+                    )
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                val parsedPort = editPort.toIntOrNull() ?: 8080
+                onApply(editEnabled, editIp, parsedPort)
+            }) {
+                Text("APPLY", color = p.blue, fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("CANCEL", color = p.textSecondary)
+            }
+        },
+        containerColor = p.surface
+    )
 }
 
 @Composable
