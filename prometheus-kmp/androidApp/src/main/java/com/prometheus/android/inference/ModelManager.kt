@@ -19,6 +19,9 @@ import com.prometheus.android.inference.download.InitEngineWorker
 import com.prometheus.android.inference.download.VerifyWorker
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -33,10 +36,10 @@ object ModelManager {
     private var appContext: Context? = null
     private val sessionLock = Any()
     private var currentConversation: Conversation? = null
-    var isLoaded = false
-        private set
-    var statusMessage = "Initializing..."
-        private set
+    private val _isLoaded = MutableStateFlow(false)
+    val isLoaded: StateFlow<Boolean> = _isLoaded.asStateFlow()
+    private val _statusMessage = MutableStateFlow("Initializing...")
+    val statusMessage: StateFlow<String> = _statusMessage.asStateFlow()
 
     suspend fun init(context: Context) {
         if (engine != null) return
@@ -45,8 +48,8 @@ object ModelManager {
             try {
                 val modelPath = findModelPath(context)
                 if (modelPath == null) {
-                    statusMessage = "Model not found"
-                    Log.w(TAG, statusMessage)
+                    _statusMessage.value = "Model not found"
+                    Log.w(TAG, _statusMessage.value)
                     return@withContext
                 }
 
@@ -54,7 +57,7 @@ object ModelManager {
 
                 var backendUsed = "CPU"
                 val newEngine = try {
-                    statusMessage = "Loading model on GPU..."
+                    _statusMessage.value = "Loading model on GPU..."
                     val gpuConfig = EngineConfig(
                         modelPath = modelPath,
                         backend = Backend.GPU(),
@@ -68,7 +71,7 @@ object ModelManager {
                     eng
                 } catch (e: Exception) {
                     Log.w(TAG, "GPU init failed, falling back to CPU: ${e.message}")
-                    statusMessage = "GPU unavailable, loading on CPU..."
+                    _statusMessage.value = "GPU unavailable, loading on CPU..."
                     val cpuConfig = EngineConfig(
                         modelPath = modelPath,
                         backend = Backend.CPU(),
@@ -82,11 +85,11 @@ object ModelManager {
                 }
 
                 engine = newEngine
-                isLoaded = true
-                statusMessage = "Gemma 4 Online ($backendUsed)"
+                _isLoaded.value = true
+                _statusMessage.value = "Gemma 4 Online ($backendUsed)"
                 Log.d(TAG, "Model ready (shared engine)")
             } catch (e: Exception) {
-                statusMessage = "Error: ${e.message ?: e.javaClass.simpleName}"
+                _statusMessage.value = "Error: ${e.message ?: e.javaClass.simpleName}"
                 Log.e(TAG, "ModelManager init failed", e)
             }
         }
@@ -120,7 +123,7 @@ object ModelManager {
         }
         try { engine?.close() } catch (_: Exception) {}
         engine = null
-        isLoaded = false
+        _isLoaded.value = false
         appContext = null
     }
 
@@ -131,8 +134,8 @@ object ModelManager {
             currentConversation = null
             try { engine?.close() } catch (_: Exception) {}
             engine = null
-            isLoaded = false
-            statusMessage = "Reloading model..."
+            _isLoaded.value = false
+            _statusMessage.value = "Reloading model..."
         }
         appContext = context.applicationContext
         GlobalScope.launch(Dispatchers.Default) {
@@ -184,13 +187,13 @@ object ModelManager {
             .then(initRequest)
             .enqueue()
 
-        statusMessage = "Download pending..."
+        _statusMessage.value = "Download pending..."
         Log.d(TAG, "Download enqueued via WorkManager")
     }
 
     fun cancelDownload(context: Context) {
         WorkManager.getInstance(context).cancelUniqueWork("model_download")
-        statusMessage = "Download cancelled"
+        _statusMessage.value = "Download cancelled"
         Log.d(TAG, "Download cancelled")
     }
 }

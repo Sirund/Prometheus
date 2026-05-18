@@ -23,7 +23,7 @@ class ConversationManager {
         imagePath: String? = null,
         onToken: (String) -> Unit
     ) = withContext(Dispatchers.IO) {
-        if (!ModelManager.isLoaded) {
+        if (!ModelManager.isLoaded.value) {
             onToken("Model not loaded.")
             return@withContext
         }

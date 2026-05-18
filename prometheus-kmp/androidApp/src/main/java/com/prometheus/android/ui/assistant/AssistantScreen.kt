@@ -70,8 +70,8 @@ fun AssistantScreen(
     val manager = remember { conversationManager ?: ConversationManager() }
     var query by remember { mutableStateOf("") }
     var selectedImageBitmap by remember { mutableStateOf<Bitmap?>(null) }
-    var isModelLoaded by remember { mutableStateOf(false) }
-    var statusMessage by remember { mutableStateOf("Initializing...") }
+    val isModelLoaded by ModelManager.isLoaded.collectAsState()
+    val statusMessage by ModelManager.statusMessage.collectAsState()
 
     val downloadState by produceState<WorkInfo?>(initialValue = null) {
         while (true) {
@@ -125,11 +125,6 @@ fun AssistantScreen(
     var localConversations by remember { mutableStateOf(conversations) }
 
     val chatHistory by remember { derivedStateOf { localConversations.getOrNull(activeIndex)?.messages ?: emptyList() } }
-
-    LaunchedEffect(Unit) {
-        isModelLoaded = ModelManager.isLoaded
-        statusMessage = ModelManager.statusMessage
-    }
 
     val showDownload = !isModelLoaded && !isDownloading && statusMessage.startsWith("Model not found")
 

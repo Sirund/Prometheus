@@ -71,8 +71,8 @@ fun VisionScreen(
     val ttsManager = remember { TTSManager(context) }
     val sttManager = remember { STTManager(context) }
 
-    var isModelLoaded by remember { mutableStateOf(ModelManager.isLoaded) }
-    var statusMessage by remember { mutableStateOf(ModelManager.statusMessage) }
+    val isModelLoaded by ModelManager.isLoaded.collectAsState()
+    val statusMessage by ModelManager.statusMessage.collectAsState()
     var capturedImage by remember { mutableStateOf<Bitmap?>(null) }
     var freezeBitmap by remember { mutableStateOf<Bitmap?>(null) }
     var cameraActions by remember { mutableStateOf<CameraActions?>(null) }
@@ -108,9 +108,6 @@ fun VisionScreen(
     }
 
     LaunchedEffect(Unit) {
-        isModelLoaded = ModelManager.isLoaded
-        statusMessage = ModelManager.statusMessage
-
         if (!hasCameraPermission || !hasAudioPermission) {
             permissionLauncher.launch(
                 arrayOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO)
@@ -156,15 +153,11 @@ fun VisionScreen(
                     isDownloading = isDownloading,
                     downloadProgress = downloadProgress,
                     context = context,
-                    onDownloadChange = { downloading, progress, msg ->
+                    onDownloadChange = { downloading, progress, _ ->
                         isDownloading = downloading
                         downloadProgress = progress
-                        statusMessage = msg
                     },
-                    onModelLoaded = {
-                        isModelLoaded = ModelManager.isLoaded
-                        statusMessage = ModelManager.statusMessage
-                    }
+                    onModelLoaded = { }
                 )
                 return@Scaffold
             }

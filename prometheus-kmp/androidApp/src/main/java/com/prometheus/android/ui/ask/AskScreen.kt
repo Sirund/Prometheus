@@ -124,8 +124,8 @@ fun AskScreen(
     }
 
     // TALK mode state
-    var isModelLoaded by remember { mutableStateOf(false) }
-    var statusMessage by remember { mutableStateOf("Initializing...") }
+    val isModelLoaded by ModelManager.isLoaded.collectAsState()
+    val statusMessage by ModelManager.statusMessage.collectAsState()
     var capturedImage by remember { mutableStateOf<Bitmap?>(null) }
     var freezeBitmap by remember { mutableStateOf<Bitmap?>(null) }
     var cameraActions by remember { mutableStateOf<CameraActions?>(null) }
@@ -170,19 +170,12 @@ fun AskScreen(
         currentTtsText = null
         description = null
         if (askMode == "TALK") {
-            isModelLoaded = ModelManager.isLoaded
-            statusMessage = ModelManager.statusMessage
             if (!hasCameraPermission || !hasAudioPermission) {
                 permissionLauncher.launch(
                     arrayOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO)
                 )
             }
         }
-    }
-
-    LaunchedEffect(Unit) {
-        isModelLoaded = ModelManager.isLoaded
-        statusMessage = ModelManager.statusMessage
     }
 
     DisposableEffect(Unit) {
