@@ -30,8 +30,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Science
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.WaterDrop
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -162,6 +166,21 @@ fun AskScreen(
     ) { permissions ->
         hasCameraPermission = permissions[Manifest.permission.CAMERA] == true
         hasAudioPermission = permissions[Manifest.permission.RECORD_AUDIO] == true
+    }
+
+    // Notification permission (Android 13+) untuk download model
+    val notificationPermLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) ModelManager.enqueueDownload(context)
+    }
+
+    fun enqueueDownloadWithPermission(context: android.content.Context) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            notificationPermLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            ModelManager.enqueueDownload(context)
+        }
     }
 
     // Reset TTS & description saat mode berubah (CHAT↔TALK)
@@ -411,7 +430,7 @@ fun AskScreen(
                         onSend = { sendChatMessage(query, selectedImageBitmap)
                             query = ""; selectedImageBitmap = null },
                         onAttachImage = { showImageSourceDialog = true },
-                        onDownloadModel = { ModelManager.enqueueDownload(context) },
+                        onDownloadModel = { enqueueDownloadWithPermission(context) },
                         onSpeakText = ::speakOrStop
                     )
 
@@ -430,6 +449,7 @@ fun AskScreen(
                         cameraActions = cameraActions,
                         onCameraActionsReady = { cameraActions = it },
                         talkMode = talkMode,
+                        onDownloadModel = { enqueueDownloadWithPermission(context) },
                         description = description,
                         pendingSttResult = pendingSttResult,
                         isDownloading = isDownloadingWork,
@@ -695,10 +715,10 @@ private fun ChatContent(
                     )
                     Spacer(Modifier.height(8.dp))
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        CapabilityPill(text = "\uD83E\uDDEA  first aid")
-                        CapabilityPill(text = "\uD83C\uDFE0  shelter & evacuation")
-                        CapabilityPill(text = "\uD83D\uDCA7  water & supplies")
-                        CapabilityPill(text = "\u26A0\uFE0F  Indonesia hazards")
+                        CapabilityPill(icon = Icons.Filled.Science, text = "first aid")
+                        CapabilityPill(icon = Icons.Filled.Home, text = "shelter & evacuation")
+                        CapabilityPill(icon = Icons.Filled.WaterDrop, text = "water & supplies")
+                        CapabilityPill(icon = Icons.Filled.Warning, text = "Indonesia hazards")
                     }
                     if (showDownload || isDownloading) {
                         Spacer(Modifier.height(16.dp))
@@ -866,6 +886,7 @@ private fun TalkContent(
     onSttListen: () -> Unit,
     onSttStopAndProcess: () -> Unit,
     onTalkModeChange: (TalkMode) -> Unit,
+    onDownloadModel: () -> Unit,
     onSpeakText: (String) -> Unit,
     scope: kotlinx.coroutines.CoroutineScope
 ) {
@@ -898,7 +919,7 @@ private fun TalkContent(
             DownloadPrompt(
                 isDownloading = isDownloading,
                 downloadProgress = downloadProgress,
-                onDownload = { ModelManager.enqueueDownload(context) }
+                onDownload = onDownloadModel
             )
         } else {
             // Camera preview
@@ -1261,14 +1282,17 @@ private fun ChatBubble(message: ChatMessage, onTextClick: (String) -> Unit) {
 }
 
 @Composable
-private fun CapabilityPill(text: String) {
+private fun CapabilityPill(icon: androidx.compose.ui.graphics.vector.ImageVector, text: String) {
     val p = LocalPrometheusColors.current
-    Text(
-        text = text,
-        color = p.textSecondary,
-        style = MaterialTheme.typography.labelSmall,
-        modifier = Modifier.padding(vertical = 2.dp)
-    )
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 2.dp)) {
+        Icon(icon, contentDescription = null, modifier = Modifier.size(14.dp), tint = p.blue)
+        Spacer(Modifier.width(4.dp))
+        Text(
+            text = text,
+            color = p.textSecondary,
+            style = MaterialTheme.typography.labelSmall
+        )
+    }
 }
 
 private fun markdownToAnnotated(text: String): AnnotatedString = buildAnnotatedString {

@@ -4,10 +4,10 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -18,7 +18,15 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.HourglassEmpty
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.SmartToy
+import androidx.compose.ui.res.painterResource
+import com.prometheus.android.R
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -32,8 +40,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
-import androidx.work.WorkInfo
-import androidx.work.WorkManager
 import com.prometheus.android.inference.ConversationManager
 import com.prometheus.android.inference.ModelManager
 import com.prometheus.android.inference.STTManager
@@ -71,8 +77,8 @@ fun VisionScreen(
     val ttsManager = remember { TTSManager(context) }
     val sttManager = remember { STTManager(context) }
 
-    val isModelLoaded by ModelManager.isLoaded.collectAsState()
-    val statusMessage by ModelManager.statusMessage.collectAsState()
+    var isModelLoaded by remember { mutableStateOf(ModelManager.isLoaded.value) }
+    var statusMessage by remember { mutableStateOf(ModelManager.statusMessage.value) }
     var capturedImage by remember { mutableStateOf<Bitmap?>(null) }
     var freezeBitmap by remember { mutableStateOf<Bitmap?>(null) }
     var cameraActions by remember { mutableStateOf<CameraActions?>(null) }
@@ -108,6 +114,9 @@ fun VisionScreen(
     }
 
     LaunchedEffect(Unit) {
+        isModelLoaded = ModelManager.isLoaded.value
+        statusMessage = ModelManager.statusMessage.value
+
         if (!hasCameraPermission || !hasAudioPermission) {
             permissionLauncher.launch(
                 arrayOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO)
@@ -145,7 +154,7 @@ fun VisionScreen(
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 16.dp, top = 4.dp)) {
                 Box(Modifier.size(6.dp).clip(RoundedCornerShape(3.dp)).background(if (isModelLoaded) Color.Green else Color(0xFFFFA500)))
                 Spacer(Modifier.width(4.dp))
-                Text(statusMessage, color = p.textSecondary, style = MaterialTheme.typography.labelSmall)
+                Text(if (isModelLoaded) "Gemma 4 Online" else "Initializing...", color = p.textSecondary, style = MaterialTheme.typography.labelSmall)
             }
 
             if (!isModelLoaded) {
@@ -153,11 +162,13 @@ fun VisionScreen(
                     isDownloading = isDownloading,
                     downloadProgress = downloadProgress,
                     context = context,
-                    onDownloadChange = { downloading, progress, _ ->
+                    onDownloadChange = { downloading, progress ->
                         isDownloading = downloading
                         downloadProgress = progress
                     },
-                    onModelLoaded = { }
+                    onModelLoaded = {
+                        isModelLoaded = ModelManager.isLoaded.value
+                    }
                 )
                 return@Scaffold
             }
@@ -350,12 +361,39 @@ fun VisionScreen(
                         color = p.textSecondary,
                         style = MaterialTheme.typography.bodySmall
                     )
-                    TalkMode.Transcribing -> Text(
-                        text = pendingSttResult ?: "...",
-                        color = p.blue,
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                    TalkMode.Sending, TalkMode.Result -> Text(
+                    TalkMode.Recording -> Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.align(Alignment.Center)
+                    ) {
+                        Icon(Icons.Filled.Mic, contentDescription = "Mic", modifier = Modifier.size(24.dp), tint = p.blue)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Listening...", color = p.blue, fontWeight = FontWeight.Bold)
+                    }
+                    TalkMode.Transcribing -> Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.align(Alignment.Center)
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                            color = p.blue
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text("Transcribing voice...", color = p.textSecondary)
+                    }
+                    TalkMode.Sending -> Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.align(Alignment.Center)
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                            color = p.blue
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text("Analyzing...", color = p.textSecondary)
+                    }
+                    TalkMode.Result -> Text(
                         text = description ?: "",
                         color = Color.White,
                         style = MaterialTheme.typography.bodySmall,
@@ -459,7 +497,11 @@ private fun PermissionGate(
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("\uD83D\uDCF7\uD83C\uDF99\uFE0F", style = MaterialTheme.typography.displaySmall)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Image(painter = painterResource(R.drawable.camera), contentDescription = "Camera", modifier = Modifier.size(36.dp))
+                Spacer(Modifier.width(8.dp))
+                Icon(Icons.Filled.Mic, contentDescription = "Mic", modifier = Modifier.size(36.dp), tint = p.blue)
+            }
             Spacer(Modifier.height(12.dp))
             Text("PERMISSIONS REQUIRED", color = p.textPrimary,
                 style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
@@ -485,42 +527,16 @@ private fun DownloadPrompt(
     isDownloading: Boolean,
     downloadProgress: Int,
     context: android.content.Context,
-    onDownloadChange: (Boolean, Int, String) -> Unit,
+    onDownloadChange: (Boolean, Int) -> Unit,
     onModelLoaded: () -> Unit
 ) {
     val p = LocalPrometheusColors.current
-    val notificationPermLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        if (granted) {
-            ModelManager.enqueueDownload(context)
-            onDownloadChange(true, 0, "Download pending...")
-        }
-    }
-    val downloadState by produceState<WorkInfo?>(initialValue = null) {
-        while (true) {
-            try {
-                val future = WorkManager.getInstance(context).getWorkInfosByTag("model_download")
-                val infos = future.get()
-                value = infos.lastOrNull()
-                if (value?.state?.isFinished == true) break
-            } catch (_: Exception) {}
-            kotlinx.coroutines.delay(1000)
-        }
-    }
-    val wmDownloading = downloadState?.let {
-        it.state == WorkInfo.State.RUNNING || it.state == WorkInfo.State.ENQUEUED
-    } ?: false
-    val wmProgress = downloadState?.progress?.getInt("progress", -1) ?: -1
-    val activeIsDownloading = isDownloading || wmDownloading
-    val activeProgress = if (wmProgress >= 0) wmProgress else downloadProgress
-
     Box(
         modifier = Modifier.fillMaxWidth().fillMaxHeight().padding(32.dp),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("\uD83E\uDD16", style = MaterialTheme.typography.displaySmall)
+            Icon(Icons.Filled.SmartToy, contentDescription = "Model", modifier = Modifier.size(48.dp), tint = p.blue)
             Spacer(Modifier.height(8.dp))
             Text("MODEL NOT FOUND", color = p.textPrimary,
                 style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
@@ -528,26 +544,19 @@ private fun DownloadPrompt(
                 color = p.textSecondary, style = MaterialTheme.typography.bodySmall)
             Spacer(Modifier.height(16.dp))
 
-            val btnColor = if (!activeIsDownloading) p.blue else p.blue.copy(alpha = 0.6f)
+            val btnColor = if (!isDownloading) p.blue else p.blue.copy(alpha = 0.6f)
             val btnText = when {
-                !activeIsDownloading -> "\u2B07\uFE0F  DOWNLOAD MODEL (2.4 GB)"
-                activeProgress >= 0 -> "\u23F3  Downloading: $activeProgress%"
-                else -> "\u23F3  Starting..."
+                !isDownloading -> "DOWNLOAD MODEL (2.4 GB)"
+                downloadProgress >= 0 -> "Downloading: $downloadProgress%"
+                else -> "Starting..."
             }
             Button(
                 onClick = {
-                    if (!activeIsDownloading) {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-                            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
-                        ) {
-                            notificationPermLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                        } else {
-                            ModelManager.enqueueDownload(context)
-                            onDownloadChange(true, 0, "Download pending...")
-                        }
+                    if (!isDownloading) {
+                        ModelManager.enqueueDownload(context)
+                        onDownloadChange(true, 0)
                     }
                 },
-                enabled = !activeIsDownloading,
                 modifier = Modifier.fillMaxWidth().height(48.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = btnColor,
@@ -555,15 +564,24 @@ private fun DownloadPrompt(
                 )
             ) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    if (activeIsDownloading) {
+                    if (isDownloading && downloadProgress in 0..99) {
                         LinearProgressIndicator(
-                            progress = { if (activeProgress > 0) activeProgress / 100f else 0f },
+                            progress = { downloadProgress / 100f },
                             modifier = Modifier.fillMaxWidth().fillMaxHeight(),
                             color = p.blue.copy(alpha = 0.3f),
                             trackColor = Color.Transparent
                         )
                     }
-                    Text(btnText, fontWeight = FontWeight.Bold)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        val icon = when {
+                            !isDownloading -> Icons.Filled.Download
+                            downloadProgress >= 100 -> Icons.Filled.CheckCircle
+                            else -> Icons.Filled.HourglassEmpty
+                        }
+                        Icon(imageVector = icon, contentDescription = null, modifier = Modifier.size(20.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(btnText, fontWeight = FontWeight.Bold)
+                    }
                 }
             }
         }

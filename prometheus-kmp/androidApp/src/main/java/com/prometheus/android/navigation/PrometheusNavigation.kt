@@ -123,11 +123,7 @@ fun PrometheusApp(
                             event = currentEvent,
                             latestEvent = latestEvent,
                             weatherInfo = weatherInfo,
-                            nowcastAlerts = nowcastAlerts,
-                            injectionEnabled = injectionEnabled,
-                            injectionIp = injectionIp,
-                            injectionPort = injectionPort,
-                            onApplyInjection = onApplyInjection
+                            nowcastAlerts = nowcastAlerts
                         )
                         Screen.Evacuate -> MapScreen(
                             event = currentEvent,
@@ -144,22 +140,120 @@ fun PrometheusApp(
                     }
                 }
             }
-            Box(
+            Row(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .statusBarsPadding()
-                    .padding(top = 8.dp, end = 12.dp)
-                    .size(48.dp)
-                    .clip(CircleShape)
-                    .background(p.surfaceElevated)
-                    .clickable(onClick = onToggleDarkMode),
-                contentAlignment = Alignment.Center
+                    .padding(top = 8.dp, end = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Icon(
-                    imageVector = if (isDarkMode) Icons.Filled.LightMode else Icons.Filled.DarkMode,
-                    contentDescription = if (isDarkMode) "Switch to light mode" else "Switch to dark mode",
-                    tint = p.blue,
-                    modifier = Modifier.size(26.dp)
+                var showHelp by remember { mutableStateOf(false) }
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(p.surfaceElevated)
+                        .clickable { showHelp = true },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "?",
+                        color = p.blue,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(p.surfaceElevated)
+                        .clickable(onClick = onToggleDarkMode),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = if (isDarkMode) Icons.Filled.LightMode else Icons.Filled.DarkMode,
+                        contentDescription = if (isDarkMode) "Switch to light mode" else "Switch to dark mode",
+                        tint = p.blue,
+                        modifier = Modifier.size(26.dp)
+                    )
+                }
+
+                if (showHelp) {
+                    AlertDialog(
+                        onDismissRequest = { showHelp = false },
+                        title = { Text("Prometheus Help", color = p.blue, fontWeight = FontWeight.Bold) },
+                        text = {
+                            Column {
+                                HelpSection(
+                                    tab = "MONITOR",
+                                    steps = listOf(
+                                        "Shows real-time BMKG earthquake data and danger status banner",
+                                        "Colour-coded threat level: blue=clear, orange=elevated, red=danger",
+                                        "Refresh BMKG to poll for latest seismic events",
+                                        "Local injection card lets you simulate events for testing"
+                                    )
+                                )
+                                HelpSection(
+                                    tab = "EVACUATE",
+                                    steps = listOf(
+                                        "Live map showing epicentre (red) and danger radius circle",
+                                        "Blue route line shows fastest exit via Google Directions",
+                                        "Green shield marks safe zone outside danger radius",
+                                        "Expand ROUTING DETAILS for travel time estimates"
+                                    )
+                                )
+                                HelpSection(
+                                    tab = "ASK",
+                                    steps = listOf(
+                                        "Powered by Gemma 4 AI running fully on-device (offline)",
+                                        "CHAT mode: text/image conversation, survival tips, first aid, shelter",
+                                        "TALK mode: hold mic to speak, camera captures image, voice+image analysis",
+                                        "Response spoken aloud via TTS — tap any bubble to replay"
+                                    )
+                                )
+                            }
+                        },
+                        confirmButton = {
+                            TextButton(onClick = { showHelp = false }) {
+                                Text("GOT IT", color = p.blue, fontWeight = FontWeight.Bold)
+                            }
+                        },
+                        containerColor = p.surface
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun HelpSection(tab: String, steps: List<String>) {
+    val p = LocalPrometheusColors.current
+    Column(modifier = Modifier.padding(bottom = 12.dp)) {
+        Text(
+            text = tab,
+            color = p.blue,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold
+        )
+        Spacer(Modifier.height(4.dp))
+        steps.forEach { step ->
+            Row(
+                modifier = Modifier.padding(start = 8.dp, bottom = 2.dp),
+                verticalAlignment = Alignment.Top
+            ) {
+                Text(
+                    text = "\u2022",
+                    color = p.textSecondary,
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    text = step,
+                    color = p.textSecondary,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.weight(1f)
                 )
             }
         }

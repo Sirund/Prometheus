@@ -92,7 +92,7 @@ struct VisionView: View {
                             .fill(inference.isModelLoaded ? Color.green : Color.orange)
                             .frame(width: 6, height: 6)
                         Text(inference.isModelLoaded ? "VISION READY" : inference.statusMessage)
-                            .font(.caption2.monospaced())
+                            .inter(11)
                             .foregroundColor(.gray)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -133,7 +133,7 @@ struct VisionView: View {
             if isCapturing {
                 Color.black.opacity(0.5)
                 Text("CAPTURING...")
-                    .font(.caption.bold().monospaced())
+                    .inter(12, weight: .bold)
                     .foregroundColor(.prometheusBlue)
             }
         }
@@ -149,7 +149,7 @@ struct VisionView: View {
                 .font(.body)
                 .foregroundColor(.prometheusBlue.opacity(0.5))
             Text(description ?? "Point camera and tap Describe to hear surroundings")
-                .font(.caption.monospaced())
+                .inter(12)
                 .foregroundColor(.gray)
                 .lineLimit(3)
             Spacer()
@@ -163,10 +163,10 @@ struct VisionView: View {
     private var infoCard: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("VISION ACCESSIBILITY MODE")
-                .font(.caption2.bold().monospaced())
+                .inter(11, weight: .bold)
                 .foregroundColor(.prometheusBlue)
             Text("Point the camera at surroundings, signage, or injuries. Gemma 4 describes what it sees in calm spoken language.")
-                .font(.caption2.monospaced())
+                .inter(11)
                 .foregroundColor(.gray)
                 .lineSpacing(4)
         }
@@ -187,7 +187,7 @@ struct VisionView: View {
                 Text(isCapturing
                     ? "DESCRIBING..."
                     : hasCapture ? "TAP FOR NEW CAPTURE" : "TAP TO DESCRIBE SURROUNDINGS")
-                    .font(.caption.bold().monospaced())
+                    .inter(12, weight: .bold)
             }
             .frame(maxWidth: .infinity)
             .padding(28)

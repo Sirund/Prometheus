@@ -13,7 +13,20 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.DirectionsRun
+import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
+import androidx.compose.material.icons.automirrored.filled.DirectionsBike
+import androidx.compose.material.icons.filled.DirectionsCar
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Motorcycle
+import androidx.compose.material.icons.filled.Public
+import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -300,7 +313,9 @@ fun MapScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .background(p.surface)
-                            .clickable { showDetails = !showDetails }
+                            .clickable {
+                                showDetails = !showDetails
+                            }
                             .padding(horizontal = 20.dp, vertical = 14.dp),
                         contentAlignment = Alignment.Center
                     ) {
@@ -312,10 +327,11 @@ fun MapScreen(
                                 fontWeight = FontWeight.Bold
                             )
                             Spacer(Modifier.weight(1f))
-                            Text(
-                                text = if (showDetails) "\u25BC" else "\u25B2",
-                                color = p.blue,
-                                style = MaterialTheme.typography.labelMedium
+                            Icon(
+                                imageVector = if (showDetails) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
+                                contentDescription = if (showDetails) "Collapse" else "Expand",
+                                tint = p.blue,
+                                modifier = Modifier.size(32.dp)
                             )
                         }
                     }
@@ -323,13 +339,13 @@ fun MapScreen(
                     AnimatedVisibility(
                         visible = showDetails,
                         enter = slideInVertically(
-                            initialOffsetY = { it },
-                            animationSpec = tween(300, easing = FastOutSlowInEasing)
-                        ) + fadeIn(animationSpec = tween(300)),
+                            initialOffsetY = { -it },
+                            animationSpec = tween(350, easing = FastOutSlowInEasing)
+                        ) + fadeIn(animationSpec = tween(350)),
                         exit = slideOutVertically(
-                            targetOffsetY = { it },
-                            animationSpec = tween(300, easing = FastOutSlowInEasing)
-                        ) + fadeOut(animationSpec = tween(300))
+                            targetOffsetY = { -it },
+                            animationSpec = tween(250, easing = FastOutSlowInEasing)
+                        ) + fadeOut(animationSpec = tween(250))
                     ) {
                         RoutingDetailsCard(
                             event = event,
@@ -353,7 +369,7 @@ fun MapScreen(
 @Composable
 private fun EvacuationStatusBanner(isDangerous: Boolean, severity: com.prometheus.model.DangerSeverity?) {
     val p = LocalPrometheusColors.current
-    val icon = if (isDangerous) "\u26A0\uFE0F" else "\uD83D\uDEE1\uFE0F"
+    val icon: ImageVector = if (isDangerous) Icons.Filled.Warning else Icons.Filled.Shield
     val label = when {
         isDangerous -> "EVACUATION ROUTING — ACTIVE"
         severity == com.prometheus.model.DangerSeverity.MEDIUM -> "MEDIUM ALERT — MONITOR"
@@ -365,7 +381,7 @@ private fun EvacuationStatusBanner(isDangerous: Boolean, severity: com.prometheu
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(text = icon, style = MaterialTheme.typography.titleMedium)
+        Icon(imageVector = icon, contentDescription = if (isDangerous) "Warning" else "Safe", modifier = Modifier.size(28.dp), tint = if (isDangerous) p.danger else p.success)
         Spacer(Modifier.width(10.dp))
         Text(
             text = label,
@@ -432,11 +448,11 @@ private fun RoutingDetailsCard(
                 style = MaterialTheme.typography.labelSmall,
                 modifier = Modifier.padding(vertical = 4.dp)
             )
-            TransportTimeRow(icon = "\uD83D\uDEB6", label = "Walk", minutes = evacuationRoute.walkMin)
-            TransportTimeRow(icon = "\uD83C\uDFC3", label = "Run", minutes = evacuationRoute.runMin)
-            TransportTimeRow(icon = "\uD83D\uDEB2", label = "Cycle", minutes = evacuationRoute.cycleMin)
-            TransportTimeRow(icon = "\uD83D\uDEF4", label = "Motor", minutes = evacuationRoute.motorMin)
-            TransportTimeRow(icon = "\uD83D\uDE97", label = "Car", minutes = evacuationRoute.durationMin)
+            TransportTimeRow(icon = { Icon(Icons.AutoMirrored.Filled.DirectionsWalk, contentDescription = "Walk", modifier = Modifier.size(20.dp)) }, label = "Walk", minutes = evacuationRoute.walkMin)
+            TransportTimeRow(icon = { Icon(Icons.AutoMirrored.Filled.DirectionsRun, contentDescription = "Run", modifier = Modifier.size(20.dp)) }, label = "Run", minutes = evacuationRoute.runMin)
+            TransportTimeRow(icon = { Icon(Icons.AutoMirrored.Filled.DirectionsBike, contentDescription = "Cycle", modifier = Modifier.size(20.dp)) }, label = "Cycle", minutes = evacuationRoute.cycleMin)
+            TransportTimeRow(icon = { Icon(Icons.Filled.Motorcycle, contentDescription = "Motor", modifier = Modifier.size(20.dp)) }, label = "Motor", minutes = evacuationRoute.motorMin)
+            TransportTimeRow(icon = { Icon(Icons.Filled.DirectionsCar, contentDescription = "Car", modifier = Modifier.size(20.dp)) }, label = "Car", minutes = evacuationRoute.durationMin)
         }
     }
 }
@@ -461,9 +477,11 @@ private fun MapUnavailableFallback(epicenter: LatLng?) {
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                text = "\uD83D\uDDFA\uFE0F",
-                style = MaterialTheme.typography.displayMedium
+            Icon(
+                imageVector = Icons.Filled.Public,
+                contentDescription = "Map",
+                modifier = Modifier.size(48.dp),
+                tint = p.blue
             )
             Spacer(Modifier.height(8.dp))
             Text(
@@ -503,7 +521,7 @@ private fun MapUnavailableFallback(epicenter: LatLng?) {
 }
 
 @Composable
-private fun TransportTimeRow(icon: String, label: String, minutes: Double) {
+private fun TransportTimeRow(icon: @Composable () -> Unit, label: String, minutes: Double) {
     val p = LocalPrometheusColors.current
     val display = when {
         minutes < 1.0 -> "< 1 min"
@@ -518,7 +536,7 @@ private fun TransportTimeRow(icon: String, label: String, minutes: Double) {
         modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(text = icon, style = MaterialTheme.typography.labelSmall)
+        icon()
         Spacer(Modifier.width(8.dp))
         Text(
             text = label,

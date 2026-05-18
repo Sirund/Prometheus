@@ -68,7 +68,7 @@ class PrometheusAlarmManager(private val context: Context) {
     private fun initTts() {
         tts = TextToSpeech(context) { status ->
             ttsReady = status == TextToSpeech.SUCCESS
-            tts?.language = Locale.Builder().setLanguage("id").setRegion("ID").build()
+            tts?.language = Locale.US
         }
     }
 
@@ -86,10 +86,11 @@ class PrometheusAlarmManager(private val context: Context) {
     }
 
     private fun openAppIntent(): PendingIntent {
-        val intent = Intent(context, com.prometheus.android.MainActivity::class.java).apply {
+        val appContext = context.applicationContext
+        val intent = Intent(appContext, com.prometheus.android.MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
-        return PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        return PendingIntent.getActivity(appContext, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
     }
 
     fun triggerAlert(event: EarthquakeEvent, gemmaBriefing: String? = null) {
@@ -115,12 +116,12 @@ class PrometheusAlarmManager(private val context: Context) {
             .setAutoCancel(true)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setContentIntent(openAppIntent())
-            .setFullScreenIntent(null, true)
+            .setFullScreenIntent(openAppIntent(), true)
             .build()
         NotificationManagerCompat.from(context).notify(ID_ALERT, n)
 
-        speak(briefing)
         playAlarm()
+        speak(briefing)
     }
 
     fun triggerMediumAlert(event: EarthquakeEvent) {
