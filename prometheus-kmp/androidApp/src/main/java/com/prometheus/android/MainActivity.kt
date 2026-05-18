@@ -4,8 +4,10 @@ import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -56,6 +58,12 @@ class MainActivity : ComponentActivity() {
 
     private val fullScreenIntentLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
+    ) { _ ->
+        requestSystemAlertWindowPermission()
+    }
+
+    private val overlayPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
     ) { _ ->
         requestStoragePermission()
     }
@@ -187,6 +195,18 @@ class MainActivity : ComponentActivity() {
                 fullScreenIntentLauncher.launch(Manifest.permission.USE_FULL_SCREEN_INTENT)
                 return
             }
+        }
+        requestSystemAlertWindowPermission()
+    }
+
+    private fun requestSystemAlertWindowPermission() {
+        if (!Settings.canDrawOverlays(this)) {
+            val intent = Intent(
+                Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                Uri.parse("package:$packageName")
+            )
+            overlayPermissionLauncher.launch(intent)
+            return
         }
         requestStoragePermission()
     }
