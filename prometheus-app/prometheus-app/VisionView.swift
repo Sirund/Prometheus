@@ -251,7 +251,7 @@ struct VisionPanel: View {
 }
 
 #if canImport(UIKit)
-private extension UIImage {
+extension UIImage {
     func resized(toMaxDimension maxDim: CGFloat) -> UIImage {
         let scale = min(maxDim / size.width, maxDim / size.height, 1)
         guard scale < 1 else { return self }

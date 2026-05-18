@@ -1,10 +1,10 @@
 {
-  "originHash" : "3c3151aaa21f6fa0608c957a246bccd7a5457b212150c774f53679aa49d4bf14",
+  "originHash" : "ac9d85e4df536571420c877d0a500ff9a69d87e7c424730c38c300f4d825c002",
   "pins" : [
     {
       "identity" : "litertlm-swift-sdk",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/Luxshan2000/LiteRTLM-Swift-SDK.git",
+      "location" : "https://github.com/lanka-ai-foundation/LiteRTLM-Swift-SDK",
       "state" : {
         "branch" : "main",
         "revision" : "76d138b4a5d21094bed61e22921531eb5dcf839a"

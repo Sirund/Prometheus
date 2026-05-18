@@ -21,6 +21,9 @@ struct ContentView: View {
 
             AssistantView()
                 .tabItem { Label("ASSISTANT", systemImage: "bubble.left.and.bubble.right") }
+
+            TalkView()
+                .tabItem { Label("TALK", systemImage: "mic.fill") }
         }
         .environment(inference)
         .tint(.prometheusBlue)

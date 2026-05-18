@@ -31,8 +31,11 @@ private func loadConversations() -> [Conversation] {
 
 // MARK: - View
 
+enum AssistantPanel { case chat, vision, emergency }
+
 struct AssistantView: View {
     @Environment(InferenceManager.self) private var inference
+    @Environment(BMKGPollingService.self) private var pollingService
     @AppStorage("isDarkMode") private var isDarkMode = false
     @AppStorage("tutorialSeen_assistant") private var tutorialSeen = false
     @State private var query = ""
@@ -41,7 +44,7 @@ struct AssistantView: View {
     @State private var conversations: [Conversation] = loadConversations()
     @State private var activeIndex = 0
     @State private var showSidebar = false
-    @State private var showVision = false
+    @State private var activePanel: AssistantPanel = .chat
     @State private var showTutorial = false
 
     var body: some View {
@@ -64,6 +67,9 @@ struct AssistantView: View {
         .onAppear {
             if !tutorialSeen { tutorialSeen = true; showTutorial = true }
         }
+        .onChange(of: pollingService.latestEarthquakeEvent?.DateTime) { _, _ in
+            inference.currentEarthquakeEvent = pollingService.latestEarthquakeEvent
+        }
         .overlay {
             if showTutorial {
                 TutorialOverlay(tabName: "Assistant", steps: TutorialContent.assistant) {
@@ -81,9 +87,18 @@ struct AssistantView: View {
 
     @ViewBuilder
     private var stateContent: some View {
-        if showVision {
+        switch activePanel {
+        case .vision:
             VisionPanel()
-        } else {
+        case .emergency:
+            switch inference.modelState {
+            case .notDownloaded:  downloadView
+            case .downloading:    progressView
+            case .loading:        loadingView
+            case .ready:          emergencyContent
+            case .error(let msg): errorView(msg)
+            }
+        case .chat:
             switch inference.modelState {
             case .notDownloaded:  downloadView
             case .downloading:    progressView
@@ -265,6 +280,37 @@ struct AssistantView: View {
         }
     }
 
+    // MARK: - Emergency screen
+
+    private var emergencyContent: some View {
+        VStack(spacing: 0) {
+            // Banner
+            let isDangerous = pollingService.dangerLevel >= 2
+            let color: Color = isDangerous ? .red : .orange
+            HStack(spacing: 8) {
+                Image(systemName: isDangerous ? "alarm.fill" : "exclamationmark.triangle.fill")
+                    .font(.caption).foregroundColor(color)
+                Text(isDangerous ? "ACTIVE EMERGENCY — \(pollingService.latestEarthquakeEvent.flatMap { $0.magnitudeValue }.map { "M\($0)" } ?? "EVENT")" : "EMERGENCY BRIEFING MODE")
+                    .inter(11, weight: .bold).foregroundColor(color)
+                Spacer()
+            }
+            .padding(10)
+            .background(color.opacity(0.12))
+            .overlay(Rectangle().stroke(color.opacity(0.4), lineWidth: 1))
+
+            messageList
+        }
+        .safeAreaInset(edge: .bottom) {
+            VStack(spacing: 4) {
+                if pollingService.latestEarthquakeEvent == nil {
+                    Text("No active earthquake event. Ask about emergency procedures.")
+                        .inter(10).foregroundColor(.secondary).padding(.horizontal)
+                }
+                inputBar
+            }
+        }
+    }
+
     // MARK: - Chat screen
 
     private var chatViewContent: some View {
@@ -273,18 +319,37 @@ struct AssistantView: View {
     }
 
     private var modeSelector: some View {
-        HStack(spacing: 8) {
+        let isDangerous = pollingService.dangerLevel >= 2
+        return HStack(spacing: 8) {
             Spacer()
-            ModeChipButton(label: "CHAT", active: !showVision) {
-                showVision = false
+            ModeChipButton(label: "CHAT", active: activePanel == .chat) {
+                switchPanel(.chat)
             }
-            ModeChipButton(label: "VISION", active: showVision) {
-                showVision = true
+            ModeChipButton(label: "VISION", active: activePanel == .vision) {
+                switchPanel(.vision)
+            }
+            ModeChipButton(
+                label: isDangerous ? "🚨 EMERGENCY" : "EMERGENCY",
+                active: activePanel == .emergency,
+                activeColor: isDangerous ? .red : .prometheusBlue
+            ) {
+                switchPanel(.emergency)
             }
             Spacer()
         }
         .padding(.vertical, 8)
         .background(Color.cardBackground)
+    }
+
+    private func switchPanel(_ panel: AssistantPanel) {
+        guard panel != activePanel else { return }
+        syncToConversation()
+        let newMode: ChatMode = panel == .emergency ? .emergency : .survival
+        if newMode != selectedMode {
+            inference.clearHistory(mode: selectedMode)
+            selectedMode = newMode
+        }
+        activePanel = panel
     }
 
     private var messageList: some View {
@@ -407,10 +472,12 @@ struct AssistantView: View {
                             .inter(11)
                             .foregroundColor(.secondary)
                     }
-                    Button(action: { createNewConversation() }) {
-                        Image(systemName: "square.and.pencil")
-                            .font(.body)
-                            .foregroundColor(.prometheusBlue)
+                    if activePanel != .vision {
+                        Button(action: { createNewConversation() }) {
+                            Image(systemName: "square.and.pencil")
+                                .font(.body)
+                                .foregroundColor(.prometheusBlue)
+                        }
                     }
                 }
             }
@@ -579,6 +646,7 @@ private struct MessageBubble: View {
 private struct ModeChipButton: View {
     let label: String
     let active: Bool
+    var activeColor: Color = .prometheusBlue
     let action: () -> Void
 
     var body: some View {
@@ -587,10 +655,10 @@ private struct ModeChipButton: View {
                 .inter(11, weight: .bold)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 5)
-                .background(active ? Color.prometheusBlue.opacity(0.2) : Color.clear)
+                .background(active ? activeColor.opacity(0.2) : Color.clear)
                 .clipShape(Capsule())
-                .overlay(Capsule().stroke(active ? Color.prometheusBlue.opacity(0.6) : Color.gray.opacity(0.3), lineWidth: 1))
-                .foregroundColor(active ? .prometheusBlue : .gray)
+                .overlay(Capsule().stroke(active ? activeColor.opacity(0.6) : Color.gray.opacity(0.3), lineWidth: 1))
+                .foregroundColor(active ? activeColor : .gray)
         }
         .buttonStyle(.plain)
     }
