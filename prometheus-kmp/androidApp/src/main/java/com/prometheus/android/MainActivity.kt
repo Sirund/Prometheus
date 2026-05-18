@@ -152,6 +152,10 @@ class MainActivity : ComponentActivity() {
         ModelManager.shutdown()
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+    }
+
     override fun onResume() {
         super.onResume()
         PollingService.forceCheck()
