@@ -466,44 +466,69 @@ private fun RowScope.WeatherStatColumn(
 private fun NowcastAlertCard(alert: NowcastAlert) {
     val p = LocalPrometheusColors.current
     val alertColor = if (alert.isBadWeather) p.danger else p.warning
+    val darkRed = Color(0xFFB71C1C)
     PrometheusCard(modifier = Modifier.fillMaxWidth()) {
-        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
-            Icon(
-                imageVector = if (alert.isBadWeather) Icons.Filled.Warning else Icons.Filled.Shield,
-                contentDescription = if (alert.isBadWeather) "Warning" else "Clear",
-                tint = alertColor,
-                modifier = Modifier.size(48.dp)
+        Column {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = if (alert.isBadWeather) Icons.Filled.Warning else Icons.Filled.Shield,
+                    contentDescription = if (alert.isBadWeather) "Warning" else "Clear",
+                    tint = if (alert.isBadWeather) darkRed else alertColor,
+                    modifier = Modifier.size(36.dp)
+                )
+                Spacer(Modifier.width(12.dp))
+                Text(
+                    text = alert.intensity.uppercase(),
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = if (alert.isBadWeather) darkRed else alertColor,
+                )
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            Text(
+                text = "Beresiko ${alert.potential.lowercase().trimEnd('.')}.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = p.textSecondary,
             )
-            Spacer(Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                InfoRow(label = "Intensity", value = alert.intensity)
-                InfoRow(label = "Potensi", value = alert.potential)
-                InfoRow(label = "Date", value = alert.alertDate)
-                InfoRow(label = "Time", value = alert.alertTime)
-                InfoRow(label = "Est. completion", value = alert.estimatedEnd)
-                InfoRow(label = "Location", value = alert.provinceName)
-                InfoRow(label = "Area", value = alert.specificLocation)
+
+            Spacer(Modifier.height(8.dp))
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("\uD83D\uDD52", fontSize = 14.sp)
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    text = "${alert.alertDate} \u2022 ${alert.alertTime} \u2014 ${alert.estimatedEnd.removePrefix("~ ")} WIB",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = p.textSecondary,
+                )
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            Surface(
+                color = p.surfaceElevated,
+                shape = RoundedCornerShape(8.dp),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Text(
+                        text = "AFFECTED AREAS - ${alert.provinceName.uppercase()}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = p.textSecondary,
+                    )
+                    if (alert.specificLocation.isNotBlank() && alert.specificLocation != "--") {
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = alert.specificLocation,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = p.textPrimary,
+                        )
+                    }
+                }
             }
         }
-    }
-}
-
-@Composable
-private fun InfoRow(label: String, value: String) {
-    val c = LocalPrometheusColors.current
-    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = c.textSecondary,
-            modifier = Modifier.width(120.dp)
-        )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodySmall,
-            color = c.textPrimary,
-            fontWeight = FontWeight.Medium
-        )
     }
 }
 
