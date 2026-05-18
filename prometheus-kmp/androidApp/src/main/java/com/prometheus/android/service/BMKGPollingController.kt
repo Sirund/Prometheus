@@ -127,14 +127,13 @@ class BMKGPollingController(context: Context, baseUrlOverride: String? = null) {
     }
 
     private fun generateAndAnnounceBriefing(event: EarthquakeEvent) {
+        alarmManager.triggerAlert(event)
         scope.launch {
             try {
-                alarmManager.showStatus(true)
                 val briefing = emergencyInference.generateBriefing(event)
-                alarmManager.triggerAlert(event, briefing)
+                Log.d("BMKGPolling", "Briefing generated: ${briefing.take(100)}")
             } catch (e: Exception) {
                 Log.e("BMKGPolling", "Briefing failed", e)
-                alarmManager.triggerAlert(event)
             }
         }
     }
