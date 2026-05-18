@@ -22,6 +22,18 @@ extension Color {
     #endif
 }
 
+extension Font {
+    static func inter(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
+        Font.custom("Inter", size: size).weight(weight)
+    }
+}
+
+extension View {
+    func inter(_ size: CGFloat, weight: Font.Weight = .regular) -> some View {
+        self.font(.inter(size, weight: weight))
+    }
+}
+
 struct TacticalButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label

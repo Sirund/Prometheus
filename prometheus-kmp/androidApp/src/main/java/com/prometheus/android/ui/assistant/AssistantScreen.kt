@@ -1,14 +1,10 @@
 package com.prometheus.android.ui.assistant
 
-import android.Manifest
-import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
-import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.core.content.ContextCompat
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.core.tween
@@ -25,8 +21,22 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ChatBubble
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.HourglassEmpty
 import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Science
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.WaterDrop
 import androidx.compose.material3.*
+import androidx.compose.ui.res.painterResource
+import com.prometheus.android.R
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -49,8 +59,6 @@ import com.prometheus.android.ui.theme.LocalPrometheusColors
 import com.prometheus.model.ChatMessage
 import com.prometheus.model.EarthquakeEvent
 import com.prometheus.prompt.SystemPrompts
-import androidx.work.WorkInfo
-import androidx.work.WorkManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -70,24 +78,10 @@ fun AssistantScreen(
     val manager = remember { conversationManager ?: ConversationManager() }
     var query by remember { mutableStateOf("") }
     var selectedImageBitmap by remember { mutableStateOf<Bitmap?>(null) }
-    val isModelLoaded by ModelManager.isLoaded.collectAsState()
-    val statusMessage by ModelManager.statusMessage.collectAsState()
-
-    val downloadState by produceState<WorkInfo?>(initialValue = null) {
-        while (true) {
-            try {
-                val future = WorkManager.getInstance(context).getWorkInfosByTag("model_download")
-                val infos = future.get()
-                value = infos.lastOrNull()
-                if (value?.state?.isFinished == true) break
-            } catch (_: Exception) {}
-            kotlinx.coroutines.delay(1000)
-        }
-    }
-    val isDownloading = downloadState?.let {
-        it.state == WorkInfo.State.RUNNING || it.state == WorkInfo.State.ENQUEUED
-    } ?: false
-    val downloadProgress = downloadState?.progress?.getInt("progress", -1) ?: -1
+    var isModelLoaded by remember { mutableStateOf(false) }
+    var statusMessage by remember { mutableStateOf("Initializing...") }
+    var downloadProgress by remember { mutableStateOf(-1) }
+    var isDownloading by remember { mutableStateOf(false) }
     var chatMode by remember { mutableStateOf("SURVIVAL_CHAT") }
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -115,18 +109,17 @@ fun AssistantScreen(
         }
     }
 
-    val notificationPermLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        if (granted) ModelManager.enqueueDownload(context)
-    }
-
     // LOCAL state — bypass AnimatedContent barrier, langsung recompose
     var localConversations by remember { mutableStateOf(conversations) }
 
     val chatHistory by remember { derivedStateOf { localConversations.getOrNull(activeIndex)?.messages ?: emptyList() } }
 
-    val showDownload = !isModelLoaded && !isDownloading && statusMessage.startsWith("Model not found")
+    LaunchedEffect(Unit) {
+        isModelLoaded = ModelManager.isLoaded.value
+        statusMessage = ModelManager.statusMessage.value
+    }
+
+    val showDownload = !isModelLoaded && downloadProgress < 0 && statusMessage.startsWith("Model not found")
 
     LaunchedEffect(chatHistory.size) {
         if (chatHistory.isNotEmpty()) {
@@ -212,7 +205,7 @@ fun AssistantScreen(
                                     },
                                     modifier = Modifier.size(32.dp)
                                 ) {
-                                    Text("\u2716", color = Color.Gray, style = MaterialTheme.typography.labelSmall)
+                                    Icon(Icons.Filled.Close, contentDescription = "Delete conversation", tint = Color.Gray, modifier = Modifier.size(18.dp))
                                 }
                             }
                         }
@@ -227,7 +220,7 @@ fun AssistantScreen(
                     title = {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             IconButton(onClick = { scope.launch { if (drawerState.isClosed) drawerState.open() else drawerState.close() } }) {
-                                Text("\u2630", color = p.blue, style = MaterialTheme.typography.titleMedium)
+                                Icon(Icons.Filled.Menu, contentDescription = "Menu", tint = p.blue, modifier = Modifier.size(24.dp))
                             }
                             Text("Survival Assistant", color = p.blue)
                         }
@@ -275,9 +268,11 @@ fun AssistantScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = "\uD83D\uDCAC",
-                                style = MaterialTheme.typography.displaySmall
+                            Icon(
+                                imageVector = Icons.Filled.ChatBubble,
+                                contentDescription = "Chat",
+                                modifier = Modifier.size(48.dp),
+                                tint = p.blue.copy(alpha = 0.6f)
                             )
                             Spacer(Modifier.height(8.dp))
                             Text(
@@ -293,32 +288,21 @@ fun AssistantScreen(
                             )
                             Spacer(Modifier.height(8.dp))
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                CapabilityPill(text = "\uD83E\uDDEA  first aid")
-                                CapabilityPill(text = "\uD83C\uDFE0  shelter & evacuation")
-                                CapabilityPill(text = "\uD83D\uDCA7  water & supplies")
-                                CapabilityPill(text = "\u26A0\uFE0F  Indonesia hazards")
+                                CapabilityPill(icon = Icons.Filled.Science, text = "first aid")
+                                CapabilityPill(icon = Icons.Filled.Home, text = "shelter & evacuation")
+                                CapabilityPill(icon = Icons.Filled.WaterDrop, text = "water & supplies")
+                                CapabilityPill(icon = Icons.Filled.Warning, text = "Indonesia hazards")
                             }
-                            if (showDownload || isDownloading) {
+                            if (showDownload) {
                                 Spacer(Modifier.height(16.dp))
                                 val btnColor = if (!isDownloading) p.blue else p.blue.copy(alpha = 0.6f)
                                 val btnText = when {
-                                    !isDownloading -> "\u2B07\uFE0F  DOWNLOAD MODEL (2.4 GB)"
-                                    downloadProgress >= 0 -> "\u23F3  Downloading: $downloadProgress%"
-                                    else -> "\u23F3  Starting..."
+                                    !isDownloading -> "DOWNLOAD MODEL (2.4 GB)"
+                                    downloadProgress >= 0 -> "Downloading: $downloadProgress%"
+                                    else -> "Starting..."
                                 }
                                 Button(
-                                    onClick = {
-                                        if (!isDownloading) {
-                                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-                                                ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
-                                            ) {
-                                                notificationPermLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                                            } else {
-                                                ModelManager.enqueueDownload(context)
-                                            }
-                                        }
-                                    },
-                                    enabled = !isDownloading,
+                                    onClick = { ModelManager.enqueueDownload(context) },
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .height(48.dp)
@@ -329,9 +313,9 @@ fun AssistantScreen(
                                     )
                                 ) {
                                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                        if (isDownloading) {
+                                        if (isDownloading && downloadProgress in 0..99) {
                                             LinearProgressIndicator(
-                                                progress = { if (downloadProgress > 0) downloadProgress / 100f else 0f },
+                                                progress = { downloadProgress / 100f },
                                                 modifier = Modifier.fillMaxWidth().fillMaxHeight(),
                                                 color = p.blue.copy(alpha = 0.3f),
                                                 trackColor = Color.Transparent
@@ -387,9 +371,10 @@ fun AssistantScreen(
                                     .clickable { selectedImageBitmap = null },
                                 contentAlignment = Alignment.Center
                             ) {
-                                Text("\u2716",
-                                    color = Color.White,
-                                    style = MaterialTheme.typography.labelSmall
+                                Icon(Icons.Filled.Close,
+                                    contentDescription = "Remove image",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(12.dp)
                                 )
                             }
                         }
@@ -499,9 +484,10 @@ fun AssistantScreen(
                         ),
                         contentPadding = PaddingValues(14.dp)
                     ) {
-                        Text(
-                            text = "\u2708\uFE0F",
-                            style = MaterialTheme.typography.bodyLarge
+                        Image(
+                            painter = painterResource(R.drawable.paper_plane),
+                            contentDescription = "Send",
+                            modifier = Modifier.size(24.dp)
                         )
                     }
                 }
@@ -526,9 +512,13 @@ fun AssistantScreen(
                         },
                         modifier = Modifier.fillMaxWidth().height(56.dp)
                     ) {
-                        Text("\uD83D\uDCF7  Take Photo",
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Image(painter = painterResource(R.drawable.camera), contentDescription = null, modifier = Modifier.size(24.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("Take Photo",
+                                color = p.textPrimary,
+                                fontWeight = FontWeight.Bold)
+                        }
                     }
                     Spacer(Modifier.height(8.dp))
                     TextButton(
@@ -589,9 +579,13 @@ fun AssistantScreen(
                         },
                         modifier = Modifier.fillMaxWidth().height(56.dp)
                     ) {
-                        Text("\uD83D\uDDBC\uFE0F  Gallery",
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Filled.Image, contentDescription = null, modifier = Modifier.size(24.dp), tint = p.textPrimary)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Gallery",
+                                color = p.textPrimary,
+                                fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
             },
@@ -647,14 +641,20 @@ private fun ModeChip(label: String, active: Boolean, onClick: () -> Unit) {
 }
 
 @Composable
-private fun CapabilityPill(text: String) {
+private fun CapabilityPill(icon: androidx.compose.ui.graphics.vector.ImageVector, text: String) {
     val p = LocalPrometheusColors.current
-    Text(
-        text = text,
-        color = p.textSecondary,
-        style = MaterialTheme.typography.labelSmall,
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.padding(vertical = 2.dp)
-    )
+    ) {
+        Icon(imageVector = icon, contentDescription = null, modifier = Modifier.size(16.dp), tint = p.textSecondary)
+        Spacer(Modifier.width(4.dp))
+        Text(
+            text = text,
+            color = p.textSecondary,
+            style = MaterialTheme.typography.labelSmall
+        )
+    }
 }
 
 @Composable

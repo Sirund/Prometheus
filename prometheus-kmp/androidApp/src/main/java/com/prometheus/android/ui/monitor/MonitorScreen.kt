@@ -1,12 +1,12 @@
 package com.prometheus.android.ui.monitor
 
 import androidx.compose.animation.*
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -14,14 +14,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.prometheus.android.R
 import com.prometheus.android.ui.shared.EntranceAnimation
 import com.prometheus.android.ui.shared.PrometheusCard
 import com.prometheus.android.ui.shared.SectionHeader
-import com.prometheus.android.ui.shared.StatusDot
 import com.prometheus.android.ui.theme.LocalPrometheusColors
 import com.prometheus.model.EarthquakeEvent
 import com.prometheus.model.NowcastAlert
@@ -36,11 +42,7 @@ fun MonitorScreen(
     event: EarthquakeEvent? = null,
     latestEvent: String? = null,
     weatherInfo: WeatherInfo = WeatherInfo.EMPTY,
-    nowcastAlerts: List<NowcastAlert> = emptyList(),
-    injectionEnabled: Boolean = false,
-    injectionIp: String = "",
-    injectionPort: Int = 8080,
-    onApplyInjection: ((Boolean, String, Int) -> Unit)? = null
+    nowcastAlerts: List<NowcastAlert> = emptyList()
 ) {
     val dangerLevel = when {
         event == null -> DangerLevel.None
@@ -54,21 +56,7 @@ fun MonitorScreen(
             }
         }
     }
-    var showInjectionDialog by remember { mutableStateOf(false) }
-    var showInjection by remember { mutableStateOf(false) }
 
-    if (showInjectionDialog) {
-        InjectionDialog(
-            currentEnabled = injectionEnabled,
-            currentIp = injectionIp,
-            currentPort = injectionPort,
-            onDismiss = { showInjectionDialog = false },
-            onApply = { enabled, ip, port ->
-                onApplyInjection?.invoke(enabled, ip, port)
-                showInjectionDialog = false
-            }
-        )
-    }
 
     val p = LocalPrometheusColors.current
     Scaffold(
@@ -95,10 +83,28 @@ fun MonitorScreen(
             DangerLevel.Medium -> "MEDIUM ALERT"
             DangerLevel.Danger -> "DANGER"
         }
+        val classificationColor = when (dangerLevel) {
+            DangerLevel.None -> p.blue
+            DangerLevel.Watch -> p.warning
+            DangerLevel.Medium -> Color(0xFFFF8C00)
+            DangerLevel.Danger -> p.danger
+        }
 
         EntranceAnimation(visible = true, index = 0) {
             Column {
-                SectionHeader(text = "EARTHQUAKE INFO — $classification")
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "EARTHQUAKE INFO \u2014 ",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = p.textSecondary
+                    )
+                    Text(
+                        text = classification,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = classificationColor,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
                 Spacer(Modifier.height(8.dp))
                 val latLon = if (event != null) "${event.Lintang ?: "--"}, ${event.Bujur ?: "--"}" else "--"
                 val eventTime = if (event != null) "${event.tanggal_ ?: ""} ${event.jam_ ?: ""}".trim() else ""
@@ -117,14 +123,47 @@ fun MonitorScreen(
 
         Spacer(Modifier.height(16.dp))
 
-        val weatherLabel = if (weatherInfo.weatherDesc.isNotBlank() && weatherInfo.weatherDesc != "--") {
-            "WEATHER — ${weatherInfo.weatherDesc}"
-        } else {
-            "WEATHER"
-        }
         EntranceAnimation(visible = true, index = 1) {
             Column {
-                SectionHeader(text = weatherLabel)
+                SectionHeader(text = "RECENT EVENTS")
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    text = latestEvent ?: "No data loaded. Tap refresh to poll BMKG.",
+                    color = p.textSecondary,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        val weatherLabel = if (weatherInfo.weatherDesc.isNotBlank() && weatherInfo.weatherDesc != "--") {
+            weatherInfo.weatherDesc
+        } else {
+            null
+        }
+        EntranceAnimation(visible = true, index = 2) {
+            Column {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "WEATHER",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = p.textSecondary
+                    )
+                    if (weatherLabel != null) {
+                        Text(
+                            text = " \u2014 ",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = p.textSecondary
+                        )
+                        Text(
+                            text = weatherLabel,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = p.blue,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
                 Spacer(Modifier.height(8.dp))
                 WeatherInfoCard(weather = weatherInfo)
             }
@@ -132,7 +171,7 @@ fun MonitorScreen(
 
         Spacer(Modifier.height(16.dp))
 
-        EntranceAnimation(visible = true, index = 2) {
+        EntranceAnimation(visible = true, index = 3) {
             val latestAlert = nowcastAlerts.maxOrNull()
             Column {
                 SectionHeader(text = "WEATHER WARNING")
@@ -142,19 +181,6 @@ fun MonitorScreen(
                 } else {
                     NowcastClearCard()
                 }
-            }
-        }
-        Spacer(Modifier.height(16.dp))
-
-        EntranceAnimation(visible = true, index = 3) {
-            Column {
-                SectionHeader(text = "RECENT EVENTS")
-                Spacer(Modifier.height(10.dp))
-                Text(
-                    text = latestEvent ?: "No data loaded. Tap refresh to poll BMKG.",
-                    color = p.textSecondary,
-                    style = MaterialTheme.typography.bodyMedium
-                )
             }
         }
 
@@ -178,25 +204,10 @@ fun MonitorScreen(
             }
         }
 
-        Spacer(Modifier.height(20.dp))
 
-        if (showInjection) {
-            EntranceAnimation(visible = true, index = 5) {
-                Column {
-                    SectionHeader(text = "LOCAL INJECTION")
-                    Spacer(Modifier.height(8.dp))
-                    InjectionStatusCard(
-                        enabled = injectionEnabled,
-                        ip = injectionIp,
-                        port = injectionPort,
-                        onClick = { showInjectionDialog = true }
-                    )
-                }
-            }
-        }
     }
 }
-
+ 
 }
 
 @Composable
@@ -218,62 +229,92 @@ private fun HeroEventCard(
         DangerLevel.Danger -> p.danger
     }
 
+    val potentialText = when {
+        potential.contains("tidak berpotensi tsunami", ignoreCase = true) ||
+        potential.contains("gempa ini dirasakan", ignoreCase = true) -> "Tidak berpotensi tsunami"
+        else -> potential
+    }
+    val potentialColor = when {
+        potential.contains("berpotensi tsunami", ignoreCase = true) ||
+        potential.contains("waspada tsunami", ignoreCase = true) -> p.danger
+        potentialText == "tidak berpotensi tsunami" -> p.success
+        else -> p.textSecondary
+    }
+
     PrometheusCard(elevated = true) {
         Row(modifier = Modifier.fillMaxWidth()) {
             StatColumn(
                 modifier = Modifier.weight(1f),
-                icon = "\uD83D\uDCCA",
+                icon = {
+                    Image(
+                        painter = painterResource(R.drawable.magnitude),
+                        contentDescription = "Magnitude",
+                        modifier = Modifier.size(40.dp)
+                    )
+                },
                 value = magnitude.let { if (it.startsWith("M ")) it else "M $it" },
                 label = "MAGNITUDE",
                 valueColor = accentColor
             )
             StatColumn(
                 modifier = Modifier.weight(1f),
-                icon = "\u2B07\uFE0F",
+                icon = {
+                    Image(
+                        painter = painterResource(R.drawable.depth),
+                        contentDescription = "Depth",
+                        modifier = Modifier.size(40.dp)
+                    )
+                },
                 value = depth,
                 label = "DEPTH",
                 valueColor = p.textPrimary
             )
-            Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(text = "\uD83D\uDCCD", fontSize = 20.sp)
+            Column(modifier = Modifier.weight(1f).padding(horizontal = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Image(
+                    painter = painterResource(R.drawable.location),
+                    contentDescription = "Location",
+                    modifier = Modifier.size(40.dp).align(Alignment.CenterHorizontally)
+                )
                 Spacer(Modifier.height(2.dp))
                 Text(
                     text = felt,
                     style = MaterialTheme.typography.labelLarge,
                     color = p.textPrimary,
                     fontWeight = FontWeight.Bold,
-                    maxLines = 2
+                    maxLines = 2,
+                    textAlign = TextAlign.Center
                 )
                 if (latLon != "--") {
                     Spacer(Modifier.height(2.dp))
                     Text(
                         text = latLon,
                         style = MaterialTheme.typography.labelSmall,
-                        color = p.textSecondary
+                        color = p.textSecondary,
+                        textAlign = TextAlign.Center
                     )
                 }
             }
         }
-        Spacer(Modifier.height(8.dp))
         HorizontalDivider(color = p.surfaceElevated)
-        Spacer(Modifier.height(6.dp))
-        Column {
-            Text(
-                text = potential,
-                style = MaterialTheme.typography.labelSmall,
-                color = p.textSecondary
-            )
-        }
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(4.dp))
+        Text(
+            text = potentialText,
+            style = MaterialTheme.typography.bodyMedium,
+            color = potentialColor,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(Modifier.height(4.dp))
         HorizontalDivider(color = p.surfaceElevated)
-        Spacer(Modifier.height(6.dp))
-        Column {
-            Text(
-                text = location,
-                style = MaterialTheme.typography.labelSmall,
-                color = p.textSecondary
-            )
-        }
+        Spacer(Modifier.height(4.dp))
+        Text(
+            text = location,
+            style = MaterialTheme.typography.bodyMedium,
+            color = p.textSecondary,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth()
+        )
         if (timestamp.isNotBlank()) {
             Spacer(Modifier.height(12.dp))
             Text(
@@ -288,7 +329,7 @@ private fun HeroEventCard(
 @Composable
 private fun RowScope.StatColumn(
     modifier: Modifier = Modifier,
-    icon: String,
+    icon: @Composable () -> Unit,
     value: String,
     label: String,
     valueColor: Color
@@ -298,7 +339,7 @@ private fun RowScope.StatColumn(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(text = icon, fontSize = 20.sp)
+        icon()
         Spacer(Modifier.height(2.dp))
         Text(
             text = value,
@@ -323,19 +364,37 @@ private fun WeatherInfoCard(weather: WeatherInfo) {
         Row(modifier = Modifier.fillMaxWidth()) {
             WeatherStatColumn(
                 modifier = Modifier.weight(1f),
-                icon = "\uD83C\uDF21\uFE0F",
+                icon = {
+                    Image(
+                        painter = painterResource(R.drawable.temp),
+                        contentDescription = "Temperature",
+                        modifier = Modifier.size(40.dp)
+                    )
+                },
                 value = "${weather.temperature}\u00B0",
                 label = "TEMP"
             )
             WeatherStatColumn(
                 modifier = Modifier.weight(1f),
-                icon = "\uD83D\uDCA7",
+                icon = {
+                    Image(
+                        painter = painterResource(R.drawable.humidity),
+                        contentDescription = "Humidity",
+                        modifier = Modifier.size(40.dp)
+                    )
+                },
                 value = "${weather.humidity}%",
                 label = "HUMIDITY"
             )
             WeatherStatColumn(
                 modifier = Modifier.weight(1f),
-                icon = "\uD83D\uDCA8",
+                icon = {
+                    Image(
+                        painter = painterResource(R.drawable.wind),
+                        contentDescription = "Wind",
+                        modifier = Modifier.size(40.dp)
+                    )
+                },
                 value = "${weather.windSpeed} km/j",
                 label = "WIND"
             )
@@ -346,7 +405,7 @@ private fun WeatherInfoCard(weather: WeatherInfo) {
 @Composable
 private fun RowScope.WeatherStatColumn(
     modifier: Modifier = Modifier,
-    icon: String,
+    icon: @Composable () -> Unit,
     value: String,
     label: String
 ) {
@@ -355,7 +414,7 @@ private fun RowScope.WeatherStatColumn(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(text = icon, fontSize = 20.sp)
+        icon()
         Spacer(Modifier.height(2.dp))
         Text(
             text = value,
@@ -379,7 +438,11 @@ private fun NowcastAlertCard(alert: NowcastAlert) {
     var expanded by remember { mutableStateOf(false) }
     PrometheusCard(modifier = Modifier.fillMaxWidth().clickable { expanded = !expanded }) {
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
-            Text(text = if (alert.isBadWeather) "\u26A0\uFE0F" else "\uD83D\uDEE1\uFE0F", fontSize = 20.sp)
+            Icon(
+                imageVector = if (alert.isBadWeather) Icons.Filled.Warning else Icons.Filled.Shield,
+                contentDescription = if (alert.isBadWeather) "Warning" else "Clear",
+                modifier = Modifier.size(40.dp)
+            )
             Spacer(Modifier.width(10.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -395,12 +458,20 @@ private fun NowcastAlertCard(alert: NowcastAlert) {
                     maxLines = if (expanded) Int.MAX_VALUE else 2,
                     overflow = TextOverflow.Ellipsis
                 )
-                Text(
-                    text = if (expanded) "\u25B2 Tap to collapse" else "\u25BC Tap to expand",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = p.textSecondary,
-                    modifier = Modifier.padding(top = 4.dp)
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
+                        contentDescription = if (expanded) "Collapse" else "Expand",
+                        modifier = Modifier.size(24.dp),
+                        tint = p.textSecondary
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        text = if (expanded) "Tap to collapse" else "Tap to expand",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = p.textSecondary
+                    )
+                }
             }
         }
     }
@@ -411,10 +482,14 @@ private fun NowcastClearCard() {
     val p = LocalPrometheusColors.current
     PrometheusCard(modifier = Modifier.fillMaxWidth()) {
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(text = "\u2600\uFE0F", fontSize = 20.sp)
+            Image(
+                painter = painterResource(R.drawable.clear_weather),
+                contentDescription = "Clear weather",
+                modifier = Modifier.size(40.dp)
+            )
             Spacer(Modifier.width(10.dp))
             Text(
-                text = "Cuaca baik \u2014 Tidak ada peringatan",
+                text = "No warning",
                 style = MaterialTheme.typography.bodySmall,
                 color = p.success
             )
@@ -422,143 +497,4 @@ private fun NowcastClearCard() {
     }
 }
 
-@Composable
-private fun InjectionStatusCard(
-    enabled: Boolean,
-    ip: String,
-    port: Int,
-    onClick: () -> Unit
-) {
-    val p = LocalPrometheusColors.current
-    val statusColor = if (enabled && ip.isNotBlank()) p.success else p.textSecondary
-    val statusText = if (enabled && ip.isNotBlank()) "ACTIVE \u2014 $ip:$port" else "DISABLED"
 
-    PrometheusCard(
-        modifier = Modifier.clickable(onClick = onClick)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            StatusDot(isActive = enabled && ip.isNotBlank())
-            Spacer(Modifier.width(10.dp))
-            Text(
-                text = "LOCAL INJECTION",
-                style = MaterialTheme.typography.bodySmall,
-                color = p.textPrimary,
-                modifier = Modifier.weight(1f)
-            )
-            Text(
-                text = statusText,
-                style = MaterialTheme.typography.labelSmall,
-                color = statusColor,
-                fontWeight = FontWeight.Bold
-            )
-        }
-        Spacer(Modifier.height(4.dp))
-        Text(
-            text = "Tap to configure local earthquake data injection",
-            style = MaterialTheme.typography.bodySmall,
-            color = p.textSecondary
-        )
-    }
-}
-
-@Composable
-private fun InjectionDialog(
-    currentEnabled: Boolean,
-    currentIp: String,
-    currentPort: Int,
-    onDismiss: () -> Unit,
-    onApply: (Boolean, String, Int) -> Unit
-) {
-    val p = LocalPrometheusColors.current
-    var enabled by remember { mutableStateOf(currentEnabled) }
-    var ip by remember { mutableStateOf(currentIp) }
-    var port by remember { mutableStateOf(currentPort.toString()) }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        containerColor = p.surface,
-        title = {
-            Text(
-                text = "LOCAL INJECTION",
-                style = MaterialTheme.typography.labelLarge,
-                color = p.blue
-            )
-        },
-        text = {
-            Column {
-                Text(
-                    text = "Run 'python3 tools/local_injector.py' on your PC, then enter its IP and port below.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = p.textSecondary
-                )
-            Spacer(Modifier.height(8.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = "Enable",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = p.textPrimary
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Switch(
-                        checked = enabled,
-                        onCheckedChange = { enabled = it },
-                        colors = SwitchDefaults.colors(
-                            checkedTrackColor = p.blue,
-                            checkedThumbColor = Color.White
-                        )
-                    )
-                }
-                Spacer(Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = ip,
-                    onValueChange = { ip = it },
-                    label = { Text("PC IP Address") },
-                    placeholder = { Text("192.168.1.42") },
-                    enabled = enabled,
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = p.textPrimary,
-                        unfocusedTextColor = p.textPrimary,
-                        focusedBorderColor = p.blue,
-                        unfocusedBorderColor = p.surfaceElevated,
-                        cursorColor = p.blue
-                    ),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri)
-                )
-                Spacer(Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = port,
-                    onValueChange = { port = it.filter { c -> c.isDigit() } },
-                    label = { Text("Port") },
-                    enabled = enabled,
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = p.textPrimary,
-                        unfocusedTextColor = p.textPrimary,
-                        focusedBorderColor = p.blue,
-                        unfocusedBorderColor = p.surfaceElevated,
-                        cursorColor = p.blue
-                    ),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-                )
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = { onApply(enabled, ip, port.toIntOrNull() ?: 8080) }) {
-                Text("APPLY", color = p.blue)
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("CANCEL", color = p.textSecondary)
-            }
-        }
-    )
-}

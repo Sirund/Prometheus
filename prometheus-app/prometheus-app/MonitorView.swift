@@ -2,6 +2,7 @@ import SwiftUI
 
 struct MonitorView: View {
     @Environment(BMKGPollingService.self) private var pollingService
+    @Environment(InferenceManager.self) private var inference
     @AppStorage("isDarkMode") private var isDarkMode = false
     @AppStorage("tutorialSeen_monitor") private var tutorialSeen = false
     @State private var showInjectionSheet = false
@@ -38,17 +39,17 @@ struct MonitorView: View {
                         }
 
                         SectionHeader(title: "ALARM & BRIEFING")
-                        AlarmStatusCard()
+                        AlarmStatusCard(modelState: inference.modelState)
 
                         SectionHeader(title: "RECENT EVENTS")
                         if let latest = pollingService.latestEvent {
                             Text(latest)
-                                .font(.caption.monospaced())
+                                .inter(12)
                                 .foregroundColor(.primary)
                                 .padding(.horizontal, 4)
                         } else {
                             Text("No data loaded. Tap refresh to poll BMKG.")
-                                .font(.caption.monospaced())
+                                .inter(12)
                                 .foregroundColor(.secondary)
                                 .padding(.horizontal, 4)
                         }
@@ -57,7 +58,7 @@ struct MonitorView: View {
                             HStack {
                                 Image(systemName: "arrow.clockwise")
                                 Text("REFRESH BMKG")
-                                    .font(.caption.bold().monospaced())
+                                    .inter(12, weight: .bold)
                             }
                             .frame(maxWidth: .infinity)
                             .padding()
@@ -80,7 +81,8 @@ struct MonitorView: View {
                 }
                 .scrollContentBackground(.hidden)
             }
-            .navigationTitle("Prometheus")
+            .navigationTitle("Monitor")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(Color.cardBackground, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
             .toolbar {
@@ -167,7 +169,7 @@ struct DangerStatusBanner: View {
     var body: some View {
         HStack(spacing: 10) {
             Image(systemName: icon).font(.title3)
-            Text(label).font(.caption.bold().monospaced())
+            Text(label).inter(12, weight: .bold)
             Spacer()
         }
         .padding(12)
@@ -191,10 +193,10 @@ struct BMKGEventCard: View {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("M \(magnitude)")
-                        .font(.title.bold().monospaced())
+                        .inter(28, weight: .bold)
                         .foregroundColor(.prometheusBlue)
                     Text(location)
-                        .font(.caption.monospaced())
+                        .inter(12)
                         .foregroundColor(.primary)
                 }
                 Spacer()
@@ -208,7 +210,7 @@ struct BMKGEventCard: View {
                 EventField(label: "TSUNAMI POTENTIAL", value: potential)
                 Spacer()
                 Text(timestamp)
-                    .font(.caption2.monospaced())
+                    .inter(11)
                     .foregroundColor(.secondary)
             }
         }
@@ -225,8 +227,8 @@ struct EventField: View {
     let value: String
     var body: some View {
         VStack(alignment: .leading, spacing: 1) {
-            Text(label).font(.caption2.monospaced()).foregroundColor(.secondary)
-            Text(value).font(.caption.bold().monospaced()).foregroundColor(.primary)
+            Text(label).inter(11).foregroundColor(.secondary)
+            Text(value).inter(12, weight: .bold).foregroundColor(.primary)
         }
     }
 }
@@ -235,13 +237,25 @@ struct SectionHeader: View {
     let title: String
     var body: some View {
         Text(title)
-            .font(.caption.bold().monospaced())
+            .inter(12, weight: .bold)
             .foregroundColor(.prometheusBlue)
             .padding(.top, 4)
     }
 }
 
 struct AlarmStatusCard: View {
+    let modelState: InferenceManager.ModelState
+
+    private var gemmaStatus: (String, Color) {
+        switch modelState {
+        case .ready:            return ("READY",        .green)
+        case .loading:          return ("LOADING…",     .orange)
+        case .downloading:      return ("DOWNLOADING",  .orange)
+        case .notDownloaded:    return ("NOT DOWNLOADED", .gray)
+        case .error:            return ("ERROR",        .red)
+        }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
@@ -251,7 +265,12 @@ struct AlarmStatusCard: View {
             Divider().background(Color.prometheusBlue.opacity(0.15))
             AlarmIndicatorRow(icon: "waveform", label: "TTS BRIEFING", status: "READY", statusColor: .prometheusBlue)
             Divider().background(Color.prometheusBlue.opacity(0.15))
-            AlarmIndicatorRow(icon: "brain.head.profile", label: "GEMMA 4 EMERGENCY PROMPT", status: "NOT LOADED", statusColor: .gray)
+            AlarmIndicatorRow(
+                icon: "brain.head.profile",
+                label: "GEMMA 4 — EMERGENCY AI",
+                status: gemmaStatus.0,
+                statusColor: gemmaStatus.1
+            )
         }
         .padding()
         .background(Color.cardBackground)
@@ -273,11 +292,11 @@ struct AlarmIndicatorRow: View {
                 .foregroundColor(statusColor.opacity(0.7))
                 .frame(width: 16)
             Text(label)
-                .font(.caption2.monospaced())
+                .inter(11)
                 .foregroundColor(.secondary)
             Spacer()
             Text(status)
-                .font(.caption2.bold().monospaced())
+                .inter(11, weight: .bold)
                 .foregroundColor(statusColor)
         }
     }
@@ -298,15 +317,15 @@ struct InjectionStatusCard: View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
                 Text("INJECTION")
-                    .font(.caption2.monospaced())
+                    .inter(11)
                     .foregroundColor(.secondary)
                 Spacer()
                 Text(statusText)
-                    .font(.caption2.bold().monospaced())
+                    .inter(11, weight: .bold)
                     .foregroundColor(statusColor)
             }
             Text("Tap to configure local earthquake data injection")
-                .font(.caption2.monospaced())
+                .inter(11)
                 .foregroundColor(.secondary)
         }
         .padding()
@@ -329,13 +348,13 @@ struct InjectionSettingsView: View {
                 Color.appBackground.ignoresSafeArea()
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Run 'python3 tools/local_injector.py' on your PC, then enter its IP and port below.")
-                        .font(.caption.monospaced())
+                        .inter(12)
                         .foregroundColor(.secondary)
 
                     Toggle("Enable Injection", isOn: $enabled)
                         .tint(.prometheusBlue)
                         .foregroundColor(.primary)
-                        .font(.caption.monospaced())
+                        .inter(12)
 
                     TextField("PC IP Address (e.g. 192.168.1.42)", text: $ip)
                         .textFieldStyle(.plain)
@@ -344,7 +363,7 @@ struct InjectionSettingsView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 8))
                         .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.prometheusBlue.opacity(0.3), lineWidth: 1))
                         .foregroundColor(.primary)
-                        .font(.caption.monospaced())
+                        .inter(12)
                         .disabled(!enabled)
 
                     TextField("Port", value: $port, format: .number)
@@ -354,7 +373,7 @@ struct InjectionSettingsView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 8))
                         .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.prometheusBlue.opacity(0.3), lineWidth: 1))
                         .foregroundColor(.primary)
-                        .font(.caption.monospaced())
+                        .inter(12)
                         .disabled(!enabled)
 
                     Spacer()
@@ -367,12 +386,12 @@ struct InjectionSettingsView: View {
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("APPLY") { onApply(enabled, ip, port); dismiss() }
-                        .font(.caption.bold().monospaced())
+                        .inter(12, weight: .bold)
                         .foregroundColor(.prometheusBlue)
                 }
                 ToolbarItem(placement: .cancellationAction) {
                     Button("CANCEL") { dismiss() }
-                        .font(.caption.monospaced())
+                        .inter(12)
                         .foregroundColor(.secondary)
                 }
             }

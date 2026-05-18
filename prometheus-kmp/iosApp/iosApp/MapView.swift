@@ -52,9 +52,24 @@ struct MapView: View {
                             .padding(16)
                     }
 
-                    DisclosureGroup(
-                        isExpanded: $showDetails,
-                        content: {
+                    VStack(spacing: 0) {
+                        Button(action: { withAnimation(.easeInOut(duration: 0.35)) { showDetails.toggle() } }) {
+                            HStack {
+                                Text("ROUTING DETAILS")
+                                    .inter(12, weight: .bold)
+                                    .foregroundColor(.prometheusBlue)
+                                Spacer()
+                                Image(systemName: "chevron.down")
+                                    .font(.caption2.bold())
+                                    .foregroundColor(.prometheusBlue)
+                                    .rotationEffect(.degrees(showDetails ? 180 : 0))
+                                    .animation(.easeInOut(duration: 0.3), value: showDetails)
+                            }
+                            .padding(.vertical, 12)
+                        }
+                        .buttonStyle(.plain)
+
+                        if showDetails {
                             RoutingDetailsCard(
                                 event: pollingService.latestEarthquakeEvent,
                                 isDangerous: isDangerous,
@@ -62,15 +77,11 @@ struct MapView: View {
                                 evacuationRoute: evacuationRoute,
                                 routeLoading: routeLoading
                             )
-                        },
-                        label: {
-                            Text("ROUTING DETAILS")
-                                .font(.caption.bold().monospaced())
-                                .foregroundColor(.prometheusBlue)
+                            .transition(.opacity.combined(with: .move(edge: .top)))
                         }
-                    )
+                    }
                     .padding(.horizontal, 16)
-                    .tint(.prometheusBlue)
+                    .clipped()
 
                     Spacer()
                 }
@@ -157,7 +168,7 @@ private struct EvacuationStatusBanner: View {
             Image(systemName: isDangerous ? "exclamationmark.triangle.fill" : "arrow.triangle.turn.up.right.circle.fill")
                 .font(.title3)
             Text(label)
-                .font(.caption.bold().monospaced())
+                .inter(12, weight: .bold)
             Spacer()
         }
         .padding(12)
@@ -176,7 +187,7 @@ private struct MapPlaceholder: View {
                     .font(.system(size: 52))
                     .foregroundColor(.prometheusBlue.opacity(0.35))
                 Text("Map requires iOS 17+")
-                    .font(.caption.bold().monospaced())
+                    .inter(12, weight: .bold)
                     .foregroundColor(.white)
             }
         }
@@ -233,7 +244,7 @@ private struct RoutingDetailsCard: View {
                 RouteInfoRow(label: "DISTANCE", value: "\(String(format: "%.1f", r.distanceKm)) km")
                 Divider().background(Color.prometheusBlue.opacity(0.15))
                 Text("ESTIMATED TIME")
-                    .font(.caption2.bold().monospaced())
+                    .inter(11, weight: .bold)
                     .foregroundColor(.gray)
                     .padding(.vertical, 2)
                 TransportTimeRow(icon: "figure.walk", label: "Walk", time: formatTime(r.walkMin))
@@ -260,9 +271,9 @@ private struct TransportTimeRow: View {
     var body: some View {
         HStack(spacing: 6) {
             Image(systemName: icon).font(.caption2).foregroundColor(.gray).frame(width: 16)
-            Text(label).font(.caption2.monospaced()).foregroundColor(.gray).frame(width: 48, alignment: .leading)
+            Text(label).inter(11).foregroundColor(.gray).frame(width: 48, alignment: .leading)
             Spacer()
-            Text(time).font(.caption2.bold().monospaced()).foregroundColor(.white)
+            Text(time).inter(11, weight: .bold).foregroundColor(.white)
         }
     }
 }
@@ -274,11 +285,11 @@ struct RouteInfoRow: View {
     var body: some View {
         HStack(alignment: .top) {
             Text(label)
-                .font(.caption2.monospaced())
+                .inter(11)
                 .foregroundColor(.gray)
                 .frame(width: 128, alignment: .leading)
             Text(value)
-                .font(.caption.monospaced())
+                .inter(12)
                 .foregroundColor(.white)
             Spacer()
         }

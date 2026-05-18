@@ -31,8 +31,11 @@ private func loadConversations() -> [Conversation] {
 
 // MARK: - View
 
+enum AssistantPanel { case chat, vision, emergency }
+
 struct AssistantView: View {
     @Environment(InferenceManager.self) private var inference
+    @Environment(BMKGPollingService.self) private var pollingService
     @AppStorage("isDarkMode") private var isDarkMode = false
     @AppStorage("tutorialSeen_assistant") private var tutorialSeen = false
     @State private var query = ""
@@ -41,7 +44,7 @@ struct AssistantView: View {
     @State private var conversations: [Conversation] = loadConversations()
     @State private var activeIndex = 0
     @State private var showSidebar = false
-    @State private var showVision = false
+    @State private var activePanel: AssistantPanel = .chat
     @State private var showTutorial = false
 
     var body: some View {
@@ -54,7 +57,8 @@ struct AssistantView: View {
                     stateContent
                 }
             }
-            .navigationTitle("Survival Assistant")
+            .navigationTitle("Gemma Assistant")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(Color.cardBackground, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
             .toolbar { toolbarContent }
@@ -62,6 +66,9 @@ struct AssistantView: View {
         .task { await inference.start() }
         .onAppear {
             if !tutorialSeen { tutorialSeen = true; showTutorial = true }
+        }
+        .onChange(of: pollingService.latestEarthquakeEvent?.DateTime) { _, _ in
+            inference.currentEarthquakeEvent = pollingService.latestEarthquakeEvent
         }
         .overlay {
             if showTutorial {
@@ -80,9 +87,18 @@ struct AssistantView: View {
 
     @ViewBuilder
     private var stateContent: some View {
-        if showVision {
+        switch activePanel {
+        case .vision:
             VisionPanel()
-        } else {
+        case .emergency:
+            switch inference.modelState {
+            case .notDownloaded:  downloadView
+            case .downloading:    progressView
+            case .loading:        loadingView
+            case .ready:          emergencyContent
+            case .error(let msg): errorView(msg)
+            }
+        case .chat:
             switch inference.modelState {
             case .notDownloaded:  downloadView
             case .downloading:    progressView
@@ -106,10 +122,10 @@ struct AssistantView: View {
 
                 VStack(spacing: 6) {
                     Text("GEMMA 4 REQUIRED")
-                        .font(.headline.bold().monospaced())
+                        .inter(17, weight: .bold)
                         .foregroundColor(.primary)
                     Text("Gemma 4 E2B  ·  ~2.4 GB  ·  on-device  ·  offline")
-                        .font(.caption.monospaced())
+                        .inter(12)
                         .foregroundColor(.secondary)
                 }
 
@@ -129,7 +145,7 @@ struct AssistantView: View {
                     HStack(spacing: 8) {
                         Image(systemName: "arrow.down.circle.fill")
                         Text("DOWNLOAD GEMMA 4  (~2.4 GB)")
-                            .font(.caption.bold().monospaced())
+                            .inter(12, weight: .bold)
                     }
                     .frame(maxWidth: .infinity)
                     .padding()
@@ -141,7 +157,7 @@ struct AssistantView: View {
                 .buttonStyle(.plain)
 
                 Text("Requires a Wi-Fi connection. Model is stored on-device and never leaves the phone.")
-                    .font(.caption2.monospaced())
+                    .inter(11)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
                     .lineSpacing(4)
@@ -165,7 +181,7 @@ struct AssistantView: View {
                 .symbolEffect(.pulse)
 
             Text("DOWNLOADING GEMMA 4")
-                .font(.caption.bold().monospaced())
+                .inter(12, weight: .bold)
                 .foregroundColor(.primary)
 
             VStack(spacing: 8) {
@@ -176,17 +192,17 @@ struct AssistantView: View {
                 let dl = inference.downloader.downloadedBytes / 1_000_000
                 let total = (inference.downloader.totalBytes ?? 2_583_085_056) / 1_000_000
                 Text("\(dl) MB  /  \(total) MB")
-                    .font(.caption.monospaced())
+                    .inter(12)
                     .foregroundColor(.secondary)
 
                 Text(String(format: "%.0f%%", inference.downloader.progress * 100))
-                    .font(.caption.bold().monospaced())
+                    .inter(12, weight: .bold)
                     .foregroundColor(.prometheusBlue)
             }
 
             Button(action: { inference.cancelDownload() }) {
                 Text("CANCEL")
-                    .font(.caption.bold().monospaced())
+                    .inter(12, weight: .bold)
                     .padding(.horizontal, 20)
                     .padding(.vertical, 8)
                     .foregroundColor(.red)
@@ -208,10 +224,10 @@ struct AssistantView: View {
                 .tint(.prometheusBlue)
                 .scaleEffect(1.4)
             Text("LOADING MODEL")
-                .font(.caption.bold().monospaced())
+                .inter(12, weight: .bold)
                 .foregroundColor(.primary)
             Text("Loading Gemma 4 into memory — this may take a moment.")
-                .font(.caption.monospaced())
+                .inter(12)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
@@ -229,17 +245,17 @@ struct AssistantView: View {
                 .font(.system(size: 48))
                 .foregroundColor(.orange)
             Text(isSimulatorError ? "SIMULATOR" : "ERROR")
-                .font(.caption.bold().monospaced())
+                .inter(12, weight: .bold)
                 .foregroundColor(.primary)
             Text(message)
-                .font(.caption.monospaced())
+                .inter(12)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
             if !isSimulatorError {
                 Button(action: { Task { await inference.retryLoad() } }) {
                     Text("RETRY")
-                        .font(.caption.bold().monospaced())
+                        .inter(12, weight: .bold)
                         .padding(.horizontal, 24)
                         .padding(.vertical, 10)
                         .background(Color.prometheusBlue.opacity(0.15))
@@ -250,7 +266,7 @@ struct AssistantView: View {
                 .buttonStyle(.plain)
                 Button(action: { Task { await inference.redownloadAndLoad() } }) {
                     Text("RE-DOWNLOAD MODEL")
-                        .font(.caption.bold().monospaced())
+                        .inter(12, weight: .bold)
                         .padding(.horizontal, 24)
                         .padding(.vertical, 10)
                         .background(Color.cardBackground)
@@ -264,6 +280,37 @@ struct AssistantView: View {
         }
     }
 
+    // MARK: - Emergency screen
+
+    private var emergencyContent: some View {
+        VStack(spacing: 0) {
+            // Banner
+            let isDangerous = pollingService.dangerLevel >= 2
+            let color: Color = isDangerous ? .red : .orange
+            HStack(spacing: 8) {
+                Image(systemName: isDangerous ? "alarm.fill" : "exclamationmark.triangle.fill")
+                    .font(.caption).foregroundColor(color)
+                Text(isDangerous ? "ACTIVE EMERGENCY — \(pollingService.latestEarthquakeEvent.flatMap { $0.magnitudeValue }.map { "M\($0)" } ?? "EVENT")" : "EMERGENCY BRIEFING MODE")
+                    .inter(11, weight: .bold).foregroundColor(color)
+                Spacer()
+            }
+            .padding(10)
+            .background(color.opacity(0.12))
+            .overlay(Rectangle().stroke(color.opacity(0.4), lineWidth: 1))
+
+            messageList
+        }
+        .safeAreaInset(edge: .bottom) {
+            VStack(spacing: 4) {
+                if pollingService.latestEarthquakeEvent == nil {
+                    Text("No active earthquake event. Ask about emergency procedures.")
+                        .inter(10).foregroundColor(.secondary).padding(.horizontal)
+                }
+                inputBar
+            }
+        }
+    }
+
     // MARK: - Chat screen
 
     private var chatViewContent: some View {
@@ -272,18 +319,37 @@ struct AssistantView: View {
     }
 
     private var modeSelector: some View {
-        HStack(spacing: 8) {
+        let isDangerous = pollingService.dangerLevel >= 2
+        return HStack(spacing: 8) {
             Spacer()
-            ModeChipButton(label: "SURVIVAL CHAT", active: !showVision) {
-                showVision = false
+            ModeChipButton(label: "CHAT", active: activePanel == .chat) {
+                switchPanel(.chat)
             }
-            ModeChipButton(label: "VISION", active: showVision) {
-                showVision = true
+            ModeChipButton(label: "VISION", active: activePanel == .vision) {
+                switchPanel(.vision)
+            }
+            ModeChipButton(
+                label: isDangerous ? "🚨 EMERGENCY" : "EMERGENCY",
+                active: activePanel == .emergency,
+                activeColor: isDangerous ? .red : .prometheusBlue
+            ) {
+                switchPanel(.emergency)
             }
             Spacer()
         }
         .padding(.vertical, 8)
         .background(Color.cardBackground)
+    }
+
+    private func switchPanel(_ panel: AssistantPanel) {
+        guard panel != activePanel else { return }
+        syncToConversation()
+        let newMode: ChatMode = panel == .emergency ? .emergency : .survival
+        if newMode != selectedMode {
+            inference.clearHistory(mode: selectedMode)
+            selectedMode = newMode
+        }
+        activePanel = panel
     }
 
     private var messageList: some View {
@@ -323,7 +389,7 @@ struct AssistantView: View {
                 .font(.system(size: 40))
                 .foregroundColor(.prometheusBlue.opacity(0.3))
             Text("Ask anything about survival")
-                .font(.caption.monospaced())
+                .inter(12)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
             Spacer(minLength: 60)
@@ -339,7 +405,7 @@ struct AssistantView: View {
                 axis: .vertical
             )
             .textFieldStyle(.plain)
-            .font(.caption.monospaced())
+            .inter(12)
             .lineLimit(1...4)
             .padding(12)
             .focused($inputFocused)
@@ -403,13 +469,15 @@ struct AssistantView: View {
                     HStack(spacing: 4) {
                         Circle().fill(Color.green).frame(width: 6, height: 6)
                         Text("GEMMA 4 · READY")
-                            .font(.caption2.monospaced())
+                            .inter(11)
                             .foregroundColor(.secondary)
                     }
-                    Button(action: { createNewConversation() }) {
-                        Image(systemName: "square.and.pencil")
-                            .font(.body)
-                            .foregroundColor(.prometheusBlue)
+                    if activePanel != .vision {
+                        Button(action: { createNewConversation() }) {
+                            Image(systemName: "square.and.pencil")
+                                .font(.body)
+                                .foregroundColor(.prometheusBlue)
+                        }
                     }
                 }
             }
@@ -427,7 +495,7 @@ struct AssistantView: View {
                         HStack {
                             Image(systemName: "plus")
                             Text("New conversation")
-                                .font(.caption.bold().monospaced())
+                                .inter(12, weight: .bold)
                         }
                         .frame(maxWidth: .infinity)
                         .padding(12)
@@ -446,7 +514,7 @@ struct AssistantView: View {
                             let isActive = index == activeIndex
                             HStack {
                                 Text(String(title))
-                                    .font(.caption.monospaced())
+                                    .inter(12)
                                     .foregroundColor(isActive ? .prometheusBlue : .primary)
                                     .fontWeight(isActive ? .bold : .regular)
                                 Spacer()
@@ -540,12 +608,12 @@ private struct MessageBubble: View {
 
             VStack(alignment: isUser ? .trailing : .leading, spacing: 4) {
                 Text(isUser ? "YOU" : "GEMMA 4")
-                    .font(.caption2.bold().monospaced())
+                    .inter(11, weight: .bold)
                     .foregroundColor(isUser ? .prometheusBlue : .gray)
                     .padding(.horizontal, 4)
 
                 Text(message.text + (message.isStreaming ? "▋" : ""))
-                    .font(.caption.monospaced())
+                    .inter(12)
                     .foregroundColor(.primary)
                     .textSelection(.enabled)
                     .padding(12)
@@ -560,7 +628,7 @@ private struct MessageBubble: View {
                     Button(action: onSpeak) {
                         HStack(spacing: 4) {
                             Image(systemName: "waveform").font(.caption2)
-                            Text("SPEAK").font(.caption2.bold().monospaced())
+                            Text("SPEAK").inter(11, weight: .bold)
                         }
                         .foregroundColor(.prometheusBlue.opacity(0.7))
                     }
@@ -578,18 +646,19 @@ private struct MessageBubble: View {
 private struct ModeChipButton: View {
     let label: String
     let active: Bool
+    var activeColor: Color = .prometheusBlue
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
             Text(label)
-                .font(.caption2.bold().monospaced())
+                .inter(11, weight: .bold)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 5)
-                .background(active ? Color.prometheusBlue.opacity(0.2) : Color.clear)
+                .background(active ? activeColor.opacity(0.2) : Color.clear)
                 .clipShape(Capsule())
-                .overlay(Capsule().stroke(active ? Color.prometheusBlue.opacity(0.6) : Color.gray.opacity(0.3), lineWidth: 1))
-                .foregroundColor(active ? .prometheusBlue : .gray)
+                .overlay(Capsule().stroke(active ? activeColor.opacity(0.6) : Color.gray.opacity(0.3), lineWidth: 1))
+                .foregroundColor(active ? activeColor : .gray)
         }
         .buttonStyle(.plain)
     }
@@ -606,7 +675,7 @@ private struct DownloadFeatureRow: View {
                 .foregroundColor(.prometheusBlue.opacity(0.7))
                 .frame(width: 16)
             Text(text)
-                .font(.caption.monospaced())
+                .inter(12)
                 .foregroundColor(.secondary)
         }
     }

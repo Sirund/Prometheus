@@ -76,6 +76,33 @@ enum TutorialContent {
         ),
     ]
 
+    static let talk: [TutorialStep] = [
+        TutorialStep(
+            icon: "mic.fill",
+            iconColor: .red,
+            title: "Hold to Speak",
+            description: "Hold the mic button and ask any question aloud — about your surroundings, what to do, or emergency guidance. Release to send."
+        ),
+        TutorialStep(
+            icon: "camera.viewfinder",
+            iconColor: .prometheusBlue,
+            title: "Auto Camera Capture",
+            description: "When you release the mic, the camera automatically captures a photo of your surroundings. Gemma sees both your question and the image to give a more relevant answer."
+        ),
+        TutorialStep(
+            icon: "waveform.and.mic",
+            iconColor: .prometheusBlue,
+            title: "Spoken Response",
+            description: "Gemma's answer is read aloud automatically after analysis — ideal when your hands are occupied or you need information quickly in an emergency."
+        ),
+        TutorialStep(
+            icon: "square.and.arrow.down.fill",
+            iconColor: .prometheusBlue,
+            title: "Download Gemma 4 First",
+            description: "The Talk tab requires Gemma 4 to be downloaded (~2.4 GB). Download it in the Assistant tab. After that, Talk works fully offline."
+        ),
+    ]
+
     static let assistant: [TutorialStep] = [
         TutorialStep(
             icon: "bubble.left.and.bubble.right.fill",
@@ -131,16 +158,16 @@ struct TutorialOverlay: View {
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("HOW TO USE")
-                            .font(.caption2.bold().monospaced())
+                            .inter(11, weight: .bold)
                             .foregroundColor(.prometheusBlue.opacity(0.7))
                         Text(tabName.uppercased())
-                            .font(.caption.bold().monospaced())
+                            .inter(12, weight: .bold)
                             .foregroundColor(.prometheusBlue)
                     }
                     Spacer()
                     Button(action: onDismiss) {
                         Text("SKIP")
-                            .font(.caption.bold().monospaced())
+                            .inter(12, weight: .bold)
                             .padding(.horizontal, 12)
                             .padding(.vertical, 5)
                             .background(Color.prometheusBlue.opacity(0.08))
@@ -185,7 +212,7 @@ struct TutorialOverlay: View {
                     }
                 }) {
                     Text(page < steps.count - 1 ? "NEXT →" : "GOT IT")
-                        .font(.caption.bold().monospaced())
+                        .inter(12, weight: .bold)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
                         .background(Color.prometheusBlue.opacity(0.15))
@@ -230,16 +257,16 @@ private struct TutorialStepCard: View {
 
             VStack(spacing: 8) {
                 Text("\(stepNumber) / \(total)")
-                    .font(.caption2.bold().monospaced())
+                    .inter(11, weight: .bold)
                     .foregroundColor(.prometheusBlue.opacity(0.5))
 
                 Text(step.title)
-                    .font(.subheadline.bold().monospaced())
+                    .inter(15, weight: .bold)
                     .foregroundColor(.primary)
                     .multilineTextAlignment(.center)
 
                 Text(step.description)
-                    .font(.caption.monospaced())
+                    .inter(12)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
                     .lineSpacing(4)

@@ -31,7 +31,7 @@ struct AssistantView: View {
                             .fill(manager.isModelLoaded ? .green : .orange)
                             .frame(width: 6, height: 6)
                         Text(manager.statusMessage)
-                            .font(.caption2.monospaced())
+                            .inter(11)
                             .foregroundColor(.gray)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -45,10 +45,10 @@ struct AssistantView: View {
                                 .font(.system(size: 48))
                                 .foregroundColor(.prometheusBlue.opacity(0.35))
                             Text("SURVIVAL ASSISTANT")
-                                .font(.headline.bold().monospaced())
+                                .inter(17, weight: .bold)
                                 .foregroundColor(.white)
                             Text("Gemma 4  ·  on-device  ·  offline")
-                                .font(.caption.monospaced())
+                                .inter(12)
                                 .foregroundColor(.gray)
                             VStack(spacing: 4) {
                                 CapabilityPill(icon: "cross.case", label: "first aid")
@@ -75,7 +75,7 @@ struct AssistantView: View {
                     HStack(spacing: 0) {
                         TextField("Ask anything about survival...", text: $query)
                             .textFieldStyle(.plain)
-                            .font(.caption.monospaced())
+                            .inter(12)
                             .padding(12)
                             .background(Color.cardBackground)
                             .disabled(!manager.isModelLoaded)
@@ -133,7 +133,7 @@ struct AssistantView: View {
                 Color.darkBackground.ignoresSafeArea()
                 VStack(alignment: .leading, spacing: 0) {
                     Text("Conversations")
-                        .font(.title3.bold().monospaced())
+                        .inter(20, weight: .bold)
                         .foregroundColor(.prometheusBlue)
                         .padding()
 
@@ -145,7 +145,7 @@ struct AssistantView: View {
                         HStack {
                             Image(systemName: "plus")
                             Text("New conversation")
-                                .font(.caption.bold().monospaced())
+                                .inter(12, weight: .bold)
                         }
                         .frame(maxWidth: .infinity)
                         .padding(12)
@@ -162,7 +162,7 @@ struct AssistantView: View {
                             let isActive = index == activeIndex
                             HStack {
                                 Text(String(title))
-                                    .font(.caption.monospaced())
+                                    .inter(12)
                                     .foregroundColor(isActive ? .prometheusBlue : .white)
                                     .fontWeight(isActive ? .bold : .regular)
                                 Spacer()
@@ -248,7 +248,7 @@ private struct ModeChip: View {
 
     var body: some View {
         Text(label)
-            .font(.caption2.bold().monospaced())
+            .inter(11, weight: .bold)
             .padding(.horizontal, 10)
             .padding(.vertical, 4)
             .background(active ? Color.prometheusBlue.opacity(0.2) : Color.clear)
@@ -266,7 +266,7 @@ private struct CapabilityPill: View {
             Image(systemName: icon)
                 .font(.caption2)
             Text(label)
-                .font(.caption2.monospaced())
+                .inter(11)
         }
         .foregroundColor(.gray)
     }

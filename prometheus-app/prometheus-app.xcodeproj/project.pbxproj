@@ -7,8 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		FD3D5C392FADB9CE0013077C /* LiteRTLM in Frameworks */ = {isa = PBXBuildFile; productRef = FD3D5C382FADB9CE0013077C /* LiteRTLM */; };
-		FD3D5C3B2FADB9CE0013077C /* LiteRTLMDownloader in Frameworks */ = {isa = PBXBuildFile; productRef = FD3D5C3A2FADB9CE0013077C /* LiteRTLMDownloader */; };
+		FDC8CEDD2FBB2CE2004B8F12 /* LiteRTLM in Frameworks */ = {isa = PBXBuildFile; productRef = FDC8CEDC2FBB2CE2004B8F12 /* LiteRTLM */; };
+		FDC8CEDF2FBB2CE2004B8F12 /* LiteRTLMDownloader in Frameworks */ = {isa = PBXBuildFile; productRef = FDC8CEDE2FBB2CE2004B8F12 /* LiteRTLMDownloader */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -28,8 +28,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				FD3D5C3B2FADB9CE0013077C /* LiteRTLMDownloader in Frameworks */,
-				FD3D5C392FADB9CE0013077C /* LiteRTLM in Frameworks */,
+				FDC8CEDF2FBB2CE2004B8F12 /* LiteRTLMDownloader in Frameworks */,
+				FDC8CEDD2FBB2CE2004B8F12 /* LiteRTLM in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -73,8 +73,8 @@
 			);
 			name = "prometheus-app";
 			packageProductDependencies = (
-				FD3D5C382FADB9CE0013077C /* LiteRTLM */,
-				FD3D5C3A2FADB9CE0013077C /* LiteRTLMDownloader */,
+				FDC8CEDC2FBB2CE2004B8F12 /* LiteRTLM */,
+				FDC8CEDE2FBB2CE2004B8F12 /* LiteRTLMDownloader */,
 			);
 			productName = "prometheus-app";
 			productReference = FDEB59F92FA4B4D200708DE9 /* prometheus-app.app */;
@@ -105,7 +105,7 @@
 			mainGroup = FDEB59F02FA4B4D200708DE9;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				FD3D5C372FADB9CE0013077C /* XCRemoteSwiftPackageReference "LiteRTLM-Swift-SDK" */,
+				FDC8CEDB2FBB2CE2004B8F12 /* XCRemoteSwiftPackageReference "LiteRTLM-Swift-SDK" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = FDEB59FA2FA4B4D200708DE9 /* Products */;
@@ -143,7 +143,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "# Type a script or drag a script file from your workspace to insert its path.\nfor DYLIB in \\\n  \"${BUILT_PRODUCTS_DIR}/${FRAMEWORKS_FOLDER_PATH}/CLiteRTLM.framework/libGemmaModelConstraintProvider.dylib\" \\\n  \"${BUILT_PRODUCTS_DIR}/${FRAMEWORKS_FOLDER_PATH}/CLiteRTLM.framework/libLiteRtMetalAccelerator.dylib\"; do\n  if [ -f \"$DYLIB\" ]; then\n    /usr/bin/codesign --force --sign \"${EXPANDED_CODE_SIGN_IDENTITY}\" \"$DYLIB\"\n  fi\ndone\n";
+			shellScript = "for DYLIB in \\\n  \"${BUILT_PRODUCTS_DIR}/${FRAMEWORKS_FOLDER_PATH}/CLiteRTLM.framework/libGemmaModelConstraintProvider.dylib\" \\\n  \"${BUILT_PRODUCTS_DIR}/${FRAMEWORKS_FOLDER_PATH}/CLiteRTLM.framework/libLiteRtMetalAccelerator.dylib\"; do\n  if [ -f \"$DYLIB\" ]; then\n    /usr/bin/codesign --force --sign \"${EXPANDED_CODE_SIGN_IDENTITY}\" \"$DYLIB\"\n  fi\ndone\nfor FWK in \\\n  \"${BUILT_PRODUCTS_DIR}/${FRAMEWORKS_FOLDER_PATH}/LiteRTLM.framework\" \\\n  \"${BUILT_PRODUCTS_DIR}/${FRAMEWORKS_FOLDER_PATH}/CLiteRTLM.framework\" \\\n  \"${BUILT_PRODUCTS_DIR}/${FRAMEWORKS_FOLDER_PATH}/LiteRTLMDownloader.framework\"; do\n  if [ -d \"$FWK\" ]; then\n    /usr/bin/codesign --force --sign \"${EXPANDED_CODE_SIGN_IDENTITY}\" \"$FWK\"\n  fi\ndone\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -295,6 +295,8 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Prometheus uses your camera to describe surroundings in Vision Accessibility mode.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Prometheus uses your location to assess earthquake danger level and proximity.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Prometheus uses the microphone for hold-to-speak voice queries in the Talk tab.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Prometheus uses speech recognition to transcribe your voice queries in the Talk tab.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -343,6 +345,8 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Prometheus uses your camera to describe surroundings in Vision Accessibility mode.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Prometheus uses your location to assess earthquake danger level and proximity.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Prometheus uses the microphone for hold-to-speak voice queries in the Talk tab.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Prometheus uses speech recognition to transcribe your voice queries in the Talk tab.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -398,9 +402,9 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		FD3D5C372FADB9CE0013077C /* XCRemoteSwiftPackageReference "LiteRTLM-Swift-SDK" */ = {
+		FDC8CEDB2FBB2CE2004B8F12 /* XCRemoteSwiftPackageReference "LiteRTLM-Swift-SDK" */ = {
 			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/Luxshan2000/LiteRTLM-Swift-SDK.git";
+			repositoryURL = "https://github.com/lanka-ai-foundation/LiteRTLM-Swift-SDK";
 			requirement = {
 				branch = main;
 				kind = branch;
@@ -409,14 +413,14 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		FD3D5C382FADB9CE0013077C /* LiteRTLM */ = {
+		FDC8CEDC2FBB2CE2004B8F12 /* LiteRTLM */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = FD3D5C372FADB9CE0013077C /* XCRemoteSwiftPackageReference "LiteRTLM-Swift-SDK" */;
+			package = FDC8CEDB2FBB2CE2004B8F12 /* XCRemoteSwiftPackageReference "LiteRTLM-Swift-SDK" */;
 			productName = LiteRTLM;
 		};
-		FD3D5C3A2FADB9CE0013077C /* LiteRTLMDownloader */ = {
+		FDC8CEDE2FBB2CE2004B8F12 /* LiteRTLMDownloader */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = FD3D5C372FADB9CE0013077C /* XCRemoteSwiftPackageReference "LiteRTLM-Swift-SDK" */;
+			package = FDC8CEDB2FBB2CE2004B8F12 /* XCRemoteSwiftPackageReference "LiteRTLM-Swift-SDK" */;
 			productName = LiteRTLMDownloader;
 		};
 /* End XCSwiftPackageProductDependency section */

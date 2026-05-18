@@ -1,5 +1,17 @@
 import SwiftUI
 
+extension Font {
+    static func inter(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
+        Font.custom("Inter", size: size).weight(weight)
+    }
+}
+
+extension View {
+    func inter(_ size: CGFloat, weight: Font.Weight = .regular) -> some View {
+        self.font(.inter(size, weight: weight))
+    }
+}
+
 extension Color {
     static let prometheusBlue = Color(red: 0.31, green: 0.76, blue: 0.97)
     static let background = Color(white: 0.07)
