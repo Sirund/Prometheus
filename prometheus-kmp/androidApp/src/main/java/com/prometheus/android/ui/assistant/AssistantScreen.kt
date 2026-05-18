@@ -387,7 +387,7 @@ fun AssistantScreen(
                             Text(
                                 when (chatMode) {
                                     "EMERGENCY_BRIEF" -> "Paste earthquake data for briefing..."
-                                    else -> "Ask anything about survival..."
+                                    else -> "Ask something..."
                                 },
                                 color = p.blue.copy(alpha = 0.5f)
                             )

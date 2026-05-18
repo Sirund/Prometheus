@@ -10,6 +10,7 @@ import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.*
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInHorizontally
@@ -34,7 +35,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.PermCameraMic
+import androidx.compose.material.icons.filled.QuestionAnswer
 import androidx.compose.material.icons.filled.Science
+import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.WaterDrop
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
@@ -425,6 +429,21 @@ fun AskScreen(
                                 }
                             }
                             Text("Ask Gemma", color = p.blue)
+                            Spacer(Modifier.weight(1f))
+                            val statusDot = when {
+                                isModelLoaded -> Color.Green
+                                statusMessage == "Model Not Found" -> Color.Red
+                                else -> Color(0xFFFFA500)
+                            }
+                            Box(
+                                Modifier.size(6.dp).clip(RoundedCornerShape(3.dp)).background(statusDot)
+                            )
+                            Spacer(Modifier.width(4.dp))
+                            Text(
+                                statusMessage,
+                                color = p.textSecondary,
+                                style = MaterialTheme.typography.labelSmall
+                            )
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
@@ -647,8 +666,7 @@ private fun ModeIndicatorBar(
         modifier = Modifier
             .fillMaxWidth()
             .background(p.surface)
-            .border(0.5.dp, p.blue.copy(alpha = 0.15f))
-            .padding(vertical = 8.dp),
+            .padding(vertical = 6.dp),
         horizontalArrangement = Arrangement.Center
     ) {
         ModeChip(label = "CHAT", active = currentMode == "CHAT", onClick = { onModeChange("CHAT") })
@@ -660,16 +678,28 @@ private fun ModeIndicatorBar(
 @Composable
 private fun ModeChip(label: String, active: Boolean, onClick: () -> Unit) {
     val p = LocalPrometheusColors.current
+    val bg by animateColorAsState(
+        if (active) p.blue else Color.Transparent,
+        label = "chipBg"
+    )
+    val textColor by animateColorAsState(
+        if (active) Color.Black else p.textSecondary,
+        label = "chipText"
+    )
+    val borderColor by animateColorAsState(
+        if (active) p.blue else p.textSecondary.copy(alpha = 0.3f),
+        label = "chipBorder"
+    )
     Text(
         text = label,
-        color = if (active) p.blue else Color.Gray,
-        style = MaterialTheme.typography.labelSmall,
+        color = textColor,
+        style = MaterialTheme.typography.labelMedium,
         fontWeight = FontWeight.Bold,
         modifier = Modifier
             .clickable(onClick = onClick)
-            .background(if (active) p.blue.copy(alpha = 0.2f) else Color.Transparent)
-            .border(1.dp, if (active) p.blue.copy(alpha = 0.6f) else Color.Gray.copy(alpha = 0.3f))
-            .padding(horizontal = 10.dp, vertical = 4.dp)
+            .background(bg, RoundedCornerShape(50))
+            .border(1.dp, borderColor, RoundedCornerShape(50))
+            .padding(horizontal = 20.dp, vertical = 6.dp)
     )
 }
 
@@ -697,32 +727,15 @@ private fun ChatContent(
     val p = LocalPrometheusColors.current
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // Status indicator
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(start = 16.dp, top = 4.dp)
-        ) {
-            val statusDot = when {
-                isModelLoaded -> Color.Green
-                statusMessage == "Model Not Found" -> Color.Red
-                else -> Color(0xFFFFA500)
-            }
-            Box(
-                modifier = Modifier
-                    .size(6.dp)
-                    .clip(RoundedCornerShape(3.dp))
-                    .background(statusDot)
-            )
-            Spacer(Modifier.width(4.dp))
-            Text(
-                text = statusMessage,
-                color = Color.Gray,
-                style = MaterialTheme.typography.labelSmall
-            )
-        }
-
         // Empty state or bubbles
-        if (chatHistory.isEmpty()) {
+        if (!isModelLoaded) {
+            ModelUnavailable(
+                isDownloading = isDownloading,
+                downloadProgress = downloadProgress,
+                showDownload = showDownload,
+                onDownload = onDownloadModel
+            )
+        } else if (chatHistory.isEmpty()) {
             Box(
                 modifier = Modifier
                     .weight(1f)
@@ -730,59 +743,19 @@ private fun ChatContent(
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("\uD83D\uDCAC", style = MaterialTheme.typography.displaySmall)
-                    Spacer(Modifier.height(8.dp))
+                    Icon(
+                        Icons.Filled.QuestionAnswer,
+                        contentDescription = null,
+                        modifier = Modifier.size(64.dp),
+                        tint = p.textSecondary
+                    )
+                    Spacer(Modifier.height(16.dp))
                     Text(
                         text = "SURVIVAL ASSISTANT",
                         color = p.textPrimary,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
-                    Text(
-                        text = "Gemma 4  \u00B7  on-device  \u00B7  offline",
-                        color = Color.Gray,
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        CapabilityPill(icon = Icons.Filled.Science, text = "first aid")
-                        CapabilityPill(icon = Icons.Filled.Home, text = "shelter & evacuation")
-                        CapabilityPill(icon = Icons.Filled.WaterDrop, text = "water & supplies")
-                        CapabilityPill(icon = Icons.Filled.Warning, text = "Indonesia hazards")
-                    }
-                    if (showDownload || isDownloading) {
-                        Spacer(Modifier.height(16.dp))
-                        val btnColor = if (!isDownloading) p.blue else p.blue.copy(alpha = 0.6f)
-                        val btnText = when {
-                            !isDownloading -> "\u2B07\uFE0F  DOWNLOAD MODEL (2.4 GB)"
-                            downloadProgress >= 0 -> "\u23F3  Downloading: $downloadProgress%"
-                            else -> "\u23F3  Starting..."
-                        }
-                        Button(
-                            onClick = onDownloadModel,
-                            enabled = !isDownloading,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(48.dp)
-                                .padding(horizontal = 16.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = btnColor,
-                                contentColor = Color.Black
-                            )
-                        ) {
-                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                if (isDownloading) {
-                                    LinearProgressIndicator(
-                                        progress = { if (downloadProgress > 0) downloadProgress / 100f else 0f },
-                                        modifier = Modifier.fillMaxWidth().fillMaxHeight(),
-                                        color = p.blue.copy(alpha = 0.3f),
-                                        trackColor = Color.Transparent
-                                    )
-                                }
-                                Text(btnText, fontWeight = FontWeight.Bold)
-                            }
-                        }
-                    }
                 }
             }
         } else {
@@ -800,13 +773,15 @@ private fun ChatContent(
         }
 
         // Input row
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp)
-                .border(1.dp, p.blue.copy(alpha = 0.3f)),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        if (isModelLoaded) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 6.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .border(1.dp, p.blue.copy(alpha = 0.2f), RoundedCornerShape(14.dp)),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
             if (selectedImageBitmap != null) {
                 Box(
                     modifier = Modifier
@@ -843,11 +818,12 @@ private fun ChatContent(
                 onValueChange = onQueryChange,
                 placeholder = {
                     Text(
-                        "Ask anything about survival...",
+                        "Ask something...",
                         color = p.blue.copy(alpha = 0.5f)
                     )
                 },
                 modifier = Modifier.weight(1f),
+                textStyle = MaterialTheme.typography.bodySmall,
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor = p.surface,
                     unfocusedContainerColor = p.surface,
@@ -860,17 +836,18 @@ private fun ChatContent(
                 enabled = isModelLoaded
             )
             VerticalDivider(
-                modifier = Modifier.height(44.dp),
+                modifier = Modifier.height(32.dp),
                 color = p.blue.copy(alpha = 0.2f)
             )
             TextButton(
                 onClick = onAttachImage,
                 enabled = isModelLoaded,
-                contentPadding = PaddingValues(14.dp)
+                contentPadding = PaddingValues(6.dp)
             ) {
                 Icon(
                     Icons.Filled.Image,
                     contentDescription = "Attach image",
+                    modifier = Modifier.size(20.dp),
                     tint = p.blue.copy(alpha = 0.6f)
                 )
             }
@@ -883,14 +860,16 @@ private fun ChatContent(
                     disabledContainerColor = p.surface,
                     disabledContentColor = Color.Gray
                 ),
-                contentPadding = PaddingValues(14.dp)
+                contentPadding = PaddingValues(6.dp)
             ) {
-                Text(
-                    text = "\u2708\uFE0F",
-                    style = MaterialTheme.typography.bodyLarge
+                Icon(
+                    Icons.Filled.Send,
+                    contentDescription = "Send",
+                    modifier = Modifier.size(20.dp)
                 )
             }
         }
+    }
     }
 }
 
@@ -933,22 +912,11 @@ private fun TalkContent(
     }
 
     Box(Modifier.fillMaxSize()) {
-        // Status
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 16.dp, top = 4.dp)) {
-            val statusDot = when {
-                isModelLoaded -> Color.Green
-                statusMessage == "Model Not Found" -> Color.Red
-                else -> Color(0xFFFFA500)
-            }
-            Box(Modifier.size(6.dp).clip(RoundedCornerShape(3.dp)).background(statusDot))
-            Spacer(Modifier.width(4.dp))
-            Text(statusMessage, color = p.textSecondary, style = MaterialTheme.typography.labelSmall)
-        }
-
         if (!isModelLoaded) {
-            DownloadPrompt(
+            ModelUnavailable(
                 isDownloading = isDownloading,
                 downloadProgress = downloadProgress,
+                showDownload = !isDownloading && statusMessage == "Model Not Found",
                 onDownload = onDownloadModel
             )
         } else {
@@ -1155,18 +1123,16 @@ private fun PermissionGate(
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("\uD83D\uDCF7\uD83C\uDF99\uFE0F", style = MaterialTheme.typography.displaySmall)
-            Spacer(Modifier.height(12.dp))
+            Icon(
+                Icons.Filled.PermCameraMic,
+                contentDescription = null,
+                modifier = Modifier.size(64.dp),
+                tint = p.textSecondary
+            )
+            Spacer(Modifier.height(24.dp))
             Text("PERMISSIONS REQUIRED", color = p.textPrimary,
                 style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(6.dp))
-            val missing = buildList {
-                if (!cameraGranted) add("Camera")
-                if (!audioGranted) add("Microphone")
-            }
-            Text("Grant ${missing.joinToString(" & ")} to use Talk to Gemma",
-                color = p.textSecondary, style = MaterialTheme.typography.bodySmall)
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(16.dp))
             Button(
                 onClick = onRequest,
                 modifier = Modifier.fillMaxWidth().height(48.dp),
@@ -1177,12 +1143,13 @@ private fun PermissionGate(
 }
 
 // ──────────────────────────────────────────────────────────
-// Download Prompt
+// Model Unavailable (shared empty state for CHAT & TALK)
 // ──────────────────────────────────────────────────────────
 @Composable
-private fun DownloadPrompt(
+private fun ModelUnavailable(
     isDownloading: Boolean,
     downloadProgress: Int,
+    showDownload: Boolean,
     onDownload: () -> Unit
 ) {
     val p = LocalPrometheusColors.current
@@ -1194,53 +1161,61 @@ private fun DownloadPrompt(
     }
 
     Box(
-        modifier = Modifier.fillMaxWidth().fillMaxHeight().padding(32.dp),
+        modifier = Modifier.fillMaxSize().padding(32.dp),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("\uD83E\uDD16", style = MaterialTheme.typography.displaySmall)
-            Spacer(Modifier.height(8.dp))
-            Text("MODEL NOT FOUND", color = p.textPrimary,
-                style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            Text("Download Gemma 4 (2.4 GB) to enable TALK",
-                color = p.textSecondary, style = MaterialTheme.typography.bodySmall)
-            Spacer(Modifier.height(16.dp))
-
-            val btnColor = if (!isDownloading) p.blue else p.blue.copy(alpha = 0.6f)
-            val btnText = when {
-                !isDownloading -> "\u2B07\uFE0F  DOWNLOAD MODEL (2.4 GB)"
-                downloadProgress >= 0 -> "\u23F3  Downloading: $downloadProgress%"
-                else -> "\u23F3  Starting..."
-            }
-            Button(
-                onClick = {
-                    if (!isDownloading) {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-                            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
-                        ) {
-                            notificationPermLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                        } else {
-                            onDownload()
+            Icon(
+                Icons.Filled.QuestionAnswer,
+                contentDescription = null,
+                modifier = Modifier.size(64.dp),
+                tint = p.textSecondary
+            )
+            Spacer(Modifier.height(24.dp))
+            Text(
+                text = "SURVIVAL ASSISTANT",
+                color = p.textPrimary,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            if (showDownload || isDownloading) {
+                Spacer(Modifier.height(24.dp))
+                val btnColor = if (!isDownloading) p.blue else p.blue.copy(alpha = 0.6f)
+                val btnText = when {
+                    !isDownloading -> "DOWNLOAD MODEL"
+                    downloadProgress >= 0 -> "\u23F3  Downloading: $downloadProgress%"
+                    else -> "\u23F3  Starting..."
+                }
+                Button(
+                    onClick = {
+                        if (!isDownloading) {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                                ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+                            ) {
+                                notificationPermLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                            } else {
+                                onDownload()
+                            }
                         }
+                    },
+                    enabled = !isDownloading,
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = btnColor,
+                        contentColor = Color.Black
+                    )
+                ) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        if (isDownloading) {
+                            LinearProgressIndicator(
+                                progress = { if (downloadProgress > 0) downloadProgress / 100f else 0f },
+                                modifier = Modifier.fillMaxWidth().fillMaxHeight(),
+                                color = p.blue.copy(alpha = 0.3f),
+                                trackColor = Color.Transparent
+                            )
+                        }
+                        Text(btnText, fontWeight = FontWeight.Bold)
                     }
-                },
-                enabled = !isDownloading,
-                modifier = Modifier.fillMaxWidth().height(48.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = btnColor,
-                    contentColor = Color.Black
-                )
-            ) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    if (isDownloading) {
-                        LinearProgressIndicator(
-                            progress = { if (downloadProgress > 0) downloadProgress / 100f else 0f },
-                            modifier = Modifier.fillMaxWidth().fillMaxHeight(),
-                            color = p.blue.copy(alpha = 0.3f),
-                            trackColor = Color.Transparent
-                        )
-                    }
-                    Text(btnText, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -1288,6 +1263,7 @@ private fun ChatBubble(message: ChatMessage, onTextClick: (String) -> Unit) {
                 Text(
                     text = markdownToAnnotated(message.text),
                     color = if (message.isUser) Color.Black else p.textPrimary,
+                    style = MaterialTheme.typography.bodySmall,
                     modifier = Modifier
                         .clickable { onTextClick(message.text) }
                         .background(
