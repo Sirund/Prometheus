@@ -76,6 +76,33 @@ enum TutorialContent {
         ),
     ]
 
+    static let talk: [TutorialStep] = [
+        TutorialStep(
+            icon: "mic.fill",
+            iconColor: .red,
+            title: "Hold to Speak",
+            description: "Hold the mic button and ask any question aloud — about your surroundings, what to do, or emergency guidance. Release to send."
+        ),
+        TutorialStep(
+            icon: "camera.viewfinder",
+            iconColor: .prometheusBlue,
+            title: "Auto Camera Capture",
+            description: "When you release the mic, the camera automatically captures a photo of your surroundings. Gemma sees both your question and the image to give a more relevant answer."
+        ),
+        TutorialStep(
+            icon: "waveform.and.mic",
+            iconColor: .prometheusBlue,
+            title: "Spoken Response",
+            description: "Gemma's answer is read aloud automatically after analysis — ideal when your hands are occupied or you need information quickly in an emergency."
+        ),
+        TutorialStep(
+            icon: "square.and.arrow.down.fill",
+            iconColor: .prometheusBlue,
+            title: "Download Gemma 4 First",
+            description: "The Talk tab requires Gemma 4 to be downloaded (~2.4 GB). Download it in the Assistant tab. After that, Talk works fully offline."
+        ),
+    ]
+
     static let assistant: [TutorialStep] = [
         TutorialStep(
             icon: "bubble.left.and.bubble.right.fill",

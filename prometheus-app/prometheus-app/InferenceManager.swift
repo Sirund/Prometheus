@@ -14,6 +14,7 @@ import UIKit
 
 enum ChatMode: Equatable {
     case survival
+    case emergency
 }
 
 struct ChatMessage: Identifiable, Codable {
@@ -64,8 +65,12 @@ final class InferenceManager {
 
     private var engine: LMEngine?
     private var survivalConversation: LMConversation?
+    private var emergencyConversation: LMConversation?
     private let synthesizer = AVSpeechSynthesizer()
     private let ttsDelegate = TTSDelegate()
+
+    // Earthquake context injected from outside for emergency mode
+    var currentEarthquakeEvent: EarthquakeEvent?
 
     // MARK: System prompts (Arund's domain — swap these out when final prompts are ready)
 
@@ -85,6 +90,23 @@ final class InferenceManager {
     Use plain spoken language only — no markdown, no bullet points. \
     Keep it brief and calm. If you cannot see anything clearly, say so honestly.
     """
+
+    static let emergencyBasePrompt = """
+    You are Prometheus, an emergency AI for earthquake disasters in Indonesia. \
+    Generate a clear, structured emergency briefing. Include: severity assessment, \
+    immediate protective actions, tsunami risk, and evacuation recommendations. \
+    Be urgent, concise, and actionable. Plain text only — no markdown, no bullet points.
+    """
+
+    func buildEmergencySystemPrompt() -> String {
+        guard let event = currentEarthquakeEvent else { return Self.emergencyBasePrompt }
+        var ctx = "Current event:"
+        if let mag = event.magnitudeValue { ctx += " M\(mag)" }
+        if let loc = event.Wilayah       { ctx += " near \(loc)" }
+        if let d   = event.Kedalaman    { ctx += ", depth \(d)" }
+        if event.hasTsunamiPotential     { ctx += " — TSUNAMI POTENTIAL" }
+        return "\(ctx)\n\n\(Self.emergencyBasePrompt)"
+    }
 
     // MARK: Init
 
@@ -232,7 +254,10 @@ final class InferenceManager {
     }
 
     func cancelGeneration(mode: ChatMode) {
-        survivalConversation?.cancel()
+        switch mode {
+        case .survival:  survivalConversation?.cancel()
+        case .emergency: emergencyConversation?.cancel()
+        }
     }
 
     func restoreMessages(_ messages: [ChatMessage]) {
@@ -240,8 +265,14 @@ final class InferenceManager {
     }
 
     func clearHistory(mode: ChatMode) {
-        survivalConversation?.close()
-        survivalConversation = nil
+        switch mode {
+        case .survival:
+            survivalConversation?.close()
+            survivalConversation = nil
+        case .emergency:
+            emergencyConversation?.close()
+            emergencyConversation = nil
+        }
         messages.removeAll()
     }
 
@@ -328,14 +359,26 @@ final class InferenceManager {
     // MARK: Private helpers
 
     private func getConversation(mode: ChatMode, engine: LMEngine) async throws -> LMConversation {
-        if let c = survivalConversation, c.isActive { return c }
-        let c = try await engine.createConversation(
-            configuration: ConversationConfiguration()
-                .systemPrompt(Self.survivalPrompt)
-                .maxOutputTokens(512)
-        )
-        survivalConversation = c
-        return c
+        switch mode {
+        case .survival:
+            if let c = survivalConversation, c.isActive { return c }
+            let c = try await engine.createConversation(
+                configuration: ConversationConfiguration()
+                    .systemPrompt(Self.survivalPrompt)
+                    .maxOutputTokens(512)
+            )
+            survivalConversation = c
+            return c
+        case .emergency:
+            if let c = emergencyConversation, c.isActive { return c }
+            let c = try await engine.createConversation(
+                configuration: ConversationConfiguration()
+                    .systemPrompt(buildEmergencySystemPrompt())
+                    .maxOutputTokens(768)
+            )
+            emergencyConversation = c
+            return c
+        }
     }
 }
 

@@ -2,6 +2,7 @@ import SwiftUI
 
 struct MonitorView: View {
     @Environment(BMKGPollingService.self) private var pollingService
+    @Environment(InferenceManager.self) private var inference
     @AppStorage("isDarkMode") private var isDarkMode = false
     @AppStorage("tutorialSeen_monitor") private var tutorialSeen = false
     @State private var showInjectionSheet = false
@@ -38,7 +39,7 @@ struct MonitorView: View {
                         }
 
                         SectionHeader(title: "ALARM & BRIEFING")
-                        AlarmStatusCard()
+                        AlarmStatusCard(modelState: inference.modelState)
 
                         SectionHeader(title: "RECENT EVENTS")
                         if let latest = pollingService.latestEvent {
@@ -243,6 +244,18 @@ struct SectionHeader: View {
 }
 
 struct AlarmStatusCard: View {
+    let modelState: InferenceManager.ModelState
+
+    private var gemmaStatus: (String, Color) {
+        switch modelState {
+        case .ready:            return ("READY",        .green)
+        case .loading:          return ("LOADING…",     .orange)
+        case .downloading:      return ("DOWNLOADING",  .orange)
+        case .notDownloaded:    return ("NOT DOWNLOADED", .gray)
+        case .error:            return ("ERROR",        .red)
+        }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
@@ -252,7 +265,12 @@ struct AlarmStatusCard: View {
             Divider().background(Color.prometheusBlue.opacity(0.15))
             AlarmIndicatorRow(icon: "waveform", label: "TTS BRIEFING", status: "READY", statusColor: .prometheusBlue)
             Divider().background(Color.prometheusBlue.opacity(0.15))
-            AlarmIndicatorRow(icon: "brain.head.profile", label: "GEMMA 4 EMERGENCY PROMPT", status: "NOT LOADED", statusColor: .gray)
+            AlarmIndicatorRow(
+                icon: "brain.head.profile",
+                label: "GEMMA 4 — EMERGENCY AI",
+                status: gemmaStatus.0,
+                statusColor: gemmaStatus.1
+            )
         }
         .padding()
         .background(Color.cardBackground)
