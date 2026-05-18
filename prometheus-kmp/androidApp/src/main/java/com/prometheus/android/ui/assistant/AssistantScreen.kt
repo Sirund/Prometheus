@@ -112,7 +112,7 @@ fun AssistantScreen(
     // LOCAL state — bypass AnimatedContent barrier, langsung recompose
     var localConversations by remember { mutableStateOf(conversations) }
 
-    val chatHistory by remember { derivedStateOf { localConversations.getOrNull(activeIndex)?.messages ?: emptyList() } }
+    val chatHistory by remember(activeIndex, localConversations) { derivedStateOf { localConversations.getOrNull(activeIndex)?.messages ?: emptyList() } }
 
     LaunchedEffect(Unit) {
         isModelLoaded = ModelManager.isLoaded.value
@@ -387,7 +387,7 @@ fun AssistantScreen(
                             Text(
                                 when (chatMode) {
                                     "EMERGENCY_BRIEF" -> "Paste earthquake data for briefing..."
-                                    else -> "Ask anything about survival..."
+                                    else -> "Ask something..."
                                 },
                                 color = p.blue.copy(alpha = 0.5f)
                             )

@@ -123,7 +123,11 @@ fun PrometheusApp(
                             event = currentEvent,
                             latestEvent = latestEvent,
                             weatherInfo = weatherInfo,
-                            nowcastAlerts = nowcastAlerts
+                            nowcastAlerts = nowcastAlerts,
+                            injectionEnabled = injectionEnabled,
+                            injectionIp = injectionIp,
+                            injectionPort = injectionPort,
+                            onApplyInjection = onApplyInjection
                         )
                         Screen.Evacuate -> MapScreen(
                             event = currentEvent,
@@ -146,7 +150,7 @@ fun PrometheusApp(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .statusBarsPadding()
-                    .padding(top = 16.dp, end = 12.dp),
+                    .padding(top = 8.dp, end = 12.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 var showHelp by remember { mutableStateOf(false) }

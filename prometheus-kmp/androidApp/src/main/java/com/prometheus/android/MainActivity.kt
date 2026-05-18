@@ -4,15 +4,22 @@ import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.Surface
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.prometheus.android.inference.ConversationManager
@@ -46,12 +53,25 @@ class MainActivity : ComponentActivity() {
     private var injectionIp by mutableStateOf("")
     private var injectionPort by mutableStateOf(8080)
     private var isDarkMode by mutableStateOf(true)
+    private var showOverlayTutorial by mutableStateOf(false)
 
     private val notificationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
         if (granted) requestStoragePermission()
         else requestStoragePermission()
+    }
+
+    private val fullScreenIntentLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { _ ->
+        requestSystemAlertWindowPermission()
+    }
+
+    private val overlayPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { _ ->
+        requestStoragePermission()
     }
 
     private val storagePermissionLauncher = registerForActivityResult(
@@ -134,6 +154,23 @@ class MainActivity : ComponentActivity() {
                         onConversationsChange = { conversations = it },
                         onActiveIndexChange = { activeIndex = it }
                     )
+
+                    if (showOverlayTutorial) {
+                        OverlayTutorialDialog(
+                            onContinue = {
+                                showOverlayTutorial = false
+                                val intent = Intent(
+                                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                                    Uri.parse("package:$packageName")
+                                )
+                                overlayPermissionLauncher.launch(intent)
+                            },
+                            onSkip = {
+                                showOverlayTutorial = false
+                                requestStoragePermission()
+                            }
+                        )
+                    }
                 }
             }
         }
@@ -152,6 +189,10 @@ class MainActivity : ComponentActivity() {
         ModelManager.shutdown()
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+    }
+
     override fun onResume() {
         super.onResume()
         PollingService.forceCheck()
@@ -165,6 +206,26 @@ class MainActivity : ComponentActivity() {
                 notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                 return
             }
+        }
+        requestFullScreenIntentPermission()
+    }
+
+    private fun requestFullScreenIntentPermission() {
+        if (Build.VERSION.SDK_INT >= 34) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.USE_FULL_SCREEN_INTENT)
+                != PackageManager.PERMISSION_GRANTED
+            ) {
+                fullScreenIntentLauncher.launch(Manifest.permission.USE_FULL_SCREEN_INTENT)
+                return
+            }
+        }
+        requestSystemAlertWindowPermission()
+    }
+
+    private fun requestSystemAlertWindowPermission() {
+        if (!Settings.canDrawOverlays(this)) {
+            showOverlayTutorial = true
+            return
         }
         requestStoragePermission()
     }
@@ -230,4 +291,53 @@ class MainActivity : ComponentActivity() {
     private fun applyInjectionUrl() {
         PollingService.updateInjectionUrl(InjectionSettings.baseUrl)
     }
+}
+
+@Composable
+private fun OverlayTutorialDialog(
+    onContinue: () -> Unit,
+    onSkip: () -> Unit
+) {
+    val p = LocalPrometheusColors.current
+    AlertDialog(
+        onDismissRequest = onSkip,
+        containerColor = p.surface,
+        title = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text("\u26A0\uFE0F", fontSize = 40.sp)
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "Display Over Other Apps",
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center
+                )
+            }
+        },
+        text = {
+            Text(
+                buildString {
+                    append("Prometheus needs this permission to show earthquake alerts ")
+                    append("on top of your current screen when a danger is detected.\n\n")
+                    append("1. Tap \u201CApps\u201D at the bottom of the next screen.\n")
+                    append("2. In the list, find and tap \u201CPrometheus\u201D.\n")
+                    append("3. Toggle on \u201CAllow display over other apps\u201D.\n")
+                    append("4. Press back to return here.")
+                },
+                color = p.textSecondary
+            )
+        },
+        confirmButton = {
+            Button(onClick = onContinue) {
+                Text("Continue")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onSkip) {
+                Text("Not now")
+            }
+        }
+    )
 }

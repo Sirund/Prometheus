@@ -64,6 +64,8 @@ class ConversationManager {
                 Log.d(TAG, "TOKEN: $token")
                 onToken(response.toString())
             }
+            try { conversation?.close() } catch (_: Exception) {}
+            conversation = null
             Log.d(TAG, "=== FULL RESPONSE: ${response} ===")
             if (response.isEmpty()) {
                 onToken("(empty response)")

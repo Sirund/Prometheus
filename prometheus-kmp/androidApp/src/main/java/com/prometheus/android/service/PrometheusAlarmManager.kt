@@ -6,11 +6,12 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.media.AudioAttributes
-import android.media.MediaPlayer
+import android.media.RingtoneManager
 import android.net.Uri
 import android.speech.tts.TextToSpeech
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import com.prometheus.android.ui.alert.EarthquakeAlertActivity
 import com.prometheus.model.EarthquakeEvent
 import com.prometheus.model.NowcastAlert
 import com.prometheus.monitor.EmergencyBriefingFormatter
@@ -28,7 +29,6 @@ class PrometheusAlarmManager(private val context: Context) {
     }
 
     private var tts: TextToSpeech? = null
-    private var mediaPlayer: MediaPlayer? = null
     private var ttsReady = false
 
     init {
@@ -37,16 +37,20 @@ class PrometheusAlarmManager(private val context: Context) {
     }
 
     private fun createChannels() {
+        val alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+            ?: Uri.parse("android.resource://android/raw/notification_audible_buzz")
         val alertChannel = NotificationChannel(
             CHANNEL_ALERT, "Earthquake Alerts", NotificationManager.IMPORTANCE_HIGH
         ).apply {
             description = "Critical earthquake and tsunami alerts"
             enableVibration(true)
+            setBypassDnd(true)
             setSound(
-                Uri.parse("android.resource://android/raw/notification_audible_buzz"),
+                alarmUri,
                 AudioAttributes.Builder()
                     .setUsage(AudioAttributes.USAGE_ALARM)
                     .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .setFlags(AudioAttributes.FLAG_AUDIBILITY_ENFORCED)
                     .build()
             )
         }
@@ -88,13 +92,20 @@ class PrometheusAlarmManager(private val context: Context) {
     private fun openAppIntent(): PendingIntent {
         val appContext = context.applicationContext
         val intent = Intent(appContext, com.prometheus.android.MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
         }
         return PendingIntent.getActivity(appContext, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
     }
 
     fun triggerAlert(event: EarthquakeEvent, gemmaBriefing: String? = null) {
         val briefing = gemmaBriefing ?: EmergencyBriefingFormatter.buildBriefingText(event)
+
+        val alertIntent = EarthquakeAlertActivity.createIntent(context, event)
+        val alertPendingIntent = PendingIntent.getActivity(
+            context.applicationContext, ID_ALERT, alertIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
         val mag = event.magnitudeValue?.let { "%.1f".format(it) } ?: "?"
         val loc = event._wilayah?.take(50) ?: "Unknown location"
         val depth = event._kedalaman ?: "?"
@@ -107,6 +118,10 @@ class PrometheusAlarmManager(private val context: Context) {
 
         val detail = "M$mag | Depth: $depth | $time$tsunami$felt"
 
+        try {
+            context.startActivity(alertIntent)
+        } catch (_: Exception) { }
+
         val n = NotificationCompat.Builder(context, CHANNEL_ALERT)
             .setSmallIcon(android.R.drawable.ic_dialog_alert)
             .setContentTitle("\uD83D\uDEA8 EARTHQUAKE DETECTED — M$mag")
@@ -115,6 +130,7 @@ class PrometheusAlarmManager(private val context: Context) {
             .setPriority(NotificationManager.IMPORTANCE_MAX)
             .setAutoCancel(true)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
+            .setDefaults(NotificationCompat.DEFAULT_ALL)
             .setContentIntent(openAppIntent())
             .setFullScreenIntent(openAppIntent(), true)
             .build()
@@ -151,22 +167,10 @@ class PrometheusAlarmManager(private val context: Context) {
 
     private fun playAlarm() {
         try {
-            val uri = Uri.parse("android.resource://android/raw/notification_audible_buzz")
-            mediaPlayer?.release()
-            mediaPlayer = MediaPlayer().apply {
-                setAudioAttributes(
-                    AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_ALARM)
-                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                        .build()
-                )
-                setDataSource(context, uri)
-                setVolume(1.0f, 1.0f)
-                prepare()
-                start()
-                setOnCompletionListener { release() }
-            }
-        } catch (_: Exception) { }
+            val uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+            val ringtone = RingtoneManager.getRingtone(context, uri)
+            ringtone.play()
+        } catch (_: Exception) {}
     }
 
     fun sendNowcastNotification(alert: NowcastAlert) {
@@ -186,7 +190,5 @@ class PrometheusAlarmManager(private val context: Context) {
     fun shutdown() {
         tts?.stop()
         tts?.shutdown()
-        mediaPlayer?.release()
-        mediaPlayer = null
     }
 }

@@ -34,6 +34,7 @@ import androidx.compose.material.icons.filled.Motorcycle
 import androidx.compose.material.icons.filled.NearMe
 import androidx.compose.material.icons.filled.Public
 import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.model.BitmapDescriptor
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.CircleOptions
@@ -271,8 +272,15 @@ fun MapScreen(
                             context, Manifest.permission.ACCESS_COARSE_LOCATION
                         ) == PackageManager.PERMISSION_GRANTED
 
-                        val epicenterIcon = remember { scaledMarkerIcon(context, R.drawable.earthquake, 48) }
-                        val userIcon = remember { scaledMarkerIcon(context, R.drawable.location, 40) }
+                        var epicenterIcon by remember { mutableStateOf<BitmapDescriptor?>(null) }
+                        var userIcon by remember { mutableStateOf<BitmapDescriptor?>(null) }
+
+                        LaunchedEffect(Unit) {
+                            try {
+                                epicenterIcon = scaledMarkerIcon(context, R.drawable.earthquake, 48)
+                                userIcon = scaledMarkerIcon(context, R.drawable.location, 40)
+                            } catch (_: Exception) { }
+                        }
 
                         GoogleMap(
                             modifier = Modifier.fillMaxSize(),
@@ -292,7 +300,7 @@ fun MapScreen(
                                     state = MarkerState(position = epicenter),
                                     title = "Epicenter",
                                     snippet = event?._wilayah ?: "",
-                                    icon = epicenterIcon
+                                    icon = epicenterIcon ?: BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)
                                 )
                             }
                             if (userLatLng != null) {
@@ -300,7 +308,7 @@ fun MapScreen(
                                     state = MarkerState(position = userLatLng),
                                     title = "You",
                                     snippet = "Current location",
-                                    icon = userIcon
+                                    icon = userIcon ?: BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE)
                                 )
                             }
                             if (epicenter != null && dangerRadiusKm != null) {
@@ -329,7 +337,65 @@ fun MapScreen(
 
             Spacer(Modifier.height(12.dp))
 
-            if (evacuationRoute != null) {
+
+            Box(
+                modifier = Modifier.padding(horizontal = 16.dp)
+            ) {
+                Column(modifier = Modifier.animateContentSize()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(PaleCyan)
+                            .border(1.dp, PaleCyanBorder, RoundedCornerShape(12.dp))
+                            .clickable { showDetails = !showDetails }
+                            .padding(horizontal = 16.dp, vertical = 12.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "ROUTING DETAILS",
+                                color = BrightBlue,
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Spacer(Modifier.weight(1f))
+                            Icon(
+                                imageVector = if (showDetails) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
+                                contentDescription = if (showDetails) "Collapse" else "Expand",
+                                tint = BrightBlue,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                    }
+
+                    AnimatedVisibility(
+                        visible = showDetails,
+                        enter = slideInVertically(
+                            initialOffsetY = { -it },
+                            animationSpec = tween(350, easing = FastOutSlowInEasing)
+                        ) + fadeIn(animationSpec = tween(350)),
+                        exit = slideOutVertically(
+                            targetOffsetY = { -it },
+                            animationSpec = tween(250, easing = FastOutSlowInEasing)
+                        ) + fadeOut(animationSpec = tween(250))
+                    ) {
+                        RoutingDetailsCard(
+                            event = event,
+                            userLocation = currentLocation,
+                            isDangerous = isDangerous,
+                            dangerRadiusKm = dangerRadiusKm,
+                            evacDirection = evacDirection,
+                            ruleName = highestSev?.ruleName,
+                            evacuationRoute = evacuationRoute,
+                            routeLoading = routeLoading
+                        )
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            if (isDangerous && evacuationRoute != null) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -392,64 +458,6 @@ fun MapScreen(
 
                 Spacer(Modifier.height(12.dp))
             }
-
-            Box(
-                modifier = Modifier.padding(horizontal = 16.dp)
-            ) {
-                Column(modifier = Modifier.animateContentSize()) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(PaleCyan)
-                            .border(1.dp, PaleCyanBorder, RoundedCornerShape(12.dp))
-                            .clickable { showDetails = !showDetails }
-                            .padding(horizontal = 16.dp, vertical = 12.dp)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = "ROUTING DETAILS",
-                                color = BrightBlue,
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.Medium
-                            )
-                            Spacer(Modifier.weight(1f))
-                            Icon(
-                                imageVector = if (showDetails) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
-                                contentDescription = if (showDetails) "Collapse" else "Expand",
-                                tint = BrightBlue,
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
-                    }
-
-                    AnimatedVisibility(
-                        visible = showDetails,
-                        enter = slideInVertically(
-                            initialOffsetY = { -it },
-                            animationSpec = tween(350, easing = FastOutSlowInEasing)
-                        ) + fadeIn(animationSpec = tween(350)),
-                        exit = slideOutVertically(
-                            targetOffsetY = { -it },
-                            animationSpec = tween(250, easing = FastOutSlowInEasing)
-                        ) + fadeOut(animationSpec = tween(250))
-                    ) {
-                        RoutingDetailsCard(
-                            event = event,
-                            userLocation = currentLocation,
-                            isDangerous = isDangerous,
-                            dangerRadiusKm = dangerRadiusKm,
-                            evacDirection = evacDirection,
-                            ruleName = highestSev?.ruleName,
-                            evacuationRoute = evacuationRoute,
-                            routeLoading = routeLoading
-                        )
-                    }
-                }
-            }
-
-            Spacer(Modifier.height(12.dp))
-
             Box(
                 modifier = Modifier.padding(horizontal = 16.dp)
             ) {
