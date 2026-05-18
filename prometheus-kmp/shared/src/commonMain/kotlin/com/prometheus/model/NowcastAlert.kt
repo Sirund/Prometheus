@@ -21,34 +21,40 @@ data class NowcastAlert(
         get() = description.ifBlank { title }
 
     val intensity: String
-        get() {
-            val regex = Regex("intensitas\\s+(\\d+)\\s*mm/jam", RegexOption.IGNORE_CASE)
-            return regex.find(description)?.groupValues?.getOrNull(1)?.let { "$it mm/jam" }
-                ?: eventType.replaceFirstChar { it.uppercase() }
-        }
+        get() = eventType.replaceFirstChar { it.uppercase() }
 
     val alertDate: String
         get() {
-            val regex = Regex("\\d{1,2}\\s+\\w+\\s+\\d{4}")
-            return regex.find(pubDate)?.value
-                ?: regex.find(description)?.value
-                ?: pubDate.take(16)
+            val regex = Regex("pada\\s+(\\d{1,2}\\s+\\w+\\s+\\d{4})")
+            return regex.find(description)?.groupValues?.getOrNull(1)
+                ?: Regex("\\d{1,2}\\s+\\w+\\s+\\d{4}").find(pubDate)?.value
+                ?: "--"
         }
 
     val alertTime: String
         get() {
-            val pubRegex = Regex("\\d{2}:\\d{2}:\\d{2}")
-            val pubTime = pubRegex.find(pubDate)?.value?.dropLast(3)
-            if (pubTime != null) return pubTime
-            val descRegex = Regex("pukul\\s+(\\d{2}\\.\\d{2}|\\d{2}:\\d{2})")
-            return descRegex.find(description)?.groupValues?.getOrNull(1)?.replace(".", ":") ?: "--"
+            val regex = Regex("pada\\s+\\d{1,2}\\s+\\w+\\s+\\d{4},\\s*(\\d{2}:\\d{2})")
+            return regex.find(description)?.groupValues?.getOrNull(1)
+                ?: Regex("\\d{2}:\\d{2}").find(pubDate)?.value
+                ?: "--"
         }
 
     val estimatedEnd: String
         get() {
-            val regex = Regex("(?:hingga|sampai|berlangsung\\s+hingga|berlangsung\\s+sampai)\\s*(?:pukul\\s+)?(\\d{2}[.:]\\d{2})", RegexOption.IGNORE_CASE)
-            return regex.find(description)?.groupValues?.getOrNull(1)?.replace(".", ":")?.let { "~ $it" }
-                ?: "--"
+            val regex = Regex("berlangsung\\s+hingga\\s+\\d{1,2}\\s+\\w+\\s+\\d{4},\\s*(\\d{2}:\\d{2})", RegexOption.IGNORE_CASE)
+            return regex.find(description)?.groupValues?.getOrNull(1)?.let { "~ $it" } ?: "--"
+        }
+
+    val potential: String
+        get() {
+            val regex = Regex("berpotensi\\s+menimbulkan\\s+dampak\\s+berupa\\s+(.+?)(?:\\.|$)", RegexOption.IGNORE_CASE)
+            return regex.find(description)?.groupValues?.getOrNull(1)?.trim() ?: "--"
+        }
+
+    val specificLocation: String
+        get() {
+            val regex = Regex("khususnya\\s+di\\s+(.+?)(?:\\.|$)", RegexOption.IGNORE_CASE)
+            return regex.find(description)?.groupValues?.getOrNull(1)?.trim() ?: "--"
         }
 
     val provinceName: String
