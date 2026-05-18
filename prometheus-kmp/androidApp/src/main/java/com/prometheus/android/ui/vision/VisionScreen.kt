@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.*
@@ -31,6 +32,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.work.WorkInfo
+import androidx.work.WorkManager
 import com.prometheus.android.inference.ConversationManager
 import com.prometheus.android.inference.ModelManager
 import com.prometheus.android.inference.STTManager
@@ -493,6 +496,32 @@ private fun DownloadPrompt(
     onModelLoaded: () -> Unit
 ) {
     val p = LocalPrometheusColors.current
+    val notificationPermLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            ModelManager.enqueueDownload(context)
+            onDownloadChange(true, 0, "Download pending...")
+        }
+    }
+    val downloadState by produceState<WorkInfo?>(initialValue = null) {
+        while (true) {
+            try {
+                val future = WorkManager.getInstance(context).getWorkInfosByTag("model_download")
+                val infos = future.get()
+                value = infos.lastOrNull()
+                if (value?.state?.isFinished == true) break
+            } catch (_: Exception) {}
+            kotlinx.coroutines.delay(1000)
+        }
+    }
+    val wmDownloading = downloadState?.let {
+        it.state == WorkInfo.State.RUNNING || it.state == WorkInfo.State.ENQUEUED
+    } ?: false
+    val wmProgress = downloadState?.progress?.getInt("progress", -1) ?: -1
+    val activeIsDownloading = isDownloading || wmDownloading
+    val activeProgress = if (wmProgress >= 0) wmProgress else downloadProgress
+
     Box(
         modifier = Modifier.fillMaxWidth().fillMaxHeight().padding(32.dp),
         contentAlignment = Alignment.Center
@@ -506,42 +535,26 @@ private fun DownloadPrompt(
                 color = p.textSecondary, style = MaterialTheme.typography.bodySmall)
             Spacer(Modifier.height(16.dp))
 
-            val isPaused = isDownloading && downloadProgress >= 0 &&
-                ModelManager.getDownloadProgress(context)?.isPaused == true
-            val btnColor = when {
-                !isDownloading -> p.blue
-                isPaused -> Color(0xFFFFA500).copy(alpha = 0.6f)
-                else -> p.blue.copy(alpha = 0.6f)
-            }
+            val btnColor = if (!activeIsDownloading) p.blue else p.blue.copy(alpha = 0.6f)
             val btnText = when {
-                !isDownloading -> "\u2B07\uFE0F  DOWNLOAD MODEL (2.4 GB)"
-                isPaused -> "\u25B6\uFE0F  Download Paused: $downloadProgress%"
-                downloadProgress < 0 -> "\u23F3  Starting..."
-                downloadProgress >= 100 -> "\u2705  Moving file..."
-                else -> "\u23F8\uFE0F  Downloading: $downloadProgress%"
+                !activeIsDownloading -> "\u2B07\uFE0F  DOWNLOAD MODEL (2.4 GB)"
+                activeProgress >= 0 -> "\u23F3  Downloading: $activeProgress%"
+                else -> "\u23F3  Starting..."
             }
             Button(
                 onClick = {
-                    when {
-                        !isDownloading -> {
+                    if (!activeIsDownloading) {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+                        ) {
+                            notificationPermLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        } else {
                             ModelManager.enqueueDownload(context)
                             onDownloadChange(true, 0, "Download pending...")
                         }
-                        isPaused -> {
-                            ModelManager.resumeDownload(context)
-                            onDownloadChange(true, downloadProgress, "Downloading: $downloadProgress%")
-                        }
-                        else -> {
-                            val ok = ModelManager.pauseDownload(context)
-                            if (ok) {
-                                onDownloadChange(true, downloadProgress, "Download Paused: $downloadProgress%")
-                            } else {
-                                ModelManager.cancelDownload(context)
-                                onDownloadChange(false, -1, "Tap to restart.")
-                            }
-                        }
                     }
                 },
+                enabled = !activeIsDownloading,
                 modifier = Modifier.fillMaxWidth().height(48.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = btnColor,
@@ -549,9 +562,9 @@ private fun DownloadPrompt(
                 )
             ) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    if (isDownloading && downloadProgress in 0..99 && !isPaused) {
+                    if (activeIsDownloading) {
                         LinearProgressIndicator(
-                            progress = { downloadProgress / 100f },
+                            progress = { if (activeProgress > 0) activeProgress / 100f else 0f },
                             modifier = Modifier.fillMaxWidth().fillMaxHeight(),
                             color = p.blue.copy(alpha = 0.3f),
                             trackColor = Color.Transparent

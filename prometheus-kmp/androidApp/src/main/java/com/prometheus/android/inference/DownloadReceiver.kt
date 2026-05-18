@@ -42,6 +42,9 @@ class DownloadReceiver : BroadcastReceiver() {
             context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                 .edit().putBoolean(PREF_DOWNLOAD_COMPLETE, true).apply()
 
+            // Trigger engine reload — init() will be called, findModelPath() finds the file
+            ModelManager.reload(context)
+
         } catch (e: Exception) {
             Log.e(TAG, "Failed to move downloaded model", e)
         }

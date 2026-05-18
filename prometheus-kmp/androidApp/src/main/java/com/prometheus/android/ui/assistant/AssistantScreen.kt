@@ -1,10 +1,14 @@
 package com.prometheus.android.ui.assistant
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
+import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.core.tween
@@ -45,6 +49,8 @@ import com.prometheus.android.ui.theme.LocalPrometheusColors
 import com.prometheus.model.ChatMessage
 import com.prometheus.model.EarthquakeEvent
 import com.prometheus.prompt.SystemPrompts
+import androidx.work.WorkInfo
+import androidx.work.WorkManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -66,8 +72,22 @@ fun AssistantScreen(
     var selectedImageBitmap by remember { mutableStateOf<Bitmap?>(null) }
     var isModelLoaded by remember { mutableStateOf(false) }
     var statusMessage by remember { mutableStateOf("Initializing...") }
-    var downloadProgress by remember { mutableStateOf(-1) }
-    var isDownloading by remember { mutableStateOf(false) }
+
+    val downloadState by produceState<WorkInfo?>(initialValue = null) {
+        while (true) {
+            try {
+                val future = WorkManager.getInstance(context).getWorkInfosByTag("model_download")
+                val infos = future.get()
+                value = infos.lastOrNull()
+                if (value?.state?.isFinished == true) break
+            } catch (_: Exception) {}
+            kotlinx.coroutines.delay(1000)
+        }
+    }
+    val isDownloading = downloadState?.let {
+        it.state == WorkInfo.State.RUNNING || it.state == WorkInfo.State.ENQUEUED
+    } ?: false
+    val downloadProgress = downloadState?.progress?.getInt("progress", -1) ?: -1
     var chatMode by remember { mutableStateOf("SURVIVAL_CHAT") }
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -95,6 +115,12 @@ fun AssistantScreen(
         }
     }
 
+    val notificationPermLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) ModelManager.enqueueDownload(context)
+    }
+
     // LOCAL state — bypass AnimatedContent barrier, langsung recompose
     var localConversations by remember { mutableStateOf(conversations) }
 
@@ -105,7 +131,7 @@ fun AssistantScreen(
         statusMessage = ModelManager.statusMessage
     }
 
-    val showDownload = !isModelLoaded && downloadProgress < 0 && statusMessage.startsWith("Model not found")
+    val showDownload = !isModelLoaded && !isDownloading && statusMessage.startsWith("Model not found")
 
     LaunchedEffect(chatHistory.size) {
         if (chatHistory.isNotEmpty()) {
@@ -277,33 +303,27 @@ fun AssistantScreen(
                                 CapabilityPill(text = "\uD83D\uDCA7  water & supplies")
                                 CapabilityPill(text = "\u26A0\uFE0F  Indonesia hazards")
                             }
-                            if (showDownload) {
+                            if (showDownload || isDownloading) {
                                 Spacer(Modifier.height(16.dp))
-                                val isPaused = isDownloading && downloadProgress >= 0 &&
-                                    ModelManager.getDownloadProgress(context)?.isPaused == true
-                                val btnColor = when {
-                                    !isDownloading -> p.blue
-                                    isPaused -> Color(0xFFFFA500).copy(alpha = 0.6f)
-                                    else -> p.blue.copy(alpha = 0.6f)
-                                }
+                                val btnColor = if (!isDownloading) p.blue else p.blue.copy(alpha = 0.6f)
                                 val btnText = when {
                                     !isDownloading -> "\u2B07\uFE0F  DOWNLOAD MODEL (2.4 GB)"
-                                    isPaused -> "\u25B6\uFE0F  Download Paused: $downloadProgress%"
-                                    downloadProgress < 0 -> "\u23F3  Starting..."
-                                    downloadProgress >= 100 -> "\u2705  Moving file..."
-                                    else -> "\u23F8\uFE0F  Downloading: $downloadProgress%"
+                                    downloadProgress >= 0 -> "\u23F3  Downloading: $downloadProgress%"
+                                    else -> "\u23F3  Starting..."
                                 }
                                 Button(
                                     onClick = {
-                                        when {
-                                            !isDownloading -> ModelManager.enqueueDownload(context)
-                                            isPaused -> ModelManager.resumeDownload(context)
-                                            else -> {
-                                                val ok = ModelManager.pauseDownload(context)
-                                                if (!ok) { ModelManager.cancelDownload(context) }
+                                        if (!isDownloading) {
+                                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                                                ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+                                            ) {
+                                                notificationPermLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                            } else {
+                                                ModelManager.enqueueDownload(context)
                                             }
                                         }
                                     },
+                                    enabled = !isDownloading,
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .height(48.dp)
@@ -314,9 +334,9 @@ fun AssistantScreen(
                                     )
                                 ) {
                                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                        if (isDownloading && downloadProgress in 0..99 && !isPaused) {
+                                        if (isDownloading) {
                                             LinearProgressIndicator(
-                                                progress = { downloadProgress / 100f },
+                                                progress = { if (downloadProgress > 0) downloadProgress / 100f else 0f },
                                                 modifier = Modifier.fillMaxWidth().fillMaxHeight(),
                                                 color = p.blue.copy(alpha = 0.3f),
                                                 trackColor = Color.Transparent
