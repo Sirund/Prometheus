@@ -13,6 +13,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -22,6 +23,9 @@ import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.CircleOptions
 import com.google.android.gms.maps.model.LatLng
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.Warning
 import com.google.android.gms.maps.model.LatLngBounds
 import android.Manifest
 import android.content.pm.PackageManager
@@ -353,7 +357,7 @@ fun MapScreen(
 @Composable
 private fun EvacuationStatusBanner(isDangerous: Boolean, severity: com.prometheus.model.DangerSeverity?) {
     val p = LocalPrometheusColors.current
-    val icon = if (isDangerous) "\u26A0\uFE0F" else "\uD83D\uDEE1\uFE0F"
+    val icon: ImageVector = if (isDangerous) Icons.Filled.Warning else Icons.Filled.Shield
     val label = when {
         isDangerous -> "EVACUATION ROUTING — ACTIVE"
         severity == com.prometheus.model.DangerSeverity.MEDIUM -> "MEDIUM ALERT — MONITOR"
@@ -365,7 +369,7 @@ private fun EvacuationStatusBanner(isDangerous: Boolean, severity: com.prometheu
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(text = icon, style = MaterialTheme.typography.titleMedium)
+        Icon(imageVector = icon, contentDescription = if (isDangerous) "Warning" else "Safe", modifier = Modifier.size(28.dp), tint = if (isDangerous) p.danger else p.success)
         Spacer(Modifier.width(10.dp))
         Text(
             text = label,

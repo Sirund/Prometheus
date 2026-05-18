@@ -126,11 +126,7 @@ fun PrometheusApp(
                             event = currentEvent,
                             latestEvent = latestEvent,
                             weatherInfo = weatherInfo,
-                            nowcastAlerts = nowcastAlerts,
-                            injectionEnabled = injectionEnabled,
-                            injectionIp = injectionIp,
-                            injectionPort = injectionPort,
-                            onApplyInjection = onApplyInjection
+                            nowcastAlerts = nowcastAlerts
                         )
                         Screen.Evacuate -> MapScreen(
                             event = currentEvent,
