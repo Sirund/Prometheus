@@ -3,6 +3,73 @@ import UserNotifications
 import AVFoundation
 import CoreLocation
 
+// MARK: - Weather and nowcast models
+
+struct WeatherInfo {
+    let temperature: String
+    let humidity: String
+    let windSpeed: String
+    let windDirection: String
+    let weatherDesc: String
+    let visibility: String
+    let province: String
+
+    static let empty = WeatherInfo(
+        temperature: "--", humidity: "--", windSpeed: "--",
+        windDirection: "--", weatherDesc: "--", visibility: "--", province: ""
+    )
+
+    static func adm4ForLocation(lat: Double?, lon: Double?) -> String {
+        guard let lat, let lon else { return defaultAdm4 }
+        let provinces: [(lat: Double, lon: Double, adm4: String)] = [
+            (-6.2088,  106.8456, "31.71.01.1001"),  // DKI Jakarta
+            (-6.9147,  107.6098, "32.73.01.1001"),  // Jawa Barat
+            (-7.1500,  110.1333, "33.74.01.1001"),  // Jawa Tengah
+            (-7.7956,  110.3695, "34.71.01.1001"),  // DI Yogyakarta
+            (-7.5361,  112.2384, "35.78.01.1001"),  // Jawa Timur
+            (-8.3405,  115.0920, "51.71.01.1001"),  // Bali
+            ( 2.1154,   99.5451, "12.71.01.1001"),  // Sumatera Utara
+            (-0.7399,  100.3450, "13.71.01.1001"),  // Sumatera Barat
+            (-5.4500,  105.2667, "18.71.01.1001"),  // Lampung
+            (-4.0000,  120.0000, "73.71.01.1001"),  // Sulawesi Selatan
+            ( 0.5000,  116.5000, "64.71.01.1001"),  // Kalimantan Timur
+            (-8.5833,  116.1167, "52.71.01.1001"),  // Nusa Tenggara Barat
+            (-4.0000,  138.0000, "93.71.01.1001"),  // Papua
+        ]
+        return provinces.min(by: {
+            pow($0.lat - lat, 2) + pow($0.lon - lon, 2) < pow($1.lat - lat, 2) + pow($1.lon - lon, 2)
+        })?.adm4 ?? defaultAdm4
+    }
+
+    static let defaultAdm4 = "31.71.01.1001"
+}
+
+struct NowcastAlert: Identifiable {
+    let title: String
+    let description: String
+    let link: String
+    let pubDate: String
+    let guid: String
+
+    var id: String { guid.isEmpty ? link : guid }
+    var summary: String { description.isEmpty ? title : description }
+
+    var isBadWeather: Bool {
+        let keywords = ["hujan lebat", "hujan petir", "hujan deras", "angin kencang",
+                        "angin puting beliung", "gelombang tinggi", "banjir",
+                        "tanah longsor", "badai", "cuaca ekstrem"]
+        let combined = "\(title) \(description)".lowercased()
+        return keywords.contains { combined.contains($0) }
+    }
+
+    var eventType: String {
+        let keywords = ["hujan lebat", "hujan petir", "angin kencang", "angin puting beliung",
+                        "gelombang tinggi", "banjir", "tanah longsor", "badai", "cuaca ekstrem"]
+        let combined = "\(title) \(description)".lowercased()
+        return keywords.first { combined.contains($0) } ?? "Peringatan Cuaca"
+    }
+}
+
 // MARK: - Location delegate (NSObject, called on main thread since manager is created there)
 
 private final class LocationDelegate: NSObject, CLLocationManagerDelegate, @unchecked Sendable {
@@ -32,6 +99,8 @@ final class BMKGPollingService {
     var latestEarthquakeEvent: EarthquakeEvent?
     var lastChecked: String?
     var dangerLevel: Int = 0
+    var latestWeather: WeatherInfo = .empty
+    var nowcastAlerts: [NowcastAlert] = []
 
     var injectionEnabled = false
     var injectionIp = ""
@@ -91,6 +160,81 @@ final class BMKGPollingService {
                 latestEvent = "Poll error: \(error.localizedDescription)"
             }
         }
+        Task { await fetchWeather() }
+        Task { await fetchNowcast() }
+    }
+
+    private func fetchWeather() async {
+        let adm4 = WeatherInfo.adm4ForLocation(lat: userLat, lon: userLon)
+        guard let url = URL(string: "https://api.bmkg.go.id/publik/prakiraan-cuaca?adm4=\(adm4)") else { return }
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let dataArr = json["data"] as? [[String: Any]],
+                  let first = dataArr.first,
+                  let cuaca = first["cuaca"] as? [[[String: Any]]],
+                  let today = cuaca.first,
+                  let current = today.first
+            else { return }
+            let provinsi = (json["lokasi"] as? [String: Any])?["provinsi"] as? String ?? ""
+            func str(_ key: String) -> String {
+                if let s = current[key] as? String { return s }
+                if let n = current[key] as? NSNumber { return n.stringValue }
+                return "--"
+            }
+            latestWeather = WeatherInfo(
+                temperature: str("t"),
+                humidity: str("hu"),
+                windSpeed: str("ws"),
+                windDirection: str("wd"),
+                weatherDesc: str("weather_desc"),
+                visibility: str("vs_text"),
+                province: provinsi
+            )
+        } catch {}
+    }
+
+    private func fetchNowcast() async {
+        guard let url = URL(string: "https://www.bmkg.go.id/alerts/nowcast/id") else { return }
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            let xml = String(data: data, encoding: .utf8) ?? ""
+            let alerts = parseNowcastRss(xml)
+            nowcastAlerts = alerts
+        } catch {}
+    }
+
+    private func parseNowcastRss(_ xml: String) -> [NowcastAlert] {
+        var alerts: [NowcastAlert] = []
+        let parts = xml.components(separatedBy: "<item>")
+        for part in parts.dropFirst() {
+            let itemXml = part.components(separatedBy: "</item>").first ?? ""
+            guard let title = extractXmlTag(itemXml, "title"),
+                  let desc  = extractXmlTag(itemXml, "description") else { continue }
+            alerts.append(NowcastAlert(
+                title: title,
+                description: desc,
+                link:    extractXmlTag(itemXml, "link")    ?? "",
+                pubDate: extractXmlTag(itemXml, "pubDate") ?? "",
+                guid:    extractXmlTag(itemXml, "guid")    ?? ""
+            ))
+        }
+        return alerts
+    }
+
+    private func extractXmlTag(_ xml: String, _ tag: String) -> String? {
+        let open = "<\(tag)>", close = "</\(tag)>"
+        guard let start = xml.range(of: open)?.upperBound,
+              let end   = xml.range(of: close, range: start..<xml.endIndex)?.lowerBound
+        else { return nil }
+        let raw = String(xml[start..<end])
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: "&amp;",  with: "&")
+            .replacingOccurrences(of: "&lt;",   with: "<")
+            .replacingOccurrences(of: "&gt;",   with: ">")
+            .replacingOccurrences(of: "&quot;", with: "\"")
+            .replacingOccurrences(of: "&apos;", with: "'")
+        return raw.isEmpty ? nil : raw
     }
 
     private func handleEvent(_ event: EarthquakeEvent) {

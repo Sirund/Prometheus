@@ -73,7 +73,6 @@ final class SpeechService: NSObject, @unchecked Sendable {
         request?.endAudio()
         request = nil
 
-        // Restore audio session for playback
         #if !os(macOS)
         try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
         try? AVAudioSession.sharedInstance().setActive(true)
@@ -98,71 +97,41 @@ final class SpeechService: NSObject, @unchecked Sendable {
 
 enum TalkState { case idle, recording, transcribing, sending, result }
 
-// MARK: - TalkView
+// MARK: - TalkPanel (embedded in AssistantView)
 
-struct TalkView: View {
+struct TalkPanel: View {
     @Environment(InferenceManager.self) private var inference
     @Environment(BMKGPollingService.self) private var pollingService
-    @AppStorage("isDarkMode") private var isDarkMode = false
-    @AppStorage("tutorialSeen_talk") private var tutorialSeen = false
 
     @State private var camera = CameraService()
     @State private var speech = SpeechService()
     @State private var talkState: TalkState = .idle
     @State private var lastResponse: String?
-    @State private var showTutorial = false
     @State private var hasSpeechPermission = false
     @State private var micScale: CGFloat = 1.0
 
     var body: some View {
-        NavigationStack {
-            ZStack {
-                cameraBackground
-                stateDimOverlay
-                VStack(spacing: 0) {
-                    Spacer()
-                    responseCard.padding(.horizontal, 16).padding(.bottom, 12)
-                    stateLabel.padding(.bottom, 16)
-                    micButton.padding(.bottom, 52)
-                }
-                topStatusBar
+        ZStack {
+            cameraBackground
+            stateDimOverlay
+            VStack(spacing: 0) {
+                Spacer()
+                responseCard.padding(.horizontal, 16).padding(.bottom, 12)
+                stateLabel.padding(.bottom, 16)
+                micButton.padding(.bottom, 90)
             }
-            .ignoresSafeArea()
-            .navigationTitle("TALK")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(Color.black.opacity(0.55), for: .navigationBar)
-            .toolbarBackground(.visible, for: .navigationBar)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    HStack(spacing: 12) {
-                        Button(action: { isDarkMode.toggle() }) {
-                            Image(systemName: isDarkMode ? "sun.max" : "moon")
-                                .font(.caption).foregroundColor(.prometheusBlue)
-                        }
-                        Button(action: { showTutorial = true }) {
-                            Image(systemName: "questionmark.circle")
-                                .font(.caption).foregroundColor(.prometheusBlue)
-                        }
-                    }
-                }
-            }
+            modelStatusPill
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                .padding(.top, 8).padding(.trailing, 16)
         }
-        .task { await inference.start() }
+        .ignoresSafeArea(edges: .bottom)
         .onAppear {
             camera.start()
             requestPermissions()
-            if !tutorialSeen { tutorialSeen = true; showTutorial = true }
         }
         .onDisappear {
             camera.stop()
             speech.shutdown()
-        }
-        .overlay {
-            if showTutorial {
-                TutorialOverlay(tabName: "Talk", steps: TutorialContent.talk) {
-                    showTutorial = false
-                }
-            }
         }
     }
 
@@ -177,7 +146,6 @@ struct TalkView: View {
             Color.black.ignoresSafeArea()
             #endif
 
-            // Red border when recording
             if talkState == .recording {
                 Rectangle()
                     .stroke(Color.red.opacity(0.8), lineWidth: 3)
@@ -191,16 +159,6 @@ struct TalkView: View {
     private var stateDimOverlay: some View {
         if talkState == .sending || talkState == .transcribing {
             Color.black.opacity(0.35).ignoresSafeArea()
-        }
-    }
-
-    private var topStatusBar: some View {
-        VStack {
-            HStack {
-                Spacer()
-                modelStatusPill.padding(.top, 56).padding(.trailing, 16)
-            }
-            Spacer()
         }
     }
 
@@ -282,14 +240,12 @@ struct TalkView: View {
         let isBusy = talkState == .transcribing || talkState == .sending
 
         return ZStack {
-            // Outer pulse ring when recording
             if isRecording {
                 Circle()
                     .fill(Color.red.opacity(0.18))
                     .frame(width: 88, height: 88)
                     .scaleEffect(micScale)
             }
-            // Inner circle
             Circle()
                 .fill(isRecording ? Color.red.opacity(0.25) : Color.white.opacity(0.18))
                 .frame(width: 64, height: 64)
@@ -318,7 +274,6 @@ struct TalkView: View {
         )
         .disabled(isBusy || !hasSpeechPermission)
         .onAppear {
-            // Continuous breathe animation for idle state
             withAnimation(.easeInOut(duration: 1.1).repeatForever(autoreverses: true)) {
                 micScale = 1.18
             }
@@ -331,9 +286,7 @@ struct TalkView: View {
         AVAudioApplication.requestRecordPermission { granted in
             guard granted else { return }
             SpeechService.requestPermissions { authorized in
-                Task { @MainActor in
-                    hasSpeechPermission = authorized
-                }
+                Task { @MainActor in hasSpeechPermission = authorized }
             }
         }
     }
@@ -357,7 +310,6 @@ struct TalkView: View {
         talkState = .transcribing
 
         Task {
-            // Await STT result (max 5 s timeout)
             let transcribed = await withCheckedContinuation { (cont: CheckedContinuation<String?, Never>) in
                 var done = false
                 let finish = { (val: String?) in
@@ -380,7 +332,6 @@ struct TalkView: View {
                 return
             }
 
-            // Capture photo for visual context
             talkState = .sending
             let cgImage = await camera.capturePhoto()
 
@@ -395,16 +346,17 @@ struct TalkView: View {
                 #endif
             }
 
-            // Build combined prompt
             let combined = visionContext.isEmpty
                 ? question
                 : "\(question)\n\n[Camera shows: \(visionContext)]"
 
-            // Send to Gemma if ready; otherwise fall back to vision description
             let response: String
             if case .ready = inference.modelState {
-                await inference.send(combined, mode: .survival)
-                response = inference.messages.last(where: { $0.role == .assistant })?.text ?? visionContext
+                let bmkgCtx = InferenceManager.buildBmkgContext(event: pollingService.latestEarthquakeEvent)
+                let systemPrompt = bmkgCtx.isEmpty
+                    ? InferenceManager.generalPrompt
+                    : "\(InferenceManager.generalPrompt)\n\n\(bmkgCtx)"
+                response = await inference.sendOneShot(combined, systemPrompt: systemPrompt)
             } else {
                 response = visionContext.isEmpty
                     ? "Model not loaded. Download Gemma 4 in the Assistant tab."

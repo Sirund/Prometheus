@@ -344,6 +344,30 @@ private struct RoutingDetailsCard: View {
         return "\(Int(km)) km"
     }
 
+    private var evacDirectionStr: String? {
+        guard let event, let pair = event.coordinatePair,
+              let userLoc = userLocation else { return nil }
+        let lat1 = pair.lat * .pi / 180
+        let lat2 = userLoc.lat * .pi / 180
+        let dLon = (userLoc.lon - pair.lon) * .pi / 180
+        let y = sin(dLon) * cos(lat2)
+        let x = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(dLon)
+        let bearing = atan2(y, x) * 180 / .pi
+        let normalized = (bearing + 360).truncatingRemainder(dividingBy: 360)
+        let cardinal: String
+        switch normalized {
+        case 337.5..<360, 0..<22.5: cardinal = "North"
+        case 22.5..<67.5:           cardinal = "North-East"
+        case 67.5..<112.5:          cardinal = "East"
+        case 112.5..<157.5:         cardinal = "South-East"
+        case 157.5..<202.5:         cardinal = "South"
+        case 202.5..<247.5:         cardinal = "South-West"
+        case 247.5..<292.5:         cardinal = "West"
+        default:                     cardinal = "North-West"
+        }
+        return "\(cardinal) (\(Int(normalized))°)"
+    }
+
     private func formatTime(_ minutes: Double) -> String {
         if minutes < 1 { return "< 1 min" }
         if minutes < 60 { return "\(Int(minutes.rounded())) min" }
@@ -359,6 +383,10 @@ private struct RoutingDetailsCard: View {
             RouteInfoRow(label: "YOUR LOCATION", value: userLocStr)
             Divider().background(Color.prometheusBlue.opacity(0.15))
             RouteInfoRow(label: "SAFE RADIUS", value: radiusStr)
+            if let dir = evacDirectionStr {
+                Divider().background(Color.prometheusBlue.opacity(0.15))
+                RouteInfoRow(label: "EVACUATE", value: dir)
+            }
 
             if let r = evacuationRoute {
                 Divider().background(Color.prometheusBlue.opacity(0.15))
