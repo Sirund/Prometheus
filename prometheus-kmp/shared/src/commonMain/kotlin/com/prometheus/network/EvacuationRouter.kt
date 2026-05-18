@@ -7,6 +7,7 @@ import io.ktor.client.statement.*
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.json.Json
 import kotlin.math.*
 
@@ -34,6 +35,7 @@ data class DirectionsLeg(
 
 @Serializable
 data class DirectionsStep(
+    @SerialName("html_instructions") val htmlInstructions: String = "",
     val maneuver: String? = null
 )
 
@@ -49,7 +51,8 @@ data class EvacuationRoute(
     val walkMin: Double,
     val runMin: Double,
     val cycleMin: Double,
-    val motorMin: Double
+    val motorMin: Double,
+    val steps: List<String> = emptyList()
 )
 
 object PolylineDecoder {
@@ -141,7 +144,8 @@ class EvacuationRouter(private val googleApiKey: String = "") {
         val mode: String,
         val polyline: List<Pair<Double, Double>>,
         val distanceKm: Double,
-        val durationMin: Double
+        val durationMin: Double,
+        val steps: List<String> = emptyList()
     )
 
     private suspend fun fetchDirections(
@@ -167,11 +171,22 @@ class EvacuationRouter(private val googleApiKey: String = "") {
             val coords = PolylineDecoder.decode(poly.points)
             if (coords.isEmpty()) return null
             if (leg.steps.any { it.maneuver == "ferry" }) return null
+            val stepTexts = leg.steps.map { step ->
+                step.htmlInstructions
+                    .replace("<b>", "")
+                    .replace("</b>", "")
+                    .replace("<wbr/>", "")
+                    .replace("<div style=\"font-size:0.9em\">", " (")
+                    .replace("</div>", ")")
+                    .replace(Regex("<[^>]*>"), "")
+                    .trim()
+            }.filter { it.isNotBlank() }
             ModeResult(
                 mode = mode,
                 polyline = coords,
                 distanceKm = leg.distance.value / 1000.0,
-                durationMin = leg.duration.value / 60.0
+                durationMin = leg.duration.value / 60.0,
+                steps = stepTexts
             )
         } catch (_: Exception) {
             null
@@ -251,7 +266,8 @@ class EvacuationRouter(private val googleApiKey: String = "") {
             walkMin = dr.distanceKm / 5.0 * 60.0,
             runMin = dr.distanceKm / 10.0 * 60.0,
             cycleMin = dr.distanceKm / 15.0 * 60.0,
-            motorMin = dr.distanceKm / 40.0 * 60.0
+            motorMin = dr.distanceKm / 40.0 * 60.0,
+            steps = dr.steps
         )
     }
 
