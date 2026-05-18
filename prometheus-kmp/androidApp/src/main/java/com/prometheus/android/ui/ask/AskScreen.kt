@@ -202,7 +202,7 @@ fun AskScreen(
     }
 
     val showDownload = !isModelLoaded && !isDownloadingWork &&
-            statusMessage.startsWith("Model not found")
+            statusMessage == "Model Not Found"
 
     // ──────────────────────────────────────────────────────────
     // TTS helper: speak or stop
@@ -652,11 +652,16 @@ private fun ChatContent(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(start = 16.dp, top = 4.dp)
         ) {
+            val statusDot = when {
+                isModelLoaded -> Color.Green
+                statusMessage == "Model Not Found" -> Color.Red
+                else -> Color(0xFFFFA500)
+            }
             Box(
                 modifier = Modifier
                     .size(6.dp)
                     .clip(RoundedCornerShape(3.dp))
-                    .background(if (isModelLoaded) Color.Green else Color(0xFFFFA500))
+                    .background(statusDot)
             )
             Spacer(Modifier.width(4.dp))
             Text(
@@ -879,7 +884,12 @@ private fun TalkContent(
     Box(Modifier.fillMaxSize()) {
         // Status
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 16.dp, top = 4.dp)) {
-            Box(Modifier.size(6.dp).clip(RoundedCornerShape(3.dp)).background(if (isModelLoaded) Color.Green else Color(0xFFFFA500)))
+            val statusDot = when {
+                isModelLoaded -> Color.Green
+                statusMessage == "Model Not Found" -> Color.Red
+                else -> Color(0xFFFFA500)
+            }
+            Box(Modifier.size(6.dp).clip(RoundedCornerShape(3.dp)).background(statusDot))
             Spacer(Modifier.width(4.dp))
             Text(statusMessage, color = p.textSecondary, style = MaterialTheme.typography.labelSmall)
         }
