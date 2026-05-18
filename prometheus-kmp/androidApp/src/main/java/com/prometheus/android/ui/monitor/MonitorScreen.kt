@@ -184,6 +184,42 @@ fun MonitorScreen(
         Spacer(Modifier.height(16.dp))
 
         EntranceAnimation(visible = true, index = 4) {
+            Column {
+                SectionHeader(text = "EMERGENCY NUMBERS")
+                Spacer(Modifier.height(8.dp))
+                PrometheusCard {
+                    Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                        listOf(
+                            "Ambulan" to "118 and 119",
+                            "Basarnas" to "115",
+                            "Posko Bencana Alam" to "129",
+                            "PLN" to "123"
+                        ).forEach { (name, number) ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = name,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = p.textPrimary
+                                )
+                                Text(
+                                    text = number,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = p.blue,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        EntranceAnimation(visible = true, index = 5) {
             Button(
                 onClick = { onRefresh?.invoke() },
                 modifier = Modifier.fillMaxWidth(),
