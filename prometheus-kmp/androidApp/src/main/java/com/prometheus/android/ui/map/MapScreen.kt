@@ -71,10 +71,12 @@ import com.prometheus.network.EvacuationRoute
 import kotlin.math.*
 
 private fun scaledMarkerIcon(context: android.content.Context, drawableRes: Int, targetDp: Int): com.google.android.gms.maps.model.BitmapDescriptor {
-    val bitmap = BitmapFactory.decodeResource(context.resources, drawableRes)
+    val opts = BitmapFactory.Options().apply { inScaled = false }
+    val bitmap = BitmapFactory.decodeResource(context.resources, drawableRes, opts) ?: return BitmapDescriptorFactory.defaultMarker()
     val density = context.resources.displayMetrics.density
     val targetPx = (targetDp * density).toInt()
     val scaled = Bitmap.createScaledBitmap(bitmap, targetPx, targetPx, true)
+    if (scaled !== bitmap) bitmap.recycle()
     return BitmapDescriptorFactory.fromBitmap(scaled)
 }
 
