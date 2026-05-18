@@ -321,8 +321,10 @@ private fun OverlayTutorialDialog(
                 buildString {
                     append("Prometheus needs this permission to show earthquake alerts ")
                     append("on top of your current screen when a danger is detected.\n\n")
-                    append("On the next screen, toggle on ")
-                    append("\u201CAllow display over other apps\u201D.")
+                    append("1. Tap \u201CApps\u201D at the bottom of the next screen.\n")
+                    append("2. In the list, find and tap \u201CPrometheus\u201D.\n")
+                    append("3. Toggle on \u201CAllow display over other apps\u201D.\n")
+                    append("4. Press back to return here.")
                 },
                 color = p.textSecondary
             )
