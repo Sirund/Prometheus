@@ -25,11 +25,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -128,6 +131,7 @@ fun AskScreen(
     var cameraActions by remember { mutableStateOf<CameraActions?>(null) }
     var talkMode by remember { mutableStateOf(TalkMode.Idle) }
     var description by remember { mutableStateOf<String?>(null) }
+    var currentTtsText by remember { mutableStateOf<String?>(null) }
 
     var hasCameraPermission by remember {
         mutableStateOf(
@@ -160,8 +164,11 @@ fun AskScreen(
         hasAudioPermission = permissions[Manifest.permission.RECORD_AUDIO] == true
     }
 
-    // TALK mode permissions check when mode switches to TALK
+    // Reset TTS & description saat mode berubah (CHAT↔TALK)
     LaunchedEffect(askMode) {
+        ttsManager.stop()
+        currentTtsText = null
+        description = null
         if (askMode == "TALK") {
             isModelLoaded = ModelManager.isLoaded
             statusMessage = ModelManager.statusMessage
@@ -203,6 +210,24 @@ fun AskScreen(
 
     val showDownload = !isModelLoaded && !isDownloadingWork &&
             statusMessage.startsWith("Model not found")
+
+    // ──────────────────────────────────────────────────────────
+    // TTS helper: speak or stop
+    // ──────────────────────────────────────────────────────────
+    fun speakOrStop(text: String) {
+        if (text == currentTtsText) {
+            ttsManager.stop()
+            currentTtsText = null
+        } else {
+            ttsManager.stop()
+            currentTtsText = text
+            ttsManager.speak(text) {
+                scope.launch(Dispatchers.Main) {
+                    currentTtsText = null
+                }
+            }
+        }
+    }
 
     // ──────────────────────────────────────────────────────────
     // CHAT: image send helper
@@ -393,7 +418,8 @@ fun AskScreen(
                         onSend = { sendChatMessage(query, selectedImageBitmap)
                             query = ""; selectedImageBitmap = null },
                         onAttachImage = { showImageSourceDialog = true },
-                        onDownloadModel = { ModelManager.enqueueDownload(context) }
+                        onDownloadModel = { ModelManager.enqueueDownload(context) },
+                        onSpeakText = ::speakOrStop
                     )
 
                     "TALK" -> TalkContent(
@@ -499,7 +525,7 @@ fun AskScreen(
                                     if (responseText.isNotEmpty() && !isSpeaking) {
                                         isSpeaking = true
                                         talkMode = TalkMode.Result
-                                        ttsManager.speak(responseText)
+                                        speakOrStop(responseText)
                                         delay(3000)
                                         isSpeaking = false
                                     }
@@ -511,6 +537,7 @@ fun AskScreen(
                             }
                         },
                         onTalkModeChange = { talkMode = it },
+                        onSpeakText = ::speakOrStop,
                         scope = scope
                     )
                 }
@@ -621,7 +648,8 @@ private fun ChatContent(
     downloadProgress: Int,
     onSend: () -> Unit,
     onAttachImage: () -> Unit,
-    onDownloadModel: () -> Unit
+    onDownloadModel: () -> Unit,
+    onSpeakText: (String) -> Unit
 ) {
     val p = LocalPrometheusColors.current
 
@@ -718,7 +746,7 @@ private fun ChatContent(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(chatHistory, key = { it.id }) { message ->
-                    ChatBubble(message = message)
+                    ChatBubble(message = message, onTextClick = onSpeakText)
                 }
             }
         }
@@ -840,6 +868,7 @@ private fun TalkContent(
     onSttListen: () -> Unit,
     onSttStopAndProcess: () -> Unit,
     onTalkModeChange: (TalkMode) -> Unit,
+    onSpeakText: (String) -> Unit,
     scope: kotlinx.coroutines.CoroutineScope
 ) {
     val p = LocalPrometheusColors.current
@@ -941,33 +970,34 @@ private fun TalkContent(
                     .padding(horizontal = 16.dp, vertical = 12.dp)
                     .background(p.surface.copy(alpha = 0.9f), RoundedCornerShape(12.dp))
                     .border(1.dp, p.blue.copy(alpha = 0.2f), RoundedCornerShape(12.dp))
+                    .clickable { onSpeakText(description ?: "") }
                     .padding(12.dp)
-                    .heightIn(max = 80.dp)
-                    .clickable(enabled = false) {}
+                    .heightIn(max = 120.dp)
             ) {
-                when (talkMode) {
-                    TalkMode.Idle -> Text(
-                        text = description ?: "Say something...",
-                        color = if (description != null) Color.White else p.textSecondary,
-                        style = MaterialTheme.typography.bodySmall,
-                        maxLines = if (description != null) 3 else 1
-                    )
-                    TalkMode.Recording -> Text(
-                        text = "...",
-                        color = p.textSecondary,
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                    TalkMode.Transcribing -> Text(
-                        text = pendingSttResult ?: "...",
-                        color = p.blue,
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                    TalkMode.Sending, TalkMode.Result -> Text(
-                        text = description ?: "",
-                        color = Color.White,
-                        style = MaterialTheme.typography.bodySmall,
-                        maxLines = 3
-                    )
+                val scrollState = rememberScrollState()
+                Column(modifier = Modifier.verticalScroll(scrollState)) {
+                    when (talkMode) {
+                        TalkMode.Idle -> Text(
+                            text = description ?: "Say something...",
+                            color = if (description != null) Color.White else p.textSecondary,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        TalkMode.Recording -> Text(
+                            text = "...",
+                            color = p.textSecondary,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        TalkMode.Transcribing -> Text(
+                            text = pendingSttResult ?: "...",
+                            color = p.blue,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        TalkMode.Sending, TalkMode.Result -> Text(
+                            text = description ?: "",
+                            color = Color.White,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
                 }
             }
         }
@@ -1167,7 +1197,7 @@ private fun DownloadPrompt(
 // ChatBubble
 // ──────────────────────────────────────────────────────────
 @Composable
-private fun ChatBubble(message: ChatMessage) {
+private fun ChatBubble(message: ChatMessage, onTextClick: (String) -> Unit) {
     val p = LocalPrometheusColors.current
     AnimatedVisibility(
         visible = true,
@@ -1200,17 +1230,29 @@ private fun ChatBubble(message: ChatMessage) {
                     Spacer(Modifier.height(6.dp))
                 }
             }
-            Text(
-                text = markdownToAnnotated(message.text),
-                color = if (message.isUser) Color.Black else p.textPrimary,
-                modifier = Modifier
-                    .background(
-                        color = if (message.isUser) p.blue else p.surface,
-                        shape = RoundedCornerShape(16.dp)
-                    )
-                    .border(1.dp, p.blue.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
-                    .padding(12.dp)
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = markdownToAnnotated(message.text),
+                    color = if (message.isUser) Color.Black else p.textPrimary,
+                    modifier = Modifier
+                        .clickable { onTextClick(message.text) }
+                        .background(
+                            color = if (message.isUser) p.blue else p.surface,
+                            shape = RoundedCornerShape(16.dp)
+                        )
+                        .border(1.dp, p.blue.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
+                        .padding(12.dp)
+                )
+                Spacer(Modifier.width(4.dp))
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.VolumeUp,
+                    contentDescription = "Play",
+                    tint = if (message.text.isNotBlank()) p.blue.copy(alpha = 0.6f) else Color.Transparent,
+                    modifier = Modifier
+                        .size(18.dp)
+                        .clickable { if (message.text.isNotBlank()) onTextClick(message.text) }
+                )
+            }
         }
     }
 }
