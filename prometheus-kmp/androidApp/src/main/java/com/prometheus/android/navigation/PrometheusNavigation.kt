@@ -8,12 +8,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ChatBubble
 import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.Forum
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Radio
-import androidx.compose.material.icons.filled.RecordVoiceOver
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,12 +23,11 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.prometheus.android.inference.ConversationManager
-import com.prometheus.android.ui.assistant.AssistantScreen
+import com.prometheus.android.ui.ask.AskScreen
 import com.prometheus.android.ui.assistant.ConversationData
 import com.prometheus.android.ui.map.MapScreen
 import com.prometheus.android.ui.monitor.MonitorScreen
 import com.prometheus.android.ui.theme.LocalPrometheusColors
-import com.prometheus.android.ui.vision.VisionScreen
 import com.prometheus.model.EarthquakeEvent
 import com.prometheus.model.NowcastAlert
 import com.prometheus.model.UserLocation
@@ -38,8 +36,7 @@ import com.prometheus.model.WeatherInfo
 enum class Screen(val label: String, val icon: ImageVector) {
     Monitor("MONITOR", Icons.Filled.Radio),
     Evacuate("EVACUATE", Icons.Filled.Map),
-    Chat("CHAT", Icons.Filled.ChatBubble),
-    Vision("TALK", Icons.Filled.RecordVoiceOver)
+    Ask("ASK", Icons.Filled.Forum)
 }
 
 @Composable
@@ -136,15 +133,7 @@ fun PrometheusApp(
                             event = currentEvent,
                             userLocation = currentLocation
                         )
-                        Screen.Chat -> AssistantScreen(
-                            conversations = conversations,
-                            activeIndex = activeIndex,
-                            conversationManager = conversationManager,
-                            onConversationsChange = onConversationsChange,
-                            onActiveIndexChange = onActiveIndexChange,
-                            currentEvent = currentEvent
-                        )
-                        Screen.Vision -> VisionScreen(
+                        Screen.Ask -> AskScreen(
                             conversations = conversations,
                             activeIndex = activeIndex,
                             conversationManager = conversationManager,
