@@ -246,31 +246,48 @@ struct WeatherStatColumn: View {
 
 struct NowcastAlertCard: View {
     let alert: shared.NowcastAlert
-    @State private var expanded = false
 
     var body: some View {
-        HStack(spacing: 10) {
-            Text(alert.isBadWeather ? "\u{26A0}\u{FE0F}" : "\u{1F6E1}\u{FE0F}")
-                .font(.title3)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(alert.eventType)
-                    .inter(12, weight: .bold)
-                    .foregroundColor(alert.isBadWeather ? .red : .orange)
-                Text(alert.summary)
-                    .inter(11)
-                    .foregroundColor(.gray)
-                    .lineLimit(expanded ? nil : 2)
-                Text(expanded ? "\u{25B2} Tap to collapse" : "\u{25BC} Tap to expand")
-                    .inter(11)
-                    .foregroundColor(.gray)
-                    .padding(.top, 2)
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 12) {
+                Text(alert.isBadWeather ? "\u{26A0}\u{FE0F}" : "\u{1F6E1}\u{FE0F}")
+                    .font(.title)
+                Text(alert.intensity.uppercased())
+                    .inter(22, weight: .bold)
+                    .foregroundColor(alert.isBadWeather ? Color(red: 0.72, green: 0.11, blue: 0.11) : .orange)
             }
+
+            Text("Beresiko \(alert.potential.lowercased().trimmingCharacters(in: .punctuation)).")
+                .inter(14)
+                .foregroundColor(.textSecondary)
+
+            HStack(spacing: 6) {
+                Text("\u{1F552}")
+                    .font(.caption)
+                Text("\(alert.alertDate) \u{2022} \(alert.alertTime) \u{2014} \(alert.estimatedEnd.replacingOccurrences(of: "~ ", with: "")) WIB")
+                    .inter(12)
+                    .foregroundColor(.textSecondary)
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("AFFECTED AREAS - \(alert.provinceName.uppercased())")
+                    .inter(10, weight: .bold)
+                    .foregroundColor(.textSecondary)
+                if !alert.specificLocation.isEmpty && alert.specificLocation != "--" {
+                    Text(alert.specificLocation)
+                        .inter(12)
+                        .foregroundColor(.textPrimary)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(12)
+            .background(Color.surfaceElevated)
+            .cornerRadius(8)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
         .background(Color.cardBackground)
         .overlay(Rectangle().stroke(Color.prometheusBlue.opacity(0.3), lineWidth: 1))
-        .onTapGesture { expanded.toggle() }
     }
 }
 
