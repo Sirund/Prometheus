@@ -92,6 +92,20 @@ fun MonitorScreen(
 
         EntranceAnimation(visible = true, index = 0) {
             Column {
+                SectionHeader(text = "RECENT EVENTS")
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    text = latestEvent ?: "No data loaded. Tap refresh to poll BMKG.",
+                    color = p.textSecondary,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        EntranceAnimation(visible = true, index = 1) {
+            Column {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = "EARTHQUAKE INFO \u2014 ",
@@ -107,30 +121,13 @@ fun MonitorScreen(
                 }
                 Spacer(Modifier.height(8.dp))
                 val latLon = if (event != null) "${event.Lintang ?: "--"}, ${event.Bujur ?: "--"}" else "--"
-                val eventTime = if (event != null) "${event.tanggal_ ?: ""} ${event.jam_ ?: ""}".trim() else ""
                 HeroEventCard(
                     magnitude = event?._magnitude ?: "--",
-                    location = event?._wilayah ?: if (event != null) "Unknown location" else "Waiting for data...",
                     depth = event?._kedalaman ?: "--",
                     felt = event?._dirasakan ?: "--",
                     latLon = latLon,
                     potential = event?._potensi ?: "--",
-                    level = dangerLevel,
-                    timestamp = eventTime
-                )
-            }
-        }
-
-        Spacer(Modifier.height(16.dp))
-
-        EntranceAnimation(visible = true, index = 1) {
-            Column {
-                SectionHeader(text = "RECENT EVENTS")
-                Spacer(Modifier.height(10.dp))
-                Text(
-                    text = latestEvent ?: "No data loaded. Tap refresh to poll BMKG.",
-                    color = p.textSecondary,
-                    style = MaterialTheme.typography.bodyMedium
+                    level = dangerLevel
                 )
             }
         }
@@ -213,13 +210,11 @@ fun MonitorScreen(
 @Composable
 private fun HeroEventCard(
     magnitude: String,
-    location: String,
     depth: String,
     felt: String,
     latLon: String,
     potential: String,
-    level: DangerLevel,
-    timestamp: String
+    level: DangerLevel
 ) {
     val p = LocalPrometheusColors.current
     val accentColor = when (level) {
@@ -305,24 +300,7 @@ private fun HeroEventCard(
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth()
         )
-        Spacer(Modifier.height(4.dp))
-        HorizontalDivider(color = p.surfaceElevated)
-        Spacer(Modifier.height(4.dp))
-        Text(
-            text = location,
-            style = MaterialTheme.typography.bodyMedium,
-            color = p.textSecondary,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth()
-        )
-        if (timestamp.isNotBlank()) {
-            Spacer(Modifier.height(12.dp))
-            Text(
-                text = timestamp,
-                style = MaterialTheme.typography.labelSmall,
-                color = p.textSecondary
-            )
-        }
+
     }
 }
 
