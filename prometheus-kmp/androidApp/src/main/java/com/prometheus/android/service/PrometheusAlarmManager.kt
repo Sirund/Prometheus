@@ -68,7 +68,7 @@ class PrometheusAlarmManager(private val context: Context) {
     private fun initTts() {
         tts = TextToSpeech(context) { status ->
             ttsReady = status == TextToSpeech.SUCCESS
-            tts?.language = Locale.Builder().setLanguage("id").setRegion("ID").build()
+            tts?.language = Locale.US
         }
     }
 
@@ -115,12 +115,12 @@ class PrometheusAlarmManager(private val context: Context) {
             .setAutoCancel(true)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setContentIntent(openAppIntent())
-            .setFullScreenIntent(null, true)
+            .setFullScreenIntent(openAppIntent(), true)
             .build()
         NotificationManagerCompat.from(context).notify(ID_ALERT, n)
 
-        speak(briefing)
         playAlarm()
+        speak(briefing)
     }
 
     fun triggerMediumAlert(event: EarthquakeEvent) {
