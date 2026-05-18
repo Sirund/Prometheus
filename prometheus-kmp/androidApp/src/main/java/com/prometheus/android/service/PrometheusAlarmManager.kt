@@ -6,7 +6,6 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.media.AudioAttributes
-import android.media.MediaPlayer
 import android.media.RingtoneManager
 import android.net.Uri
 import android.speech.tts.TextToSpeech
@@ -30,7 +29,6 @@ class PrometheusAlarmManager(private val context: Context) {
     }
 
     private var tts: TextToSpeech? = null
-    private var mediaPlayer: MediaPlayer? = null
     private var ttsReady = false
 
     init {
@@ -138,7 +136,6 @@ class PrometheusAlarmManager(private val context: Context) {
             .build()
         NotificationManagerCompat.from(context).notify(ID_ALERT, n)
 
-        playAlarm()
         speak(briefing)
     }
 
@@ -167,28 +164,6 @@ class PrometheusAlarmManager(private val context: Context) {
         if (ttsReady) tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "alert")
     }
 
-    private fun playAlarm() {
-        try {
-            val uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
-                ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-            mediaPlayer?.release()
-            mediaPlayer = MediaPlayer().apply {
-                setAudioAttributes(
-                    AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_ALARM)
-                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                        .setFlags(AudioAttributes.FLAG_AUDIBILITY_ENFORCED)
-                        .build()
-                )
-                setDataSource(context, uri)
-                isLooping = true
-                setVolume(1.0f, 1.0f)
-                prepare()
-                start()
-            }
-        } catch (_: Exception) { }
-    }
-
     fun sendNowcastNotification(alert: NowcastAlert) {
         val n = NotificationCompat.Builder(context, CHANNEL_WEATHER)
             .setSmallIcon(android.R.drawable.ic_dialog_alert)
@@ -206,7 +181,5 @@ class PrometheusAlarmManager(private val context: Context) {
     fun shutdown() {
         tts?.stop()
         tts?.shutdown()
-        mediaPlayer?.release()
-        mediaPlayer = null
     }
 }
