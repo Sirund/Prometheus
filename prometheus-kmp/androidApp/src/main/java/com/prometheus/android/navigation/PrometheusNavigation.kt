@@ -23,7 +23,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.prometheus.android.inference.ConversationManager
 import com.prometheus.android.ui.assistant.AssistantScreen
+import com.prometheus.android.ui.assistant.ConversationData
 import com.prometheus.android.ui.map.MapScreen
 import com.prometheus.android.ui.monitor.MonitorScreen
 import com.prometheus.android.ui.theme.LocalPrometheusColors
@@ -53,7 +55,12 @@ fun PrometheusApp(
     injectionEnabled: Boolean = false,
     injectionIp: String = "",
     injectionPort: Int = 8080,
-    onApplyInjection: ((Boolean, String, Int) -> Unit)? = null
+    onApplyInjection: ((Boolean, String, Int) -> Unit)? = null,
+    conversations: List<ConversationData> = emptyList(),
+    activeIndex: Int = 0,
+    conversationManager: ConversationManager? = null,
+    onConversationsChange: (List<ConversationData>) -> Unit = {},
+    onActiveIndexChange: (Int) -> Unit = {}
 ) {
     var selectedScreen by remember { mutableStateOf(Screen.Monitor) }
     val p = LocalPrometheusColors.current
@@ -119,36 +126,154 @@ fun PrometheusApp(
                             event = currentEvent,
                             latestEvent = latestEvent,
                             weatherInfo = weatherInfo,
-                            nowcastAlerts = nowcastAlerts,
-                            injectionEnabled = injectionEnabled,
-                            injectionIp = injectionIp,
-                            injectionPort = injectionPort,
-                            onApplyInjection = onApplyInjection
+                            nowcastAlerts = nowcastAlerts
                         )
                         Screen.Evacuate -> MapScreen(
                             event = currentEvent,
                             userLocation = currentLocation
                         )
-                        Screen.Chat -> AssistantScreen()
-                        Screen.Vision -> VisionScreen()
+                        Screen.Chat -> AssistantScreen(
+                            conversations = conversations,
+                            activeIndex = activeIndex,
+                            conversationManager = conversationManager,
+                            onConversationsChange = onConversationsChange,
+                            onActiveIndexChange = onActiveIndexChange,
+                            currentEvent = currentEvent
+                        )
+                        Screen.Vision -> VisionScreen(
+                            conversations = conversations,
+                            activeIndex = activeIndex,
+                            conversationManager = conversationManager,
+                            onConversationsChange = onConversationsChange,
+                            onActiveIndexChange = onActiveIndexChange,
+                            currentEvent = currentEvent
+                        )
                     }
                 }
             }
-            Box(
+            Row(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .padding(top = 48.dp, end = 12.dp)
-                    .size(48.dp)
-                    .clip(CircleShape)
-                    .background(p.surfaceElevated)
-                    .clickable(onClick = onToggleDarkMode),
-                contentAlignment = Alignment.Center
+                    .statusBarsPadding()
+                    .padding(top = 8.dp, end = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Icon(
-                    imageVector = if (isDarkMode) Icons.Filled.LightMode else Icons.Filled.DarkMode,
-                    contentDescription = if (isDarkMode) "Switch to light mode" else "Switch to dark mode",
-                    tint = p.blue,
-                    modifier = Modifier.size(26.dp)
+                var showHelp by remember { mutableStateOf(false) }
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(p.surfaceElevated)
+                        .clickable { showHelp = true },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "?",
+                        color = p.blue,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(p.surfaceElevated)
+                        .clickable(onClick = onToggleDarkMode),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = if (isDarkMode) Icons.Filled.LightMode else Icons.Filled.DarkMode,
+                        contentDescription = if (isDarkMode) "Switch to light mode" else "Switch to dark mode",
+                        tint = p.blue,
+                        modifier = Modifier.size(26.dp)
+                    )
+                }
+
+                if (showHelp) {
+                    AlertDialog(
+                        onDismissRequest = { showHelp = false },
+                        title = { Text("Prometheus Help", color = p.blue, fontWeight = FontWeight.Bold) },
+                        text = {
+                            Column {
+                                HelpSection(
+                                    tab = "MONITOR",
+                                    steps = listOf(
+                                        "Shows real-time BMKG earthquake data and danger status banner",
+                                        "Colour-coded threat level: blue=clear, orange=elevated, red=danger",
+                                        "Refresh BMKG to poll for latest seismic events",
+                                        "Local injection card lets you simulate events for testing"
+                                    )
+                                )
+                                HelpSection(
+                                    tab = "EVACUATE",
+                                    steps = listOf(
+                                        "Live map showing epicentre (red) and danger radius circle",
+                                        "Blue route line shows fastest exit via Google Directions",
+                                        "Green shield marks safe zone outside danger radius",
+                                        "Expand ROUTING DETAILS for travel time estimates"
+                                    )
+                                )
+                                HelpSection(
+                                    tab = "CHAT",
+                                    steps = listOf(
+                                        "Powered by Gemma 4 AI running fully on-device (offline)",
+                                        "Ask about first aid, shelter, water, evacuation — any survival topic",
+                                        "Switch between SURVIVAL CHAT and EMERGENCY BRIEF modes",
+                                        "Tap the image icon to attach photos via camera or gallery"
+                                    )
+                                )
+                                HelpSection(
+                                    tab = "TALK",
+                                    steps = listOf(
+                                        "Hold the mic button and speak to ask questions hands-free",
+                                        "Camera auto-captures when speech is detected",
+                                        "Gemma 4 analyses both voice and image together",
+                                        "Response is spoken aloud via TTS"
+                                    )
+                                )
+                            }
+                        },
+                        confirmButton = {
+                            TextButton(onClick = { showHelp = false }) {
+                                Text("GOT IT", color = p.blue, fontWeight = FontWeight.Bold)
+                            }
+                        },
+                        containerColor = p.surface
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun HelpSection(tab: String, steps: List<String>) {
+    val p = LocalPrometheusColors.current
+    Column(modifier = Modifier.padding(bottom = 12.dp)) {
+        Text(
+            text = tab,
+            color = p.blue,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold
+        )
+        Spacer(Modifier.height(4.dp))
+        steps.forEach { step ->
+            Row(
+                modifier = Modifier.padding(start = 8.dp, bottom = 2.dp),
+                verticalAlignment = Alignment.Top
+            ) {
+                Text(
+                    text = "\u2022",
+                    color = p.textSecondary,
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    text = step,
+                    color = p.textSecondary,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.weight(1f)
                 )
             }
         }

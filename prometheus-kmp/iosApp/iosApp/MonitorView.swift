@@ -12,9 +12,16 @@ struct MonitorView: View {
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: 20) {
-                        DangerStatusBanner(level: dangerLevel)
+                        let classification: String = {
+                            switch dangerLevel {
+                            case .none: return "ALL CLEAR"
+                            case .watch: return "WATCH"
+                            case .medium: return "MEDIUM ALERT"
+                            case .danger: return "DANGER"
+                            }
+                        }()
 
-                        SectionHeader(title: "EARTHQUAKE INFO")
+                        SectionHeader(title: "EARTHQUAKE INFO — \(classification)")
                         if let event = pollingService.latestEarthquakeEvent {
                             BMKGEventCard(
                                 magnitude: event.magnitudeValue?.formatted() ?? "--",
@@ -37,7 +44,14 @@ struct MonitorView: View {
                             )
                         }
 
-                        SectionHeader(title: "WEATHER")
+                        let weatherLabel: String = {
+                            let w = pollingService.weatherInfo
+                            if !w.weatherDesc.isEmpty && w.weatherDesc != "--" {
+                                return "WEATHER — \(w.weatherDesc)"
+                            }
+                            return "WEATHER"
+                        }()
+                        SectionHeader(title: weatherLabel)
                         WeatherInfoCard(weather: pollingService.weatherInfo)
 
                         SectionHeader(title: "WEATHER WARNING")
@@ -50,12 +64,12 @@ struct MonitorView: View {
                         SectionHeader(title: "RECENT EVENTS")
                         if let latest = pollingService.latestEvent {
                             Text(latest)
-                                .font(.caption.monospaced())
+                                .inter(12)
                                 .foregroundColor(.white)
                                 .padding(.horizontal, 4)
                         } else {
                             Text("No data loaded. Tap refresh to poll BMKG.")
-                                .font(.caption.monospaced())
+                                .inter(12)
                                 .foregroundColor(.gray)
                                 .padding(.horizontal, 4)
                         }
@@ -64,7 +78,7 @@ struct MonitorView: View {
                             HStack {
                                 Image(systemName: "arrow.clockwise")
                                 Text("REFRESH BMKG")
-                                    .font(.caption.bold().monospaced())
+                                    .inter(12, weight: .bold)
                             }
                             .frame(maxWidth: .infinity)
                             .padding()
@@ -86,16 +100,9 @@ struct MonitorView: View {
                 }
                 .scrollContentBackground(.hidden)
             }
-            .navigationTitle("Prometheus")
+            .navigationTitle("Monitor")
             .toolbarBackground(Color.cardBackground, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Label("BMKG", systemImage: "checkmark.shield")
-                        .font(.caption.monospaced())
-                        .foregroundColor(.prometheusBlue)
-                }
-            }
             .sheet(isPresented: $showInjectionSheet) {
                 InjectionSettingsView(
                     enabled: pollingService.injectionEnabled,
@@ -120,47 +127,6 @@ struct MonitorView: View {
 }
 
 enum DangerLevel { case none, watch, medium, danger }
-
-struct DangerStatusBanner: View {
-    let level: DangerLevel
-
-    private var color: Color {
-        switch level {
-        case .none:   return .green
-        case .watch:  return .orange
-        case .medium: return Color(red: 1.0, green: 0.55, blue: 0.0)
-        case .danger: return .red
-        }
-    }
-    var label: String {
-        switch level {
-        case .none:   return "NO ACTIVE ALERTS"
-        case .watch:  return "WATCH \u2014 MONITOR CLOSELY"
-        case .medium: return "MEDIUM ALERT \u2014 NOTIFIED"
-        case .danger: return "DANGER \u2014 TAKE ACTION NOW"
-        }
-    }
-    var icon: String {
-        switch level {
-        case .none:   return "checkmark.shield.fill"
-        case .watch:  return "exclamationmark.triangle.fill"
-        case .danger: return "alarm.fill"
-        case .medium: return "exclamationmark.triangle.fill"
-        }
-    }
-
-    var body: some View {
-        HStack(spacing: 10) {
-            Image(systemName: icon).font(.title3)
-            Text(label).font(.caption.bold().monospaced())
-            Spacer()
-        }
-        .padding(12)
-        .background(color.opacity(0.15))
-        .overlay(Rectangle().stroke(color.opacity(0.6), lineWidth: 1))
-        .foregroundColor(color)
-    }
-}
 
 struct BMKGEventCard: View {
     let magnitude: String
@@ -189,27 +155,27 @@ struct BMKGEventCard: View {
                 VStack(alignment: .center, spacing: 2) {
                     Text("\u{1F4CD}").font(.title3)
                     Text(felt)
-                        .font(.caption.bold().monospaced())
+                        .inter(12, weight: .bold)
                         .foregroundColor(.white)
                         .multilineTextAlignment(.center)
                         .lineLimit(2)
                     if latLon != "--" {
                         Text(latLon)
-                            .font(.caption2.monospaced())
+                            .inter(11)
                             .foregroundColor(.gray)
                     }
                 }
                 .frame(maxWidth: .infinity)
             }
             Divider().background(Color.prometheusBlue.opacity(0.3))
-            Text(potential).font(.caption.bold().monospaced()).foregroundColor(.white)
+            Text(potential).inter(11).foregroundColor(.gray)
             Divider().background(Color.prometheusBlue.opacity(0.3))
-            Text(location).font(.caption.bold().monospaced()).foregroundColor(.white)
+            Text(location).inter(11).foregroundColor(.gray)
             if !timestamp.isEmpty {
                 HStack {
                     Spacer()
                     Text(timestamp)
-                        .font(.caption2.monospaced())
+                        .inter(11)
                         .foregroundColor(.gray)
                 }
             }
@@ -230,12 +196,12 @@ struct StatColumn: View {
         VStack(spacing: 2) {
             Text(icon).font(.title3)
             Text(value)
-                .font(.caption.bold().monospaced())
+                .inter(12, weight: .bold)
                 .foregroundColor(valueColor)
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
             Text(label)
-                .font(.caption2.monospaced())
+                .inter(11)
                 .foregroundColor(.gray)
         }
         .frame(maxWidth: .infinity)
@@ -251,12 +217,6 @@ struct WeatherInfoCard: View {
                 WeatherStatColumn(icon: "\u{1F321}\u{FE0F}", value: "\(weather.temperature)\u{00B0}", label: "TEMP")
                 WeatherStatColumn(icon: "\u{1F4A7}", value: "\(weather.humidity)%", label: "HUMIDITY")
                 WeatherStatColumn(icon: "\u{1F4A8}", value: "\(weather.windSpeed) km/j", label: "WIND")
-            }
-            if !weather.weatherDesc.isEmpty && weather.weatherDesc != "--" {
-                Divider().background(Color.prometheusBlue.opacity(0.3))
-                Text(weather.weatherDesc)
-                    .font(.caption2.monospaced())
-                    .foregroundColor(.gray)
             }
         }
         .padding()
@@ -274,10 +234,10 @@ struct WeatherStatColumn: View {
         VStack(spacing: 2) {
             Text(icon).font(.title3)
             Text(value)
-                .font(.caption.bold().monospaced())
+                .inter(12, weight: .bold)
                 .foregroundColor(.white)
             Text(label)
-                .font(.caption2.monospaced())
+                .inter(11)
                 .foregroundColor(.gray)
         }
         .frame(maxWidth: .infinity)
@@ -294,20 +254,20 @@ struct NowcastAlertCard: View {
                 .font(.title3)
             VStack(alignment: .leading, spacing: 2) {
                 Text(alert.eventType)
-                    .font(.caption.bold().monospaced())
+                    .inter(12, weight: .bold)
                     .foregroundColor(alert.isBadWeather ? .red : .orange)
                 Text(alert.summary)
-                    .font(.caption2.monospaced())
+                    .inter(11)
                     .foregroundColor(.gray)
                     .lineLimit(expanded ? nil : 2)
                 Text(expanded ? "\u{25B2} Tap to collapse" : "\u{25BC} Tap to expand")
-                    .font(.caption2.monospaced())
+                    .inter(11)
                     .foregroundColor(.gray)
                     .padding(.top, 2)
             }
         }
-        .padding()
         .frame(maxWidth: .infinity, alignment: .leading)
+        .padding()
         .background(Color.cardBackground)
         .overlay(Rectangle().stroke(Color.prometheusBlue.opacity(0.3), lineWidth: 1))
         .onTapGesture { expanded.toggle() }
@@ -320,9 +280,10 @@ struct NowcastClearCard: View {
             Text("\u{2600}\u{FE0F}")
                 .font(.title3)
             Text("Cuaca baik \u2014 Tidak ada peringatan")
-                .font(.caption2.monospaced())
+                .inter(11)
                 .foregroundColor(.green)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
         .background(Color.cardBackground)
         .overlay(Rectangle().stroke(Color.prometheusBlue.opacity(0.3), lineWidth: 1))
@@ -341,15 +302,15 @@ struct InjectionStatusCard: View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
                 Text("INJECTION")
-                    .font(.caption2.monospaced())
+                    .inter(11)
                     .foregroundColor(.gray)
                 Spacer()
                 Text(statusText)
-                    .font(.caption2.bold().monospaced())
+                    .inter(11, weight: .bold)
                     .foregroundColor(statusColor)
             }
             Text("Tap to configure local earthquake data injection")
-                .font(.caption2.monospaced())
+                .inter(11)
                 .foregroundColor(.gray)
         }
         .padding()
@@ -371,13 +332,13 @@ struct InjectionSettingsView: View {
                 Color.darkBackground.ignoresSafeArea()
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Run 'python3 tools/local_injector.py' on your PC, then enter its IP and port below.")
-                        .font(.caption.monospaced())
+                        .inter(12)
                         .foregroundColor(.gray)
 
                     Toggle("Enable Injection", isOn: $enabled)
                         .tint(.prometheusBlue)
                         .foregroundColor(.white)
-                        .font(.caption.monospaced())
+                        .inter(12)
 
                     TextField("PC IP Address (e.g. 192.168.1.42)", text: $ip)
                         .textFieldStyle(.plain)
@@ -385,7 +346,7 @@ struct InjectionSettingsView: View {
                         .background(Color.cardBackground)
                         .overlay(Rectangle().stroke(Color.prometheusBlue.opacity(0.3), lineWidth: 1))
                         .foregroundColor(.white)
-                        .font(.caption.monospaced())
+                        .inter(12)
                         .disabled(!enabled)
 
                     TextField("Port", value: $port, format: .number)
@@ -394,7 +355,7 @@ struct InjectionSettingsView: View {
                         .background(Color.cardBackground)
                         .overlay(Rectangle().stroke(Color.prometheusBlue.opacity(0.3), lineWidth: 1))
                         .foregroundColor(.white)
-                        .font(.caption.monospaced())
+                        .inter(12)
                         .disabled(!enabled)
 
                     Spacer()
@@ -410,14 +371,14 @@ struct InjectionSettingsView: View {
                         onApply(enabled, ip, port)
                         dismiss()
                     }
-                    .font(.caption.bold().monospaced())
+                    .inter(12, weight: .bold)
                     .foregroundColor(.prometheusBlue)
                 }
                 ToolbarItem(placement: .cancellationAction) {
                     Button("CANCEL") {
                         dismiss()
                     }
-                    .font(.caption.monospaced())
+                    .inter(12)
                     .foregroundColor(.gray)
                 }
             }
@@ -430,8 +391,8 @@ struct EventField: View {
     let value: String
     var body: some View {
         VStack(alignment: .leading, spacing: 1) {
-            Text(label).font(.caption2.monospaced()).foregroundColor(.gray)
-            Text(value).font(.caption.bold().monospaced()).foregroundColor(.white)
+            Text(label).inter(11).foregroundColor(.gray)
+            Text(value).inter(12, weight: .bold).foregroundColor(.white)
         }
     }
 }
@@ -440,7 +401,7 @@ struct SectionHeader: View {
     let title: String
     var body: some View {
         Text(title)
-            .font(.caption.bold().monospaced())
+            .inter(12, weight: .bold)
             .foregroundColor(.prometheusBlue)
             .padding(.top, 4)
     }

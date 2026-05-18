@@ -34,6 +34,7 @@ dependencies {
     implementation(project(":shared"))
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)
+    implementation("androidx.compose.ui:ui-text-google-fonts")
     implementation(libs.compose.material3)
     implementation(libs.compose.icons.extended)
     implementation(libs.compose.ui.tooling.preview)

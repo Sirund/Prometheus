@@ -117,14 +117,14 @@ struct VisionPanel: View {
             if isCapturing {
                 Color.black.opacity(0.5)
                 Text("CAPTURING...")
-                    .font(.caption.bold().monospaced())
+                    .inter(12, weight: .bold)
                     .foregroundColor(.prometheusBlue)
             } else if isAnalyzing {
                 VStack(spacing: 8) {
                     ProgressView()
                         .tint(.prometheusBlue)
                     Text("ANALYZING...")
-                        .font(.caption.bold().monospaced())
+                        .inter(12, weight: .bold)
                         .foregroundColor(.prometheusBlue)
                 }
             }
@@ -141,7 +141,7 @@ struct VisionPanel: View {
                 .font(.body)
                 .foregroundColor(.prometheusBlue.opacity(0.5))
             Text(description ?? "Point camera and tap Describe to hear surroundings")
-                .font(.caption.monospaced())
+                .inter(12)
                 .foregroundColor(.secondary)
                 .lineLimit(3)
             Spacer()
@@ -155,10 +155,10 @@ struct VisionPanel: View {
     private var infoCard: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("VISION ACCESSIBILITY MODE")
-                .font(.caption2.bold().monospaced())
+                .inter(11, weight: .bold)
                 .foregroundColor(.prometheusBlue)
             Text("Point the camera at surroundings, signage, or injuries. On-device vision analysis detects people, scene type, and visible text — spoken aloud automatically.")
-                .font(.caption2.monospaced())
+                .inter(11)
                 .foregroundColor(.secondary)
                 .lineSpacing(4)
         }
@@ -181,7 +181,7 @@ struct VisionPanel: View {
                     ? "CAPTURING PHOTO..."
                     : isAnalyzing ? "AI ANALYZING — PLEASE WAIT..."
                     : hasCapture ? "TAP FOR NEW CAPTURE" : "TAP TO DESCRIBE SURROUNDINGS")
-                    .font(.caption.bold().monospaced())
+                    .inter(12, weight: .bold)
             }
             .frame(maxWidth: .infinity)
             .padding(28)
