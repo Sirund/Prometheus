@@ -14,11 +14,11 @@ class InitEngineWorker(context: Context, params: WorkerParameters) : CoroutineWo
         Log.d(TAG, "Initializing engine after download...")
         try {
             ModelManager.reload(applicationContext)
-            if (ModelManager.isLoaded) {
+            if (ModelManager.isLoaded.value) {
                 Log.d(TAG, "Engine loaded successfully")
                 return Result.success()
             } else {
-                Log.e(TAG, "Engine failed to load: ${ModelManager.statusMessage}")
+                Log.e(TAG, "Engine failed to load: ${ModelManager.statusMessage.value}")
                 return Result.failure()
             }
         } catch (e: Exception) {

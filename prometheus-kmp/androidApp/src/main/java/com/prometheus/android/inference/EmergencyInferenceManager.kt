@@ -15,7 +15,7 @@ private const val TAG = "EmergencyInference"
 class EmergencyInferenceManager {
 
     suspend fun generateBriefing(event: EarthquakeEvent): String {
-        if (!ModelManager.isLoaded) {
+        if (!ModelManager.isLoaded.value) {
             return EmergencyBriefingFormatter.buildBriefingText(event)
         }
 
