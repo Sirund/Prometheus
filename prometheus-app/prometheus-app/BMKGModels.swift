@@ -61,6 +61,26 @@ struct EarthquakeEvent: Decodable {
         guard let p = Potensi?.lowercased() else { return false }
         return p.contains("tsunami") && p.contains("berpotensi") && !p.contains("tidak")
     }
+
+    var cleanedWilayah: String? {
+        guard var w = Wilayah?.trimmingCharacters(in: .whitespaces) else { return nil }
+        let prefixes = [
+            "Pusat Gempa berada di darat ", "Pusat Gempa berada di laut ",
+            "Pusat gempa berada di darat ", "Pusat gempa berada di laut ",
+        ]
+        for p in prefixes where w.lowercased().hasPrefix(p.lowercased()) {
+            w = String(w.dropFirst(p.count)).trimmingCharacters(in: .whitespaces)
+            break
+        }
+        return w.isEmpty ? nil : w
+    }
+
+    var cleanedPotensi: String? {
+        guard let p = Potensi?.trimmingCharacters(in: .whitespaces) else { return nil }
+        let skipPhrases = ["dirasakan untuk diteruskan", "diteruskan pada masyarakat"]
+        if skipPhrases.contains(where: { p.lowercased().contains($0) }) { return nil }
+        return p.isEmpty ? nil : p
+    }
 }
 
 extension EarthquakeEvent {

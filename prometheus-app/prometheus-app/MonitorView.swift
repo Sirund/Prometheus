@@ -22,10 +22,10 @@ struct MonitorView: View {
                         if let event = pollingService.latestEarthquakeEvent {
                             BMKGEventCard(
                                 magnitude: event.magnitudeValue.map { "\($0)" } ?? "--",
-                                location: event.Wilayah ?? "--",
+                                location: event.cleanedWilayah ?? "--",
                                 depth: event.Kedalaman ?? "--",
                                 felt: event.Dirasakan ?? "--",
-                                potential: event.Potensi ?? "--",
+                                potential: event.cleanedPotensi ?? "Tidak berpotensi tsunami",
                                 timestamp: "\(event.Tanggal ?? "") \(event.Jam ?? "")".trimmingCharacters(in: .whitespaces),
                                 lintang: event.Lintang,
                                 bujur: event.Bujur
