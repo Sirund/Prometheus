@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct MonitorView: View {
     @Environment(BMKGPollingService.self) private var pollingService
@@ -25,7 +26,9 @@ struct MonitorView: View {
                                 depth: event.Kedalaman ?? "--",
                                 felt: event.Dirasakan ?? "--",
                                 potential: event.Potensi ?? "--",
-                                timestamp: "\(event.Tanggal ?? "") \(event.Jam ?? "")".trimmingCharacters(in: .whitespaces)
+                                timestamp: "\(event.Tanggal ?? "") \(event.Jam ?? "")".trimmingCharacters(in: .whitespaces),
+                                lintang: event.Lintang,
+                                bujur: event.Bujur
                             )
                         } else {
                             BMKGEventCard(
@@ -52,6 +55,9 @@ struct MonitorView: View {
                         } else {
                             NowcastClearCard()
                         }
+
+                        SectionHeader(title: "EMERGENCY")
+                        EmergencyCallCard()
 
                         SectionHeader(title: "RECENT EVENTS")
                         if let latest = pollingService.latestEvent {
@@ -199,38 +205,79 @@ struct BMKGEventCard: View {
     let felt: String
     let potential: String
     let timestamp: String
+    var lintang: String? = nil
+    var bujur: String? = nil
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 2) {
+        VStack(spacing: 12) {
+            HStack(spacing: 0) {
+                // Magnitude column
+                VStack(spacing: 6) {
+                    ZStack {
+                        Circle().fill(Color.orange.opacity(0.18)).frame(width: 48, height: 48)
+                        Image(systemName: "waveform.path.ecg")
+                            .font(.title3).foregroundColor(.orange)
+                    }
                     Text("M \(magnitude)")
-                        .inter(28, weight: .bold)
-                        .foregroundColor(.prometheusBlue)
+                        .inter(20, weight: .bold).foregroundColor(.prometheusBlue)
+                    Text("MAGNITUDE").inter(10).foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity)
+
+                Divider().frame(height: 72).background(Color.prometheusBlue.opacity(0.15))
+
+                // Depth column
+                VStack(spacing: 6) {
+                    ZStack {
+                        Circle().fill(Color.prometheusBlue.opacity(0.1)).frame(width: 48, height: 48)
+                        Image(systemName: "arrow.down.circle")
+                            .font(.title3).foregroundColor(.prometheusBlue)
+                    }
+                    Text(depth)
+                        .inter(20, weight: .bold).foregroundColor(.primary)
+                    Text("DEPTH").inter(10).foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity)
+
+                Divider().frame(height: 72).background(Color.prometheusBlue.opacity(0.15))
+
+                // Location column
+                VStack(spacing: 4) {
+                    ZStack {
+                        Circle().fill(Color.red.opacity(0.12)).frame(width: 48, height: 48)
+                        Image(systemName: "mappin.circle.fill")
+                            .font(.title3).foregroundColor(.red.opacity(0.75))
+                    }
                     Text(location)
-                        .inter(12)
-                        .foregroundColor(.primary)
+                        .inter(11, weight: .bold).foregroundColor(.primary)
+                        .multilineTextAlignment(.center)
+                        .lineLimit(2)
+                    if let lat = lintang, let lon = bujur {
+                        Text("\(lat) \(lon)")
+                            .inter(9).foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
                 }
-                Spacer()
-                VStack(alignment: .trailing, spacing: 2) {
-                    EventField(label: "DEPTH", value: depth)
-                    EventField(label: "FELT", value: felt)
-                }
+                .frame(maxWidth: .infinity)
             }
-            Divider().background(Color.prometheusBlue.opacity(0.3))
-            HStack {
-                EventField(label: "TSUNAMI POTENTIAL", value: potential)
-                Spacer()
+
+            Divider().background(Color.prometheusBlue.opacity(0.2))
+
+            Text(potential)
+                .inter(12).foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity)
+
+            if !timestamp.isEmpty {
                 Text(timestamp)
-                    .inter(11)
-                    .foregroundColor(.secondary)
+                    .inter(10).foregroundColor(.secondary.opacity(0.7))
             }
         }
         .padding()
         .background(Color.cardBackground)
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.prometheusBlue.opacity(0.3), lineWidth: 1))
-        .shadow(color: .black.opacity(0.35), radius: 8, x: 0, y: 4)
+        .shadow(color: .black.opacity(0.3), radius: 8, x: 0, y: 4)
     }
 }
 
@@ -359,41 +406,51 @@ private struct WeatherStatColumn: View {
 
 struct NowcastAlertCard: View {
     let alert: NowcastAlert
-    @State private var expanded = false
 
     var body: some View {
         let alertColor: Color = alert.isBadWeather ? .red : .orange
-        Button(action: { withAnimation(.easeInOut(duration: 0.2)) { expanded.toggle() } }) {
-            HStack(alignment: .top, spacing: 10) {
-                Image(systemName: alert.isBadWeather ? "exclamationmark.triangle.fill" : "shield.fill")
-                    .font(.title3)
-                    .foregroundColor(alertColor)
-                    .frame(width: 24)
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(alert.eventType.uppercased())
-                        .inter(12, weight: .bold)
-                        .foregroundColor(alertColor)
-                    Text(alert.summary)
-                        .inter(11)
-                        .foregroundColor(.secondary)
-                        .lineLimit(expanded ? nil : 2)
-                        .fixedSize(horizontal: false, vertical: expanded)
-                    HStack(spacing: 4) {
-                        Image(systemName: expanded ? "chevron.up" : "chevron.down")
-                            .font(.caption2)
-                        Text(expanded ? "Tap to collapse" : "Tap to expand")
-                            .inter(10)
-                    }
-                    .foregroundColor(.secondary)
+        HStack(alignment: .top, spacing: 14) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.title2)
+                .foregroundColor(alertColor)
+                .padding(.top, 2)
+
+            VStack(alignment: .leading, spacing: 7) {
+                NowcastDetailRow(label: "Intensity",        value: alert.intensity)
+                NowcastDetailRow(label: "Potensi",          value: alert.potential == "--" ? alert.summary : alert.potential)
+                NowcastDetailRow(label: "Date",             value: alert.alertDate)
+                NowcastDetailRow(label: "Time",             value: alert.alertTime)
+                NowcastDetailRow(label: "Est. completion",  value: alert.estimatedEnd)
+                if alert.provinceName != "--" {
+                    NowcastDetailRow(label: "Location", value: alert.provinceName)
                 }
-                Spacer()
+                if alert.specificLocation != "--" {
+                    NowcastDetailRow(label: "Area", value: alert.specificLocation)
+                }
             }
-            .padding(12)
-            .background(alertColor.opacity(0.08))
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-            .overlay(RoundedRectangle(cornerRadius: 16).stroke(alertColor.opacity(0.4), lineWidth: 1))
         }
-        .buttonStyle(.plain)
+        .padding(14)
+        .background(alertColor.opacity(0.06))
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(alertColor.opacity(0.35), lineWidth: 1))
+    }
+}
+
+private struct NowcastDetailRow: View {
+    let label: String
+    let value: String
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 0) {
+            Text(label)
+                .inter(11)
+                .foregroundColor(.secondary)
+                .frame(width: 118, alignment: .leading)
+            Text(value)
+                .inter(11)
+                .foregroundColor(.primary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
     }
 }
 
@@ -412,6 +469,40 @@ struct NowcastClearCard: View {
         .background(Color.green.opacity(0.08))
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.green.opacity(0.3), lineWidth: 1))
+    }
+}
+
+struct EmergencyCallCard: View {
+    var body: some View {
+        Button(action: {
+            if let url = URL(string: "tel://112") {
+                UIApplication.shared.open(url)
+            }
+        }) {
+            HStack(spacing: 16) {
+                Image(systemName: "phone.fill")
+                    .font(.title2)
+                    .foregroundColor(.prometheusBlue)
+                    .frame(width: 36)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Layanan Darurat Terpadu")
+                        .inter(13, weight: .bold)
+                        .foregroundColor(.prometheusBlue)
+                    Text("112")
+                        .inter(30, weight: .bold)
+                        .foregroundColor(.prometheusBlue)
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundColor(.prometheusBlue.opacity(0.5))
+            }
+            .padding()
+            .background(Color.prometheusBlue.opacity(0.08))
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.prometheusBlue.opacity(0.35), lineWidth: 1))
+        }
+        .buttonStyle(.plain)
     }
 }
 
