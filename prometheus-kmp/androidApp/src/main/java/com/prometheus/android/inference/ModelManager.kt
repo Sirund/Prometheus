@@ -48,7 +48,7 @@ object ModelManager {
             try {
                 val modelPath = findModelPath(context)
                 if (modelPath == null) {
-                    _statusMessage.value = "Model not found"
+                    _statusMessage.value = "Model Not Found"
                     Log.w(TAG, _statusMessage.value)
                     return@withContext
                 }
@@ -89,7 +89,7 @@ object ModelManager {
                 _statusMessage.value = "Gemma 4 Online ($backendUsed)"
                 Log.d(TAG, "Model ready (shared engine)")
             } catch (e: Exception) {
-                _statusMessage.value = "Error: ${e.message ?: e.javaClass.simpleName}"
+                _statusMessage.value = "Model Not Found"
                 Log.e(TAG, "ModelManager init failed", e)
             }
         }
