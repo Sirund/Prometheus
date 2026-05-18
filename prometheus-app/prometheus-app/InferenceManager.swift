@@ -98,6 +98,25 @@ final class InferenceManager {
     Be urgent, concise, and actionable. Plain text only — no markdown, no bullet points.
     """
 
+    static let generalPrompt = """
+    You are Prometheus, a calm and practical AI assistant for disaster preparedness in Indonesia. \
+    Help users with survival guidance, first aid, evacuation planning, and hazard awareness \
+    for earthquakes, tsunamis, volcanic eruptions, and floods. \
+    Keep answers short and actionable. Plain text only — no markdown, no bullet points.
+    """
+
+    static func buildBmkgContext(event: EarthquakeEvent?) -> String {
+        guard let event else { return "" }
+        var parts: [String] = []
+        if let mag = event.magnitudeValue { parts.append("Magnitude: M\(mag)") }
+        if let loc = event.Wilayah        { parts.append("Location: \(loc)") }
+        if let d   = event.Kedalaman     { parts.append("Depth: \(d)") }
+        if event.hasTsunamiPotential      { parts.append("Tsunami potential: YES") }
+        if let dt  = event.DateTime       { parts.append("Time: \(dt)") }
+        guard !parts.isEmpty else { return "" }
+        return "[Current BMKG Situation]\n" + parts.joined(separator: "\n")
+    }
+
     func buildEmergencySystemPrompt() -> String {
         guard let event = currentEarthquakeEvent else { return Self.emergencyBasePrompt }
         var ctx = "Current event:"
@@ -257,6 +276,24 @@ final class InferenceManager {
         switch mode {
         case .survival:  survivalConversation?.cancel()
         case .emergency: emergencyConversation?.cancel()
+        }
+    }
+
+    func sendOneShot(_ text: String, systemPrompt: String) async -> String {
+        guard let engine else { return "" }
+        do {
+            let conv = try await engine.createConversation(
+                configuration: ConversationConfiguration()
+                    .systemPrompt(systemPrompt)
+                    .maxOutputTokens(256)
+            )
+            var result = ""
+            let stream = try conv.sendStream(text)
+            for try await token in stream { result += token }
+            conv.close()
+            return result
+        } catch {
+            return "Error: \(error.localizedDescription)"
         }
     }
 

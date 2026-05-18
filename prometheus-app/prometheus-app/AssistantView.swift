@@ -4,6 +4,7 @@
 //
 
 import SwiftUI
+import PhotosUI
 import LiteRTLMDownloader
 
 // MARK: - Conversation model
@@ -31,7 +32,7 @@ private func loadConversations() -> [Conversation] {
 
 // MARK: - View
 
-enum AssistantPanel { case chat, vision, emergency }
+enum AssistantPanel { case chat, vision }
 
 struct AssistantView: View {
     @Environment(InferenceManager.self) private var inference
@@ -39,13 +40,17 @@ struct AssistantView: View {
     @AppStorage("isDarkMode") private var isDarkMode = false
     @AppStorage("tutorialSeen_assistant") private var tutorialSeen = false
     @State private var query = ""
-    @State private var selectedMode: ChatMode = .survival
     @FocusState private var inputFocused: Bool
     @State private var conversations: [Conversation] = loadConversations()
     @State private var activeIndex = 0
     @State private var showSidebar = false
     @State private var activePanel: AssistantPanel = .chat
     @State private var showTutorial = false
+    @State private var attachedImage: UIImage? = nil
+    @State private var photosPickerItem: PhotosPickerItem? = nil
+    @State private var showImageSourceDialog = false
+    @State private var showPhotosPicker = false
+    @State private var showCameraSheet = false
 
     var body: some View {
         NavigationStack {
@@ -78,6 +83,21 @@ struct AssistantView: View {
             }
         }
         .sheet(isPresented: $showSidebar) { sidebarView }
+        .sheet(isPresented: $showCameraSheet) { CameraPickerView(onCapture: { img in attachedImage = img }) }
+        .photosPicker(isPresented: $showPhotosPicker, selection: $photosPickerItem, matching: .images)
+        .confirmationDialog("Attach Image", isPresented: $showImageSourceDialog) {
+            Button("Camera") { showCameraSheet = true }
+            Button("Photo Library") { showPhotosPicker = true }
+            Button("Cancel", role: .cancel) {}
+        }
+        .onChange(of: photosPickerItem) { _, item in
+            Task {
+                if let data = try? await item?.loadTransferable(type: Data.self),
+                   let img = UIImage(data: data) {
+                    attachedImage = img
+                }
+            }
+        }
         .onChange(of: inference.isGenerating) { _, generating in
             if !generating { syncToConversation() }
         }
@@ -89,15 +109,7 @@ struct AssistantView: View {
     private var stateContent: some View {
         switch activePanel {
         case .vision:
-            VisionPanel()
-        case .emergency:
-            switch inference.modelState {
-            case .notDownloaded:  downloadView
-            case .downloading:    progressView
-            case .loading:        loadingView
-            case .ready:          emergencyContent
-            case .error(let msg): errorView(msg)
-            }
+            TalkPanel()
         case .chat:
             switch inference.modelState {
             case .notDownloaded:  downloadView
@@ -280,37 +292,6 @@ struct AssistantView: View {
         }
     }
 
-    // MARK: - Emergency screen
-
-    private var emergencyContent: some View {
-        VStack(spacing: 0) {
-            // Banner
-            let isDangerous = pollingService.dangerLevel >= 2
-            let color: Color = isDangerous ? .red : .orange
-            HStack(spacing: 8) {
-                Image(systemName: isDangerous ? "alarm.fill" : "exclamationmark.triangle.fill")
-                    .font(.caption).foregroundColor(color)
-                Text(isDangerous ? "ACTIVE EMERGENCY — \(pollingService.latestEarthquakeEvent.flatMap { $0.magnitudeValue }.map { "M\($0)" } ?? "EVENT")" : "EMERGENCY BRIEFING MODE")
-                    .inter(11, weight: .bold).foregroundColor(color)
-                Spacer()
-            }
-            .padding(10)
-            .background(color.opacity(0.12))
-            .overlay(Rectangle().stroke(color.opacity(0.4), lineWidth: 1))
-
-            messageList
-        }
-        .safeAreaInset(edge: .bottom) {
-            VStack(spacing: 4) {
-                if pollingService.latestEarthquakeEvent == nil {
-                    Text("No active earthquake event. Ask about emergency procedures.")
-                        .inter(10).foregroundColor(.secondary).padding(.horizontal)
-                }
-                inputBar
-            }
-        }
-    }
-
     // MARK: - Chat screen
 
     private var chatViewContent: some View {
@@ -319,21 +300,13 @@ struct AssistantView: View {
     }
 
     private var modeSelector: some View {
-        let isDangerous = pollingService.dangerLevel >= 2
-        return HStack(spacing: 8) {
+        HStack(spacing: 8) {
             Spacer()
             ModeChipButton(label: "CHAT", active: activePanel == .chat) {
                 switchPanel(.chat)
             }
-            ModeChipButton(label: "VISION", active: activePanel == .vision) {
+            ModeChipButton(label: "TALK", active: activePanel == .vision) {
                 switchPanel(.vision)
-            }
-            ModeChipButton(
-                label: isDangerous ? "🚨 EMERGENCY" : "EMERGENCY",
-                active: activePanel == .emergency,
-                activeColor: isDangerous ? .red : .prometheusBlue
-            ) {
-                switchPanel(.emergency)
             }
             Spacer()
         }
@@ -344,11 +317,6 @@ struct AssistantView: View {
     private func switchPanel(_ panel: AssistantPanel) {
         guard panel != activePanel else { return }
         syncToConversation()
-        let newMode: ChatMode = panel == .emergency ? .emergency : .survival
-        if newMode != selectedMode {
-            inference.clearHistory(mode: selectedMode)
-            selectedMode = newMode
-        }
         activePanel = panel
     }
 
@@ -398,40 +366,77 @@ struct AssistantView: View {
     }
 
     private var inputBar: some View {
-        HStack(spacing: 0) {
-            TextField(
-                "Ask about survival, first aid, evacuation...",
-                text: $query,
-                axis: .vertical
-            )
-            .textFieldStyle(.plain)
-            .inter(12)
-            .lineLimit(1...4)
-            .padding(12)
-            .focused($inputFocused)
-            .disabled(inference.isGenerating)
-            .onSubmit { sendMessage() }
-
-            Divider()
-                .background(Color.prometheusBlue.opacity(0.2))
-                .frame(height: 44)
-
-            Button(action: {
-                if inference.isGenerating {
-                    inference.cancelGeneration(mode: selectedMode)
-                } else {
-                    sendMessage()
+        VStack(spacing: 0) {
+            if let img = attachedImage {
+                HStack(spacing: 8) {
+                    Image(uiImage: img)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 44, height: 44)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.prometheusBlue.opacity(0.4), lineWidth: 1))
+                    Text("Image attached")
+                        .inter(11).foregroundColor(.secondary)
+                    Spacer()
+                    Button(action: { attachedImage = nil; photosPickerItem = nil }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundColor(.secondary)
+                    }
+                    .buttonStyle(.plain)
                 }
-            }) {
-                Image(systemName: inference.isGenerating ? "stop.circle.fill" : "bolt.fill")
-                    .font(.body)
-                    .padding(14)
-                    .foregroundColor(
-                        (query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !inference.isGenerating)
-                            ? .gray : .prometheusBlue
-                    )
+                .padding(.horizontal, 16)
+                .padding(.top, 6)
+                .padding(.bottom, 2)
             }
-            .disabled(query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !inference.isGenerating)
+
+            HStack(spacing: 0) {
+                Button(action: { showImageSourceDialog = true }) {
+                    Image(systemName: attachedImage != nil ? "photo.fill" : "camera")
+                        .font(.body)
+                        .padding(12)
+                        .foregroundColor(attachedImage != nil ? .prometheusBlue : .gray.opacity(0.6))
+                }
+                .buttonStyle(.plain)
+                .disabled(activePanel == .vision)
+
+                Divider()
+                    .background(Color.prometheusBlue.opacity(0.15))
+                    .frame(height: 32)
+
+                TextField(
+                    "Ask about survival, first aid, evacuation...",
+                    text: $query,
+                    axis: .vertical
+                )
+                .textFieldStyle(.plain)
+                .inter(12)
+                .lineLimit(1...4)
+                .padding(12)
+                .focused($inputFocused)
+                .disabled(inference.isGenerating)
+                .onSubmit { sendMessage() }
+
+                Divider()
+                    .background(Color.prometheusBlue.opacity(0.2))
+                    .frame(height: 44)
+
+                Button(action: {
+                    if inference.isGenerating {
+                        inference.cancelGeneration(mode: .survival)
+                    } else {
+                        sendMessage()
+                    }
+                }) {
+                    Image(systemName: inference.isGenerating ? "stop.circle.fill" : "bolt.fill")
+                        .font(.body)
+                        .padding(14)
+                        .foregroundColor(
+                            (query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !inference.isGenerating)
+                                ? .gray : .prometheusBlue
+                        )
+                }
+                .disabled(query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !inference.isGenerating)
+            }
         }
         .background(Color.cardBackground)
         .clipShape(RoundedRectangle(cornerRadius: 14))
@@ -460,25 +465,6 @@ struct AssistantView: View {
                     Image(systemName: "questionmark.circle")
                         .font(.caption)
                         .foregroundColor(.prometheusBlue)
-                }
-            }
-        }
-        ToolbarItem(placement: .navigationBarTrailing) {
-            HStack(spacing: 10) {
-                if case .ready = inference.modelState {
-                    HStack(spacing: 4) {
-                        Circle().fill(Color.green).frame(width: 6, height: 6)
-                        Text("GEMMA 4 · READY")
-                            .inter(11)
-                            .foregroundColor(.secondary)
-                    }
-                    if activePanel != .vision {
-                        Button(action: { createNewConversation() }) {
-                            Image(systemName: "square.and.pencil")
-                                .font(.body)
-                                .foregroundColor(.prometheusBlue)
-                        }
-                    }
                 }
             }
         }
@@ -568,7 +554,7 @@ struct AssistantView: View {
 
     private func createNewConversation() {
         syncToConversation()
-        inference.clearHistory(mode: selectedMode)
+        inference.clearHistory(mode: .survival)
         conversations.append(Conversation(messages: []))
         activeIndex = conversations.count - 1
         saveConversations(conversations)
@@ -577,7 +563,7 @@ struct AssistantView: View {
     private func switchToConversation(at index: Int) {
         guard index < conversations.count else { return }
         syncToConversation()
-        inference.clearHistory(mode: selectedMode)
+        inference.clearHistory(mode: .survival)
         activeIndex = index
         inference.restoreMessages(conversations[index].messages)
         showSidebar = false
@@ -590,7 +576,20 @@ struct AssistantView: View {
         guard !text.isEmpty else { return }
         query = ""
         inputFocused = false
-        Task { await inference.send(text, mode: selectedMode) }
+        let imageToSend = attachedImage
+        attachedImage = nil
+        photosPickerItem = nil
+        Task {
+            if let img = imageToSend,
+               let data = img.resized(toMaxDimension: 512).jpegData(compressionQuality: 0.7) {
+                var visionContext = ""
+                await inference.describeImage(data) { token in visionContext = token }
+                let combined = visionContext.isEmpty ? text : "\(text)\n\n[Image shows: \(visionContext)]"
+                await inference.send(combined, mode: .survival)
+            } else {
+                await inference.send(text, mode: .survival)
+            }
+        }
     }
 }
 
@@ -602,6 +601,18 @@ private struct MessageBubble: View {
 
     var isUser: Bool { message.role == .user }
 
+    private var renderedText: some View {
+        let raw = message.text + (message.isStreaming ? "▋" : "")
+        if !isUser, !message.isStreaming,
+           let attributed = try? AttributedString(
+               markdown: raw,
+               options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)
+           ) {
+            return AnyView(Text(attributed).inter(12).foregroundColor(.primary))
+        }
+        return AnyView(Text(raw).inter(12).foregroundColor(.primary))
+    }
+
     var body: some View {
         HStack(alignment: .bottom, spacing: 0) {
             if isUser { Spacer(minLength: 48) }
@@ -612,9 +623,7 @@ private struct MessageBubble: View {
                     .foregroundColor(isUser ? .prometheusBlue : .gray)
                     .padding(.horizontal, 4)
 
-                Text(message.text + (message.isStreaming ? "▋" : ""))
-                    .inter(12)
-                    .foregroundColor(.primary)
+                renderedText
                     .textSelection(.enabled)
                     .padding(12)
                     .background(isUser ? Color.prometheusBlue.opacity(0.18) : Color.cardBackground)
@@ -661,6 +670,69 @@ private struct ModeChipButton: View {
                 .foregroundColor(active ? activeColor : .gray)
         }
         .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Camera capture sheet (for image attachment)
+
+private struct CameraPickerView: View {
+    let onCapture: (UIImage) -> Void
+    @State private var camera = CameraService()
+    @State private var isCapturing = false
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color.black.ignoresSafeArea()
+                #if canImport(UIKit)
+                CameraPreviewView(session: camera.session)
+                    .ignoresSafeArea()
+                #endif
+                VStack {
+                    Spacer()
+                    Button(action: capture) {
+                        ZStack {
+                            Circle().fill(Color.white.opacity(0.2)).frame(width: 72, height: 72)
+                            Circle().strokeBorder(Color.white.opacity(0.6), lineWidth: 3).frame(width: 72, height: 72)
+                            if isCapturing {
+                                ProgressView().tint(.white).scaleEffect(1.3)
+                            } else {
+                                Image(systemName: "camera.fill").font(.title2).foregroundColor(.white)
+                            }
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(isCapturing)
+                    .padding(.bottom, 52)
+                }
+            }
+            .navigationTitle("Take Photo")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(Color.black.opacity(0.55), for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { camera.stop(); dismiss() }
+                        .foregroundColor(.white)
+                }
+            }
+        }
+        .onAppear { camera.start() }
+        .onDisappear { camera.stop() }
+    }
+
+    private func capture() {
+        isCapturing = true
+        Task {
+            if let cgImage = await camera.capturePhoto() {
+                #if canImport(UIKit)
+                onCapture(UIImage(cgImage: cgImage))
+                #endif
+            }
+            isCapturing = false
+            dismiss()
+        }
     }
 }
 
