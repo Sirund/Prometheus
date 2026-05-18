@@ -54,6 +54,12 @@ class MainActivity : ComponentActivity() {
         else requestStoragePermission()
     }
 
+    private val fullScreenIntentLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { _ ->
+        requestStoragePermission()
+    }
+
     private val storagePermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { _ ->
@@ -167,6 +173,18 @@ class MainActivity : ComponentActivity() {
                 != PackageManager.PERMISSION_GRANTED
             ) {
                 notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                return
+            }
+        }
+        requestFullScreenIntentPermission()
+    }
+
+    private fun requestFullScreenIntentPermission() {
+        if (Build.VERSION.SDK_INT >= 34) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.USE_FULL_SCREEN_INTENT)
+                != PackageManager.PERMISSION_GRANTED
+            ) {
+                fullScreenIntentLauncher.launch(Manifest.permission.USE_FULL_SCREEN_INTENT)
                 return
             }
         }
