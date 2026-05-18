@@ -20,11 +20,15 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.prometheus.android.R
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.ui.platform.LocalContext
 import com.prometheus.android.ui.shared.EntranceAnimation
 import com.prometheus.android.ui.shared.PrometheusCard
 import com.prometheus.android.ui.shared.SectionHeader
@@ -92,6 +96,20 @@ fun MonitorScreen(
 
         EntranceAnimation(visible = true, index = 0) {
             Column {
+                SectionHeader(text = "RECENT EVENTS")
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    text = latestEvent ?: "No data loaded. Tap refresh to poll BMKG.",
+                    color = p.textSecondary,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        EntranceAnimation(visible = true, index = 1) {
+            Column {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = "EARTHQUAKE INFO \u2014 ",
@@ -107,30 +125,13 @@ fun MonitorScreen(
                 }
                 Spacer(Modifier.height(8.dp))
                 val latLon = if (event != null) "${event.Lintang ?: "--"}, ${event.Bujur ?: "--"}" else "--"
-                val eventTime = if (event != null) "${event.tanggal_ ?: ""} ${event.jam_ ?: ""}".trim() else ""
                 HeroEventCard(
                     magnitude = event?._magnitude ?: "--",
-                    location = event?._wilayah ?: if (event != null) "Unknown location" else "Waiting for data...",
                     depth = event?._kedalaman ?: "--",
                     felt = event?._dirasakan ?: "--",
                     latLon = latLon,
                     potential = event?._potensi ?: "--",
-                    level = dangerLevel,
-                    timestamp = eventTime
-                )
-            }
-        }
-
-        Spacer(Modifier.height(16.dp))
-
-        EntranceAnimation(visible = true, index = 1) {
-            Column {
-                SectionHeader(text = "RECENT EVENTS")
-                Spacer(Modifier.height(10.dp))
-                Text(
-                    text = latestEvent ?: "No data loaded. Tap refresh to poll BMKG.",
-                    color = p.textSecondary,
-                    style = MaterialTheme.typography.bodyMedium
+                    level = dangerLevel
                 )
             }
         }
@@ -187,6 +188,55 @@ fun MonitorScreen(
         Spacer(Modifier.height(16.dp))
 
         EntranceAnimation(visible = true, index = 4) {
+            val context = LocalContext.current
+            Column {
+                SectionHeader(text = "EMERGENCY")
+                Spacer(Modifier.height(8.dp))
+                PrometheusCard(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            val intent = Intent(Intent.ACTION_DIAL).apply {
+                                data = Uri.parse("tel:112")
+                            }
+                            context.startActivity(intent)
+                        },
+                    elevated = true
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Call,
+                            contentDescription = "Emergency",
+                            tint = p.blue,
+                            modifier = Modifier.size(48.dp)
+                        )
+                        Spacer(Modifier.width(12.dp))
+                        Column {
+                            Text(
+                                text = "Layanan Darurat Terpadu",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = p.blue,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "112",
+                                style = MaterialTheme.typography.displayMedium,
+                                color = p.blue,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        EntranceAnimation(visible = true, index = 5) {
             Button(
                 onClick = { onRefresh?.invoke() },
                 modifier = Modifier.fillMaxWidth(),
@@ -213,13 +263,11 @@ fun MonitorScreen(
 @Composable
 private fun HeroEventCard(
     magnitude: String,
-    location: String,
     depth: String,
     felt: String,
     latLon: String,
     potential: String,
-    level: DangerLevel,
-    timestamp: String
+    level: DangerLevel
 ) {
     val p = LocalPrometheusColors.current
     val accentColor = when (level) {
@@ -305,24 +353,7 @@ private fun HeroEventCard(
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth()
         )
-        Spacer(Modifier.height(4.dp))
-        HorizontalDivider(color = p.surfaceElevated)
-        Spacer(Modifier.height(4.dp))
-        Text(
-            text = location,
-            style = MaterialTheme.typography.bodyMedium,
-            color = p.textSecondary,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth()
-        )
-        if (timestamp.isNotBlank()) {
-            Spacer(Modifier.height(12.dp))
-            Text(
-                text = timestamp,
-                style = MaterialTheme.typography.labelSmall,
-                color = p.textSecondary
-            )
-        }
+
     }
 }
 
@@ -435,45 +466,44 @@ private fun RowScope.WeatherStatColumn(
 private fun NowcastAlertCard(alert: NowcastAlert) {
     val p = LocalPrometheusColors.current
     val alertColor = if (alert.isBadWeather) p.danger else p.warning
-    var expanded by remember { mutableStateOf(false) }
-    PrometheusCard(modifier = Modifier.fillMaxWidth().clickable { expanded = !expanded }) {
+    PrometheusCard(modifier = Modifier.fillMaxWidth()) {
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
             Icon(
                 imageVector = if (alert.isBadWeather) Icons.Filled.Warning else Icons.Filled.Shield,
                 contentDescription = if (alert.isBadWeather) "Warning" else "Clear",
-                modifier = Modifier.size(40.dp)
+                tint = alertColor,
+                modifier = Modifier.size(48.dp)
             )
-            Spacer(Modifier.width(10.dp))
+            Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = alert.eventType,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = alertColor,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = alert.summary,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = p.textSecondary,
-                    maxLines = if (expanded) Int.MAX_VALUE else 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
-                        contentDescription = if (expanded) "Collapse" else "Expand",
-                        modifier = Modifier.size(24.dp),
-                        tint = p.textSecondary
-                    )
-                    Spacer(Modifier.width(4.dp))
-                    Text(
-                        text = if (expanded) "Tap to collapse" else "Tap to expand",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = p.textSecondary
-                    )
-                }
+                InfoRow(label = "Intensity", value = alert.intensity)
+                InfoRow(label = "Potensi", value = alert.potential)
+                InfoRow(label = "Date", value = alert.alertDate)
+                InfoRow(label = "Time", value = alert.alertTime)
+                InfoRow(label = "Est. completion", value = alert.estimatedEnd)
+                InfoRow(label = "Location", value = alert.provinceName)
+                InfoRow(label = "Area", value = alert.specificLocation)
             }
         }
+    }
+}
+
+@Composable
+private fun InfoRow(label: String, value: String) {
+    val c = LocalPrometheusColors.current
+    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = c.textSecondary,
+            modifier = Modifier.width(120.dp)
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodySmall,
+            color = c.textPrimary,
+            fontWeight = FontWeight.Medium
+        )
     }
 }
 

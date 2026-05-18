@@ -20,6 +20,43 @@ data class NowcastAlert(
     val summary: String
         get() = description.ifBlank { title }
 
+    val intensity: String
+        get() = eventType.replaceFirstChar { it.uppercase() }
+
+    val alertDate: String
+        get() {
+            val regex = Regex("pada\\s+(\\d{1,2}\\s+\\w+\\s+\\d{4})")
+            return regex.find(description)?.groupValues?.getOrNull(1)
+                ?: Regex("\\d{1,2}\\s+\\w+\\s+\\d{4}").find(pubDate)?.value
+                ?: "--"
+        }
+
+    val alertTime: String
+        get() {
+            val regex = Regex("pada\\s+\\d{1,2}\\s+\\w+\\s+\\d{4},\\s*(\\d{2}:\\d{2})")
+            return regex.find(description)?.groupValues?.getOrNull(1)
+                ?: Regex("\\d{2}:\\d{2}").find(pubDate)?.value
+                ?: "--"
+        }
+
+    val estimatedEnd: String
+        get() {
+            val regex = Regex("berlangsung\\s+hingga\\s+\\d{1,2}\\s+\\w+\\s+\\d{4},\\s*(\\d{2}:\\d{2})", RegexOption.IGNORE_CASE)
+            return regex.find(description)?.groupValues?.getOrNull(1)?.let { "~ $it" } ?: "--"
+        }
+
+    val potential: String
+        get() {
+            val regex = Regex("berpotensi\\s+menimbulkan\\s+dampak\\s+berupa\\s+(.+?)(?:\\.|$)", RegexOption.IGNORE_CASE)
+            return regex.find(description)?.groupValues?.getOrNull(1)?.trim() ?: "--"
+        }
+
+    val specificLocation: String
+        get() {
+            val regex = Regex("khususnya\\s+di\\s+(.+?)(?:\\.|$)", RegexOption.IGNORE_CASE)
+            return regex.find(description)?.groupValues?.getOrNull(1)?.trim() ?: "--"
+        }
+
     val provinceName: String
         get() = extractProvince(title)
 
