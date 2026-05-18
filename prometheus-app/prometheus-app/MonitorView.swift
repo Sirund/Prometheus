@@ -41,6 +41,18 @@ struct MonitorView: View {
                         SectionHeader(title: "ALARM & BRIEFING")
                         AlarmStatusCard(modelState: inference.modelState)
 
+                        let weatherLabel = pollingService.latestWeather.weatherDesc == "--" ? nil : pollingService.latestWeather.weatherDesc
+                        SectionHeader(title: weatherLabel != nil ? "WEATHER — \(weatherLabel!.uppercased())" : "WEATHER")
+                        WeatherInfoCard(weather: pollingService.latestWeather)
+
+                        SectionHeader(title: "WEATHER WARNING")
+                        let latestAlert = pollingService.nowcastAlerts.first
+                        if let alert = latestAlert {
+                            NowcastAlertCard(alert: alert)
+                        } else {
+                            NowcastClearCard()
+                        }
+
                         SectionHeader(title: "RECENT EVENTS")
                         if let latest = pollingService.latestEvent {
                             Text(latest)
@@ -303,6 +315,105 @@ struct AlarmIndicatorRow: View {
 }
 
 // MARK: - Local injection
+
+struct WeatherInfoCard: View {
+    let weather: WeatherInfo
+
+    var body: some View {
+        HStack(spacing: 0) {
+            WeatherStatColumn(icon: "thermometer.medium", value: weather.temperature == "--" ? "--" : "\(weather.temperature)°", label: "TEMP")
+            Divider().background(Color.prometheusBlue.opacity(0.15)).padding(.vertical, 8)
+            WeatherStatColumn(icon: "humidity", value: weather.humidity == "--" ? "--" : "\(weather.humidity)%", label: "HUMIDITY")
+            Divider().background(Color.prometheusBlue.opacity(0.15)).padding(.vertical, 8)
+            WeatherStatColumn(icon: "wind", value: weather.windSpeed == "--" ? "--" : "\(weather.windSpeed) km/j", label: "WIND")
+        }
+        .padding(.vertical, 8)
+        .background(Color.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.prometheusBlue.opacity(0.3), lineWidth: 1))
+    }
+}
+
+private struct WeatherStatColumn: View {
+    let icon: String
+    let value: String
+    let label: String
+
+    var body: some View {
+        VStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.title2)
+                .foregroundColor(.prometheusBlue.opacity(0.7))
+                .frame(height: 36)
+            Text(value)
+                .inter(14, weight: .bold)
+                .foregroundColor(.primary)
+            Text(label)
+                .inter(10)
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 4)
+    }
+}
+
+struct NowcastAlertCard: View {
+    let alert: NowcastAlert
+    @State private var expanded = false
+
+    var body: some View {
+        let alertColor: Color = alert.isBadWeather ? .red : .orange
+        Button(action: { withAnimation(.easeInOut(duration: 0.2)) { expanded.toggle() } }) {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: alert.isBadWeather ? "exclamationmark.triangle.fill" : "shield.fill")
+                    .font(.title3)
+                    .foregroundColor(alertColor)
+                    .frame(width: 24)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(alert.eventType.uppercased())
+                        .inter(12, weight: .bold)
+                        .foregroundColor(alertColor)
+                    Text(alert.summary)
+                        .inter(11)
+                        .foregroundColor(.secondary)
+                        .lineLimit(expanded ? nil : 2)
+                        .fixedSize(horizontal: false, vertical: expanded)
+                    HStack(spacing: 4) {
+                        Image(systemName: expanded ? "chevron.up" : "chevron.down")
+                            .font(.caption2)
+                        Text(expanded ? "Tap to collapse" : "Tap to expand")
+                            .inter(10)
+                    }
+                    .foregroundColor(.secondary)
+                }
+                Spacer()
+            }
+            .padding(12)
+            .background(alertColor.opacity(0.08))
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .overlay(RoundedRectangle(cornerRadius: 16).stroke(alertColor.opacity(0.4), lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+struct NowcastClearCard: View {
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.title3)
+                .foregroundColor(.green)
+            Text("No warning")
+                .inter(12)
+                .foregroundColor(.green)
+            Spacer()
+        }
+        .padding(12)
+        .background(Color.green.opacity(0.08))
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.green.opacity(0.3), lineWidth: 1))
+    }
+}
 
 struct InjectionStatusCard: View {
     let enabled: Bool
