@@ -359,41 +359,29 @@ private struct WeatherStatColumn: View {
 
 struct NowcastAlertCard: View {
     let alert: NowcastAlert
-    @State private var expanded = false
 
     var body: some View {
-        let alertColor: Color = alert.isBadWeather ? .red : .orange
-        Button(action: { withAnimation(.easeInOut(duration: 0.2)) { expanded.toggle() } }) {
-            HStack(alignment: .top, spacing: 10) {
+        let alertColor: Color = alert.isBadWeather ? Color(red: 0.72, green: 0.11, blue: 0.11) : .orange
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 12) {
                 Image(systemName: alert.isBadWeather ? "exclamationmark.triangle.fill" : "shield.fill")
-                    .font(.title3)
+                    .font(.title)
                     .foregroundColor(alertColor)
-                    .frame(width: 24)
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(alert.eventType.uppercased())
-                        .inter(12, weight: .bold)
-                        .foregroundColor(alertColor)
-                    Text(alert.summary)
-                        .inter(11)
-                        .foregroundColor(.secondary)
-                        .lineLimit(expanded ? nil : 2)
-                        .fixedSize(horizontal: false, vertical: expanded)
-                    HStack(spacing: 4) {
-                        Image(systemName: expanded ? "chevron.up" : "chevron.down")
-                            .font(.caption2)
-                        Text(expanded ? "Tap to collapse" : "Tap to expand")
-                            .inter(10)
-                    }
-                    .foregroundColor(.secondary)
-                }
-                Spacer()
+                Text(alert.eventType.uppercased())
+                    .inter(22, weight: .bold)
+                    .foregroundColor(alertColor)
             }
-            .padding(12)
-            .background(alertColor.opacity(0.08))
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-            .overlay(RoundedRectangle(cornerRadius: 16).stroke(alertColor.opacity(0.4), lineWidth: 1))
+
+            Text(alert.summary)
+                .inter(14)
+                .foregroundColor(.secondary)
+                .lineLimit(3)
         }
-        .buttonStyle(.plain)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(alert.isBadWeather ? Color.red.opacity(0.08) : Color.orange.opacity(0.08))
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(alert.isBadWeather ? Color.red.opacity(0.4) : Color.orange.opacity(0.4), lineWidth: 1))
     }
 }
 
