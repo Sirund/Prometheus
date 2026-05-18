@@ -68,6 +68,58 @@ struct NowcastAlert: Identifiable {
         let combined = "\(title) \(description)".lowercased()
         return keywords.first { combined.contains($0) } ?? "Peringatan Cuaca"
     }
+
+    var intensity: String {
+        let e = eventType
+        return e.prefix(1).uppercased() + e.dropFirst()
+    }
+
+    var alertDate: String {
+        capture(#"pada\s+(\d{1,2}\s+\w+\s+\d{4})"#, in: description)
+            ?? capture(#"\d{1,2}\s+\w+\s+\d{4}"#, in: pubDate)
+            ?? "--"
+    }
+
+    var alertTime: String {
+        capture(#"pada\s+\d{1,2}\s+\w+\s+\d{4},\s*(\d{2}[:.]\d{2})"#, in: description)
+            ?? capture(#"\d{2}:\d{2}"#, in: pubDate)
+            ?? "--"
+    }
+
+    var estimatedEnd: String {
+        guard let t = capture(#"(?i)berlangsung\s+hingga\s+\d{1,2}\s+\w+\s+\d{4},\s*(\d{2}[:.]\d{2})"#, in: description) else { return "--" }
+        return "~ \(t)"
+    }
+
+    var potential: String {
+        capture(#"(?i)berpotensi\s+menimbulkan\s+dampak\s+berupa\s+(.+?)(?:\.|$)"#, in: description)?
+            .trimmingCharacters(in: .whitespaces) ?? "--"
+    }
+
+    var specificLocation: String {
+        capture(#"(?i)khususnya\s+di\s+(.+?)(?:\.|$)"#, in: description)?
+            .trimmingCharacters(in: .whitespaces) ?? "--"
+    }
+
+    var provinceName: String {
+        for sep in [" - ", " – ", "– ", "- "] {
+            if let r = title.range(of: sep) {
+                let after = String(title[r.upperBound...]).trimmingCharacters(in: .whitespaces)
+                if !after.isEmpty { return after }
+            }
+        }
+        return "--"
+    }
+
+    private func capture(_ pattern: String, in text: String) -> String? {
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive) else { return nil }
+        let ns = text as NSString
+        guard let match = regex.firstMatch(in: text, range: NSRange(location: 0, length: ns.length)) else { return nil }
+        let idx = match.numberOfRanges > 1 ? 1 : 0
+        let r = match.range(at: idx)
+        guard r.location != NSNotFound else { return nil }
+        return ns.substring(with: r)
+    }
 }
 
 // MARK: - Location delegate (NSObject, called on main thread since manager is created there)

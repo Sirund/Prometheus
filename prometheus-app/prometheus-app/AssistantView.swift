@@ -356,7 +356,7 @@ struct AssistantView: View {
             Image(systemName: "bubble.left.and.bubble.right.fill")
                 .font(.system(size: 40))
                 .foregroundColor(.prometheusBlue.opacity(0.3))
-            Text("Ask something...")
+            Text("Ask anything about survival")
                 .inter(12)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)

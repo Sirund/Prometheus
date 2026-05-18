@@ -34,12 +34,15 @@ import androidx.compose.material.icons.filled.Motorcycle
 import androidx.compose.material.icons.filled.NearMe
 import androidx.compose.material.icons.filled.Public
 import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.model.BitmapDescriptor
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.CircleOptions
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.Manifest
 import android.content.pm.PackageManager
@@ -57,6 +60,7 @@ import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.Polyline
 import com.google.maps.android.compose.rememberCameraPositionState
+import com.prometheus.android.R
 import com.prometheus.android.service.LocationProvider
 import com.prometheus.android.ui.shared.LoadingOverlay
 import com.prometheus.android.ui.theme.LocalPrometheusColors
@@ -66,6 +70,16 @@ import com.prometheus.model.UserLocation
 import com.prometheus.network.EvacuationRouter
 import com.prometheus.network.EvacuationRoute
 import kotlin.math.*
+
+private fun scaledMarkerIcon(context: android.content.Context, drawableRes: Int, targetDp: Int): com.google.android.gms.maps.model.BitmapDescriptor {
+    val opts = BitmapFactory.Options().apply { inScaled = false }
+    val bitmap = BitmapFactory.decodeResource(context.resources, drawableRes, opts) ?: return BitmapDescriptorFactory.defaultMarker()
+    val density = context.resources.displayMetrics.density
+    val targetPx = (targetDp * density).toInt()
+    val scaled = Bitmap.createScaledBitmap(bitmap, targetPx, targetPx, true)
+    if (scaled !== bitmap) bitmap.recycle()
+    return BitmapDescriptorFactory.fromBitmap(scaled)
+}
 
 private val PaleCyan = Color(0xFFE0F2F9)
 private val PaleCyanBorder = Color(0xFFB3E0F2)
@@ -258,6 +272,16 @@ fun MapScreen(
                             context, Manifest.permission.ACCESS_COARSE_LOCATION
                         ) == PackageManager.PERMISSION_GRANTED
 
+                        var epicenterIcon by remember { mutableStateOf<BitmapDescriptor?>(null) }
+                        var userIcon by remember { mutableStateOf<BitmapDescriptor?>(null) }
+
+                        LaunchedEffect(Unit) {
+                            try {
+                                epicenterIcon = scaledMarkerIcon(context, R.drawable.earthquake, 48)
+                                userIcon = scaledMarkerIcon(context, R.drawable.location, 40)
+                            } catch (_: Exception) { }
+                        }
+
                         GoogleMap(
                             modifier = Modifier.fillMaxSize(),
                             cameraPositionState = cameraState,
@@ -276,7 +300,7 @@ fun MapScreen(
                                     state = MarkerState(position = epicenter),
                                     title = "Epicenter",
                                     snippet = event?._wilayah ?: "",
-                                    icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)
+                                    icon = epicenterIcon ?: BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)
                                 )
                             }
                             if (userLatLng != null) {
@@ -284,7 +308,7 @@ fun MapScreen(
                                     state = MarkerState(position = userLatLng),
                                     title = "You",
                                     snippet = "Current location",
-                                    icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE)
+                                    icon = userIcon ?: BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE)
                                 )
                             }
                             if (epicenter != null && dangerRadiusKm != null) {
@@ -312,6 +336,7 @@ fun MapScreen(
             }
 
             Spacer(Modifier.height(12.dp))
+
 
             Box(
                 modifier = Modifier.padding(horizontal = 16.dp)
@@ -433,7 +458,6 @@ fun MapScreen(
 
                 Spacer(Modifier.height(12.dp))
             }
-
             Box(
                 modifier = Modifier.padding(horizontal = 16.dp)
             ) {

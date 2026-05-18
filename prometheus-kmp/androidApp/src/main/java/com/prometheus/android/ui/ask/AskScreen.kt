@@ -782,94 +782,94 @@ private fun ChatContent(
                     .border(1.dp, p.blue.copy(alpha = 0.2f), RoundedCornerShape(14.dp)),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-            if (selectedImageBitmap != null) {
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .padding(2.dp)
-                ) {
-                    Image(
-                        bitmap = selectedImageBitmap!!.asImageBitmap(),
-                        contentDescription = "Selected image",
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clip(RoundedCornerShape(6.dp)),
-                        contentScale = ContentScale.Crop
-                    )
+                if (selectedImageBitmap != null) {
                     Box(
                         modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .size(16.dp)
-                            .clip(CircleShape)
-                            .background(Color.Black.copy(alpha = 0.6f))
-                            .clickable { onClearImage() },
-                        contentAlignment = Alignment.Center
+                            .size(40.dp)
+                            .padding(2.dp)
                     ) {
-                        Text("\u2716",
-                            color = Color.White,
-                            style = MaterialTheme.typography.labelSmall
+                        Image(
+                            bitmap = selectedImageBitmap!!.asImageBitmap(),
+                            contentDescription = "Selected image",
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(RoundedCornerShape(6.dp)),
+                            contentScale = ContentScale.Crop
                         )
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .size(16.dp)
+                                .clip(CircleShape)
+                                .background(Color.Black.copy(alpha = 0.6f))
+                                .clickable { onClearImage() },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("\u2716",
+                                color = Color.White,
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                        }
                     }
+                    Spacer(Modifier.width(6.dp))
                 }
-                Spacer(Modifier.width(6.dp))
-            }
-            TextField(
-                value = query,
-                onValueChange = onQueryChange,
-                placeholder = {
-                    Text(
-                        "Ask something...",
-                        color = p.blue.copy(alpha = 0.5f)
+                TextField(
+                    value = query,
+                    onValueChange = onQueryChange,
+                    placeholder = {
+                        Text(
+                            "Ask something...",
+                            color = p.blue.copy(alpha = 0.5f)
+                        )
+                    },
+                    modifier = Modifier.weight(1f),
+                    textStyle = MaterialTheme.typography.bodySmall,
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = p.surface,
+                        unfocusedContainerColor = p.surface,
+                        focusedTextColor = p.blue,
+                        unfocusedTextColor = p.blue,
+                        cursorColor = p.blue,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent
+                    ),
+                    enabled = isModelLoaded
+                )
+                VerticalDivider(
+                    modifier = Modifier.height(32.dp),
+                    color = p.blue.copy(alpha = 0.2f)
+                )
+                TextButton(
+                    onClick = onAttachImage,
+                    enabled = isModelLoaded,
+                    contentPadding = PaddingValues(6.dp)
+                ) {
+                    Icon(
+                        Icons.Filled.Image,
+                        contentDescription = "Attach image",
+                        modifier = Modifier.size(20.dp),
+                        tint = p.blue.copy(alpha = 0.6f)
                     )
-                },
-                modifier = Modifier.weight(1f),
-                textStyle = MaterialTheme.typography.bodySmall,
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = p.surface,
-                    unfocusedContainerColor = p.surface,
-                    focusedTextColor = p.blue,
-                    unfocusedTextColor = p.blue,
-                    cursorColor = p.blue,
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent
-                ),
-                enabled = isModelLoaded
-            )
-            VerticalDivider(
-                modifier = Modifier.height(32.dp),
-                color = p.blue.copy(alpha = 0.2f)
-            )
-            TextButton(
-                onClick = onAttachImage,
-                enabled = isModelLoaded,
-                contentPadding = PaddingValues(6.dp)
-            ) {
-                Icon(
-                    Icons.Filled.Image,
-                    contentDescription = "Attach image",
-                    modifier = Modifier.size(20.dp),
-                    tint = p.blue.copy(alpha = 0.6f)
-                )
-            }
-            TextButton(
-                onClick = onSend,
-                enabled = isModelLoaded && query.isNotBlank(),
-                colors = ButtonDefaults.textButtonColors(
-                    containerColor = if (isModelLoaded) p.blue else p.surface,
-                    contentColor = if (isModelLoaded) Color.Black else Color.Gray,
-                    disabledContainerColor = p.surface,
-                    disabledContentColor = Color.Gray
-                ),
-                contentPadding = PaddingValues(6.dp)
-            ) {
-                Icon(
-                    Icons.Filled.Send,
-                    contentDescription = "Send",
-                    modifier = Modifier.size(20.dp)
-                )
+                }
+                TextButton(
+                    onClick = onSend,
+                    enabled = isModelLoaded && query.isNotBlank(),
+                    colors = ButtonDefaults.textButtonColors(
+                        containerColor = if (isModelLoaded) p.blue else p.surface,
+                        contentColor = if (isModelLoaded) Color.Black else Color.Gray,
+                        disabledContainerColor = p.surface,
+                        disabledContentColor = Color.Gray
+                    ),
+                    contentPadding = PaddingValues(6.dp)
+                ) {
+                    Icon(
+                        Icons.Filled.Send,
+                        contentDescription = "Send",
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
         }
-    }
     }
 }
 

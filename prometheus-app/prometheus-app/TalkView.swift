@@ -9,6 +9,7 @@ final class SpeechService: NSObject, @unchecked Sendable {
     private var request: SFSpeechAudioBufferRecognitionRequest?
     private var task: SFSpeechRecognitionTask?
     private let engine = AVAudioEngine()
+    private var latestTranscript = ""
 
     var onResult: ((String) -> Void)?
     var onError: ((String) -> Void)?
@@ -25,6 +26,7 @@ final class SpeechService: NSObject, @unchecked Sendable {
     }
 
     func startListening() throws {
+        latestTranscript = ""
         #if !os(macOS)
         let session = AVAudioSession.sharedInstance()
         try session.setCategory(.record, mode: .measurement, options: .duckOthers)
@@ -33,7 +35,7 @@ final class SpeechService: NSObject, @unchecked Sendable {
 
         request = SFSpeechAudioBufferRecognitionRequest()
         guard let request, let recognizer else { return }
-        request.shouldReportPartialResults = false
+        request.shouldReportPartialResults = true
 
         let inputNode = engine.inputNode
         let format = inputNode.outputFormat(forBus: 0)
@@ -42,11 +44,13 @@ final class SpeechService: NSObject, @unchecked Sendable {
         }
 
         task = recognizer.recognitionTask(with: request) { [weak self] result, error in
-            if let result, result.isFinal {
+            guard let self else { return }
+            if let result {
                 let text = result.bestTranscription.formattedString
-                self?.onResult?(text)
+                if !text.isEmpty { self.latestTranscript = text }
+                if result.isFinal { self.onResult?(text) }
             } else if let error {
-                self?.onError?(error.localizedDescription)
+                self.onError?(error.localizedDescription)
             }
         }
 
@@ -54,17 +58,19 @@ final class SpeechService: NSObject, @unchecked Sendable {
         try engine.start()
     }
 
-    // Sets callbacks then stops audio — callbacks fire naturally after endAudio().
+    // Stops audio and waits for the final recognition result.
+    // Falls back to the latest partial transcript if the final result is empty or errors.
     func stopAndAwait(onResult: @escaping (String) -> Void, onError: @escaping () -> Void) {
-        self.onResult = { text in
-            self.onResult = nil
-            self.onError = nil
-            onResult(text)
+        let fallback = latestTranscript
+        self.onResult = { [weak self] text in
+            self?.onResult = nil
+            self?.onError = nil
+            onResult(text.isEmpty ? fallback : text)
         }
-        self.onError = { _ in
-            self.onResult = nil
-            self.onError = nil
-            onError()
+        self.onError = { [weak self] _ in
+            self?.onResult = nil
+            self?.onError = nil
+            if fallback.isEmpty { onError() } else { onResult(fallback) }
         }
         engine.stop()
         if engine.inputNode.numberOfInputs > 0 {
@@ -328,7 +334,8 @@ struct TalkPanel: View {
             }
 
             guard let question = transcribed else {
-                talkState = .idle
+                lastResponse = "Couldn't hear you clearly. Please try again."
+                talkState = .result
                 return
             }
 
@@ -356,7 +363,8 @@ struct TalkPanel: View {
                 let systemPrompt = bmkgCtx.isEmpty
                     ? InferenceManager.generalPrompt
                     : "\(InferenceManager.generalPrompt)\n\n\(bmkgCtx)"
-                response = await inference.sendOneShot(combined, systemPrompt: systemPrompt)
+                let raw = await inference.sendOneShot(combined, systemPrompt: systemPrompt)
+                response = raw.isEmpty ? "No response. Please try again." : raw
             } else {
                 response = visionContext.isEmpty
                     ? "Model not loaded. Download Gemma 4 in the Assistant tab."
