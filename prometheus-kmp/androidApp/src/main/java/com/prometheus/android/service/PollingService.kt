@@ -62,11 +62,11 @@ class PollingService : Service() {
     private fun startController() {
         if (controller != null) return
         controller = BMKGPollingController(this, baseUrlOverride = InjectionSettings.baseUrl).apply {
-            onPoll = { events -> onPoll?.invoke(events) }
-            onNewEvent = { event -> onNewEvent?.invoke(event) }
-            onWeatherUpdate = { weather -> onWeatherUpdate?.invoke(weather) }
-            onNowcastUpdate = { alerts -> onNowcastUpdate?.invoke(alerts) }
-            onBadWeather = { alerts -> onBadWeather?.invoke(alerts) }
+            onPoll = { events -> PollingService.onPoll?.invoke(events) }
+            onNewEvent = { event -> PollingService.onNewEvent?.invoke(event) }
+            onWeatherUpdate = { weather -> PollingService.onWeatherUpdate?.invoke(weather) }
+            onNowcastUpdate = { alerts -> PollingService.onNowcastUpdate?.invoke(alerts) }
+            onBadWeather = { alerts -> PollingService.onBadWeather?.invoke(alerts) }
             start()
         }
     }
