@@ -55,9 +55,24 @@ struct MapView: View {
                             .padding(16)
                     }
 
-                    DisclosureGroup(
-                        isExpanded: $showDetails,
-                        content: {
+                    VStack(spacing: 0) {
+                        Button(action: { withAnimation(.easeInOut(duration: 0.35)) { showDetails.toggle() } }) {
+                            HStack {
+                                Text("ROUTING DETAILS")
+                                    .inter(12, weight: .bold)
+                                    .foregroundColor(.prometheusBlue)
+                                Spacer()
+                                Image(systemName: "chevron.down")
+                                    .font(.caption2.bold())
+                                    .foregroundColor(.prometheusBlue)
+                                    .rotationEffect(.degrees(showDetails ? 180 : 0))
+                                    .animation(.easeInOut(duration: 0.3), value: showDetails)
+                            }
+                            .padding(.vertical, 12)
+                        }
+                        .buttonStyle(.plain)
+
+                        if showDetails {
                             RoutingDetailsCard(
                                 event: pollingService.latestEarthquakeEvent,
                                 userLocation: pollingService.currentLocation,
@@ -66,17 +81,12 @@ struct MapView: View {
                                 evacuationRoute: evacuationRoute,
                                 routeLoading: routeLoading
                             )
+                            .transition(.opacity.combined(with: .move(edge: .top)))
                             .padding(.top, 8)
-                        },
-                        label: {
-                            Text("ROUTING DETAILS")
-                                .font(.caption.bold().monospaced())
-                                .foregroundColor(.prometheusBlue)
                         }
-                    )
+                    }
                     .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                    .tint(.prometheusBlue)
+                    .clipped()
 
                     actionButtonRow
                     .padding(.horizontal, 16)
@@ -134,7 +144,6 @@ struct MapView: View {
         }
     }
 
-    @available(iOS 17.0, *)
     private var actionButtonRow: some View {
         let routeIcon = routeLoading ? "hourglass.circle.fill" : "arrow.triangle.turn.up.right.circle.fill"
         let routeLabel: String = isDangerous ? "EVACUATE NOW" : routeLoading ? "COMPUTING..." : "VIEW ROUTE"
@@ -276,7 +285,7 @@ private struct EvacuationStatusBanner: View {
 
         HStack(spacing: 10) {
             Image(systemName: icon).font(.title3)
-            Text(label).font(.caption.bold().monospaced())
+            Text(label).inter(12, weight: .bold)
             Spacer()
         }
         .padding(12)
@@ -298,7 +307,7 @@ private struct MapPlaceholder: View {
                     .font(.system(size: 52))
                     .foregroundColor(.prometheusBlue.opacity(0.35))
                 Text("Map requires iOS 17+")
-                    .font(.caption.bold().monospaced())
+                    .inter(12, weight: .bold)
                     .foregroundColor(.primary)
             }
         }
@@ -356,7 +365,7 @@ private struct RoutingDetailsCard: View {
                 RouteInfoRow(label: "DISTANCE", value: "\(String(format: "%.1f", r.distanceKm)) km")
                 Divider().background(Color.prometheusBlue.opacity(0.15))
                 Text("ESTIMATED TIME")
-                    .font(.caption2.bold().monospaced())
+                    .inter(11, weight: .bold)
                     .foregroundColor(.secondary)
                     .padding(.vertical, 2)
                 TransportTimeRow(icon: "figure.walk",  label: "Walk",  time: formatTime(r.walkMin))
@@ -392,10 +401,10 @@ private struct TransportTimeRow: View {
             Image(systemName: icon)
                 .font(.caption2).foregroundColor(.secondary).frame(width: 16)
             Text(label)
-                .font(.caption2.monospaced()).foregroundColor(.secondary).frame(width: 48, alignment: .leading)
+                .inter(11).foregroundColor(.secondary).frame(width: 48, alignment: .leading)
             Spacer()
             Text(time)
-                .font(.caption2.bold().monospaced()).foregroundColor(.primary)
+                .inter(11, weight: .bold).foregroundColor(.primary)
         }
     }
 }
@@ -407,11 +416,11 @@ struct RouteInfoRow: View {
     var body: some View {
         HStack(alignment: .top) {
             Text(label)
-                .font(.caption2.monospaced())
+                .inter(11)
                 .foregroundColor(.secondary)
                 .frame(width: 128, alignment: .leading)
             Text(value)
-                .font(.caption.monospaced())
+                .inter(12)
                 .foregroundColor(.primary)
             Spacer()
         }
@@ -422,10 +431,10 @@ private struct EvacuationInfoNote: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("HOW IT WORKS")
-                .font(.caption2.bold().monospaced())
+                .inter(11, weight: .bold)
                 .foregroundColor(.prometheusBlue)
             Text("On a dangerous event, the BMKG epicentre is shown on the map with a danger radius. The blue route line shows the fastest road exit from the danger zone via Google Directions. Follow official BMKG and BNPB instructions.")
-                .font(.caption2.monospaced())
+                .inter(11)
                 .foregroundColor(.secondary)
                 .lineSpacing(4)
         }
@@ -467,7 +476,7 @@ private struct EvacuationGuideSheet: View {
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("CLOSE") { dismiss() }
-                        .font(.caption.bold().monospaced())
+                        .inter(12, weight: .bold)
                         .foregroundColor(.prometheusBlue)
                 }
             }
@@ -481,10 +490,10 @@ private struct EvacuationGuideSheet: View {
             Spacer()
             ProgressView().tint(.prometheusBlue).scaleEffect(1.4)
             Text("COMPUTING EVACUATION ROUTE")
-                .font(.caption.bold().monospaced())
+                .inter(12, weight: .bold)
                 .foregroundColor(.primary)
             Text("Querying Google Directions for the safest exit from the danger zone…")
-                .font(.caption2.monospaced())
+                .inter(11)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
@@ -499,10 +508,10 @@ private struct EvacuationGuideSheet: View {
                 .font(.system(size: 44))
                 .foregroundColor(.orange)
             Text("NO ROUTE AVAILABLE")
-                .font(.caption.bold().monospaced())
+                .inter(12, weight: .bold)
                 .foregroundColor(.primary)
             Text("Route data requires an active earthquake event with a known location and your current GPS position.")
-                .font(.caption2.monospaced())
+                .inter(11)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
@@ -520,7 +529,7 @@ private struct EvacuationGuideSheet: View {
                     HStack(spacing: 8) {
                         Image(systemName: "map.fill").font(.body)
                         Text("OPEN NAVIGATION IN APPLE MAPS")
-                            .font(.caption.bold().monospaced())
+                            .inter(12, weight: .bold)
                     }
                     .frame(maxWidth: .infinity)
                     .padding()
@@ -533,7 +542,7 @@ private struct EvacuationGuideSheet: View {
 
                 if !route.steps.isEmpty {
                     Text("TURN-BY-TURN DIRECTIONS")
-                        .font(.caption2.bold().monospaced())
+                        .inter(11, weight: .bold)
                         .foregroundColor(.prometheusBlue)
                         .padding(.top, 4)
                     ForEach(Array(route.steps.enumerated()), id: \.offset) { idx, step in
@@ -568,10 +577,10 @@ private struct EvacuationGuideSheet: View {
         return HStack(spacing: 10) {
             Image(systemName: icon).font(.title3)
             VStack(alignment: .leading, spacing: 2) {
-                Text(label).font(.caption.bold().monospaced())
+                Text(label).inter(12, weight: .bold)
                 if let e = event, let mag = e.magnitudeValue {
                     Text("M\(String(format: "%.1f", mag))  ·  \(e.Wilayah ?? "Unknown location")")
-                        .font(.caption2.monospaced())
+                        .inter(11)
                         .foregroundColor(color.opacity(0.8))
                 }
             }
@@ -595,14 +604,14 @@ private struct EvacuationGuideSheet: View {
         return VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Text("ROUTE DISTANCE")
-                    .font(.caption2.monospaced()).foregroundColor(.secondary)
+                    .inter(11).foregroundColor(.secondary)
                 Spacer()
                 Text("\(String(format: "%.1f", route.distanceKm)) km")
-                    .font(.caption.bold().monospaced()).foregroundColor(.prometheusBlue)
+                    .inter(12, weight: .bold).foregroundColor(.prometheusBlue)
             }
             Divider().background(Color.prometheusBlue.opacity(0.15))
             Text("ESTIMATED TRAVEL TIME")
-                .font(.caption2.bold().monospaced()).foregroundColor(.secondary)
+                .inter(11, weight: .bold).foregroundColor(.secondary)
             HStack(spacing: 0) {
                 TimeCell(icon: "figure.walk",  label: "Walk",  time: fmt(route.walkMin))
                 TimeCell(icon: "figure.run",   label: "Run",   time: fmt(route.runMin))
@@ -619,7 +628,7 @@ private struct EvacuationGuideSheet: View {
 
     private var disclaimer: some View {
         Text("Route computed by Google Directions API for driving. Follow official BMKG and BNPB instructions in a real emergency. Road conditions may differ.")
-            .font(.caption2.monospaced())
+            .inter(11)
             .foregroundColor(.secondary)
             .lineSpacing(4)
             .padding()
@@ -639,9 +648,9 @@ private struct TimeCell: View {
             Image(systemName: icon)
                 .font(.caption).foregroundColor(.prometheusBlue.opacity(0.7))
             Text(label)
-                .font(.caption2.monospaced()).foregroundColor(.secondary)
+                .inter(11).foregroundColor(.secondary)
             Text(time)
-                .font(.caption2.bold().monospaced()).foregroundColor(.primary)
+                .inter(11, weight: .bold).foregroundColor(.primary)
         }
         .frame(maxWidth: .infinity)
     }
@@ -656,11 +665,11 @@ private struct TurnStepRow: View {
             ZStack {
                 Circle().fill(Color.prometheusBlue.opacity(0.15)).frame(width: 28, height: 28)
                 Text("\(number)")
-                    .font(.caption2.bold().monospaced())
+                    .inter(11, weight: .bold)
                     .foregroundColor(.prometheusBlue)
             }
             Text(instruction)
-                .font(.caption.monospaced())
+                .inter(12)
                 .foregroundColor(.primary)
                 .fixedSize(horizontal: false, vertical: true)
             Spacer()
