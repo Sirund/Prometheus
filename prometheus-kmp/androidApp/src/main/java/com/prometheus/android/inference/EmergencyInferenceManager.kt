@@ -22,7 +22,7 @@ class EmergencyInferenceManager {
         return withContext(Dispatchers.IO) {
             try {
                 val prompt = buildEmergencyPrompt(event)
-                val conversation = ModelManager.createConversation(SystemPrompts.EMERGENCY_BRIEFING)
+                val conversation = ModelManager.createConversation(SystemPrompts.EMERGENCY_COORDINATOR)
                     ?: return@withContext EmergencyBriefingFormatter.buildBriefingText(event)
                 val stream = conversation.sendMessageAsync(
                     Contents.of(listOf(Content.Text(prompt)))
@@ -42,7 +42,7 @@ class EmergencyInferenceManager {
 
     private fun buildEmergencyPrompt(event: EarthquakeEvent): String {
         val summary = EmergencyBriefingFormatter.formatEventSummary(event)
-        return "${SystemPrompts.EMERGENCY_BRIEFING}\n\n$summary"
+        return "${SystemPrompts.EMERGENCY_COORDINATOR}\n\n$summary"
     }
 
     fun shutdown() {

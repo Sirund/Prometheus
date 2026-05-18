@@ -20,6 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
@@ -199,31 +200,32 @@ fun MonitorScreen(
                                 data = Uri.parse("tel:112")
                             }
                             context.startActivity(intent)
-                        }
+                        },
+                    elevated = true
                 ) {
                     Row(
-                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                        modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center
                     ) {
                         Icon(
-                            imageVector = Icons.Filled.Warning,
+                            imageVector = Icons.Filled.Call,
                             contentDescription = "Emergency",
-                            tint = p.danger,
-                            modifier = Modifier.size(28.dp)
+                            tint = p.blue,
+                            modifier = Modifier.size(48.dp)
                         )
-                        Spacer(Modifier.width(10.dp))
+                        Spacer(Modifier.width(12.dp))
                         Column {
                             Text(
                                 text = "Layanan Darurat Terpadu",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = p.textPrimary,
+                                style = MaterialTheme.typography.titleMedium,
+                                color = p.blue,
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
                                 text = "112",
-                                style = MaterialTheme.typography.titleLarge,
-                                color = p.danger,
+                                style = MaterialTheme.typography.displayMedium,
+                                color = p.blue,
                                 fontWeight = FontWeight.Bold
                             )
                         }
@@ -237,10 +239,10 @@ fun MonitorScreen(
         EntranceAnimation(visible = true, index = 5) {
             Button(
                 onClick = { onRefresh?.invoke() },
-                modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.small,
+                modifier = Modifier.fillMaxWidth().height(48.dp),
+                shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = p.surfaceElevated,
+                    containerColor = p.blue.copy(alpha = 0.12f),
                     contentColor = p.blue
                 )
             ) {
@@ -283,75 +285,83 @@ private fun HeroEventCard(
     val potentialColor = when {
         potential.contains("berpotensi tsunami", ignoreCase = true) ||
         potential.contains("waspada tsunami", ignoreCase = true) -> p.danger
-        potentialText == "tidak berpotensi tsunami" -> p.success
+        potentialText.contains("tidak berpotensi", ignoreCase = true) ||
+        potentialText.contains("gempa ini", ignoreCase = true) -> p.success
         else -> p.textSecondary
     }
 
-    PrometheusCard(elevated = true) {
-        Row(modifier = Modifier.fillMaxWidth()) {
-            StatColumn(
-                modifier = Modifier.weight(1f),
-                icon = {
-                    Image(
-                        painter = painterResource(R.drawable.magnitude),
-                        contentDescription = "Magnitude",
-                        modifier = Modifier.size(40.dp)
-                    )
-                },
-                value = magnitude.let { if (it.startsWith("M ")) it else "M $it" },
-                label = "MAGNITUDE",
-                valueColor = accentColor
-            )
-            StatColumn(
-                modifier = Modifier.weight(1f),
-                icon = {
-                    Image(
-                        painter = painterResource(R.drawable.depth),
-                        contentDescription = "Depth",
-                        modifier = Modifier.size(40.dp)
-                    )
-                },
-                value = depth,
-                label = "DEPTH",
-                valueColor = p.textPrimary
-            )
-            Column(modifier = Modifier.weight(1f).padding(horizontal = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Image(
-                    painter = painterResource(R.drawable.location),
-                    contentDescription = "Location",
-                    modifier = Modifier.size(40.dp).align(Alignment.CenterHorizontally)
+    Surface(
+        color = p.surfaceElevated,
+        shape = RoundedCornerShape(16.dp),
+        tonalElevation = 4.dp,
+        shadowElevation = 6.dp,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Row(modifier = Modifier.fillMaxWidth()) {
+                StatColumn(
+                    modifier = Modifier.weight(1f),
+                    icon = {
+                        Image(
+                            painter = painterResource(R.drawable.magnitude),
+                            contentDescription = "Magnitude",
+                            modifier = Modifier.size(40.dp)
+                        )
+                    },
+                    value = magnitude.let { if (it.startsWith("M ")) it else "M $it" },
+                    label = "MAGNITUDE",
+                    valueColor = accentColor
                 )
-                Spacer(Modifier.height(2.dp))
-                Text(
-                    text = felt,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = p.textPrimary,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 2,
-                    textAlign = TextAlign.Center
+                StatColumn(
+                    modifier = Modifier.weight(1f),
+                    icon = {
+                        Image(
+                            painter = painterResource(R.drawable.depth),
+                            contentDescription = "Depth",
+                            modifier = Modifier.size(40.dp)
+                        )
+                    },
+                    value = depth,
+                    label = "DEPTH",
+                    valueColor = p.textPrimary
                 )
-                if (latLon != "--") {
+                Column(modifier = Modifier.weight(1f).padding(horizontal = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Image(
+                        painter = painterResource(R.drawable.location),
+                        contentDescription = "Location",
+                        modifier = Modifier.size(40.dp).align(Alignment.CenterHorizontally)
+                    )
                     Spacer(Modifier.height(2.dp))
                     Text(
-                        text = latLon,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = p.textSecondary,
+                        text = felt,
+                        style = MaterialTheme.typography.labelLarge,
+                        color = p.textPrimary,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 2,
                         textAlign = TextAlign.Center
                     )
+                    if (latLon != "--") {
+                        Spacer(Modifier.height(2.dp))
+                        Text(
+                            text = latLon,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = p.textSecondary,
+                            textAlign = TextAlign.Center
+                        )
+                    }
                 }
             }
+            HorizontalDivider(color = p.surfaceElevated)
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = potentialText,
+                style = MaterialTheme.typography.bodyMedium,
+                color = potentialColor,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
         }
-        HorizontalDivider(color = p.surfaceElevated)
-        Spacer(Modifier.height(4.dp))
-        Text(
-            text = potentialText,
-            style = MaterialTheme.typography.bodyMedium,
-            color = potentialColor,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth()
-        )
-
     }
 }
 
@@ -397,7 +407,7 @@ private fun WeatherInfoCard(weather: WeatherInfo) {
                     Image(
                         painter = painterResource(R.drawable.temp),
                         contentDescription = "Temperature",
-                        modifier = Modifier.size(40.dp)
+                        modifier = Modifier.size(32.dp)
                     )
                 },
                 value = "${weather.temperature}\u00B0",
@@ -409,7 +419,7 @@ private fun WeatherInfoCard(weather: WeatherInfo) {
                     Image(
                         painter = painterResource(R.drawable.humidity),
                         contentDescription = "Humidity",
-                        modifier = Modifier.size(40.dp)
+                        modifier = Modifier.size(32.dp)
                     )
                 },
                 value = "${weather.humidity}%",
@@ -421,7 +431,7 @@ private fun WeatherInfoCard(weather: WeatherInfo) {
                     Image(
                         painter = painterResource(R.drawable.wind),
                         contentDescription = "Wind",
-                        modifier = Modifier.size(40.dp)
+                        modifier = Modifier.size(32.dp)
                     )
                 },
                 value = "${weather.windSpeed} km/j",
@@ -444,7 +454,6 @@ private fun RowScope.WeatherStatColumn(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         icon()
-        Spacer(Modifier.height(2.dp))
         Text(
             text = value,
             style = MaterialTheme.typography.labelLarge,
@@ -464,44 +473,69 @@ private fun RowScope.WeatherStatColumn(
 private fun NowcastAlertCard(alert: NowcastAlert) {
     val p = LocalPrometheusColors.current
     val alertColor = if (alert.isBadWeather) p.danger else p.warning
+    val darkRed = Color(0xFFB71C1C)
     PrometheusCard(modifier = Modifier.fillMaxWidth()) {
-        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
-            Icon(
-                imageVector = if (alert.isBadWeather) Icons.Filled.Warning else Icons.Filled.Shield,
-                contentDescription = if (alert.isBadWeather) "Warning" else "Clear",
-                tint = alertColor,
-                modifier = Modifier.size(40.dp)
+        Column {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = if (alert.isBadWeather) Icons.Filled.Warning else Icons.Filled.Shield,
+                    contentDescription = if (alert.isBadWeather) "Warning" else "Clear",
+                    tint = if (alert.isBadWeather) darkRed else alertColor,
+                    modifier = Modifier.size(36.dp)
+                )
+                Spacer(Modifier.width(12.dp))
+                Text(
+                    text = alert.intensity.uppercase(),
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = if (alert.isBadWeather) darkRed else alertColor,
+                )
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            Text(
+                text = "Beresiko ${alert.potential.lowercase().trimEnd('.')}.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = p.textSecondary,
             )
-            Spacer(Modifier.width(10.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                InfoRow(label = "Intensity", value = alert.intensity)
-                InfoRow(label = "Potensi", value = alert.potential)
-                InfoRow(label = "Date", value = alert.alertDate)
-                InfoRow(label = "Time", value = alert.alertTime)
-                InfoRow(label = "Est. completion", value = alert.estimatedEnd)
-                InfoRow(label = "Location", value = alert.provinceName)
-                InfoRow(label = "Area", value = alert.specificLocation)
+
+            Spacer(Modifier.height(8.dp))
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("\uD83D\uDD52", fontSize = 14.sp)
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    text = "${alert.alertDate} \u2022 ${alert.alertTime} \u2014 ${alert.estimatedEnd.removePrefix("~ ")} WIB",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = p.textSecondary,
+                )
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            Surface(
+                color = p.surfaceElevated,
+                shape = RoundedCornerShape(8.dp),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Text(
+                        text = "AFFECTED AREAS - ${alert.provinceName.uppercase()}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = p.textSecondary,
+                    )
+                    if (alert.specificLocation.isNotBlank() && alert.specificLocation != "--") {
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = alert.specificLocation,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = p.textPrimary,
+                        )
+                    }
+                }
             }
         }
-    }
-}
-
-@Composable
-private fun InfoRow(label: String, value: String) {
-    val c = LocalPrometheusColors.current
-    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = c.textSecondary,
-            modifier = Modifier.width(120.dp)
-        )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodySmall,
-            color = c.textPrimary,
-            fontWeight = FontWeight.Medium
-        )
     }
 }
 

@@ -7,14 +7,21 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.DirectionsRun
 import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
@@ -22,20 +29,20 @@ import androidx.compose.material.icons.automirrored.filled.DirectionsBike
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Motorcycle
+import androidx.compose.material.icons.filled.NearMe
 import androidx.compose.material.icons.filled.Public
-import androidx.compose.material.icons.filled.Shield
-import androidx.compose.material.icons.filled.Warning
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.CircleOptions
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
+import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.net.Uri
 import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -52,6 +59,7 @@ import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.Polyline
 import com.google.maps.android.compose.rememberCameraPositionState
+import com.prometheus.android.R
 import com.prometheus.android.service.LocationProvider
 import com.prometheus.android.ui.shared.LoadingOverlay
 import com.prometheus.android.ui.theme.LocalPrometheusColors
@@ -61,6 +69,24 @@ import com.prometheus.model.UserLocation
 import com.prometheus.network.EvacuationRouter
 import com.prometheus.network.EvacuationRoute
 import kotlin.math.*
+
+private fun scaledMarkerIcon(context: android.content.Context, drawableRes: Int, targetDp: Int): com.google.android.gms.maps.model.BitmapDescriptor {
+    val bitmap = BitmapFactory.decodeResource(context.resources, drawableRes)
+    val density = context.resources.displayMetrics.density
+    val targetPx = (targetDp * density).toInt()
+    val scaled = Bitmap.createScaledBitmap(bitmap, targetPx, targetPx, true)
+    return BitmapDescriptorFactory.fromBitmap(scaled)
+}
+
+private val PaleCyan = Color(0xFFE0F2F9)
+private val PaleCyanBorder = Color(0xFFB3E0F2)
+private val BrightBlue = Color(0xFF00BFFF)
+private val PaleGreen = Color(0xFFE5F4E3)
+private val PaleGreenBorder = Color(0xFFC2E5BD)
+private val DarkGreen = Color(0xFF2E7D32)
+private val CardWhite = Color(0xFFFFFFFF)
+private val CardBorder = Color(0xFFE0E0E0)
+private val BodyTextColor = Color(0xFF555555)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -163,10 +189,11 @@ fun MapScreen(
     var evacuationRoute by remember { mutableStateOf<EvacuationRoute?>(null) }
     var routeLoading by remember { mutableStateOf(false) }
     var showDetails by remember { mutableStateOf(false) }
+    val scrollState = rememberScrollState()
 
     val locationPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
-    ) { /* granted or denied — map handles both */ }
+    ) { /* granted or denied */ }
 
     LaunchedEffect(Unit) {
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
@@ -225,85 +252,144 @@ fun MapScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+                .verticalScroll(scrollState)
         ) {
-            EvacuationStatusBanner(isDangerous = isDangerous, severity = highestSev?.severity)
+            TopStatusBanner(isDangerous = isDangerous, severity = highestSev?.severity)
 
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f)
-                    .padding(horizontal = 16.dp)
-                    .padding(top = 8.dp)
+                    .height(280.dp)
             ) {
                 LoadingOverlay(isLoading = routeLoading) {
-                if (mapsAvailable == ConnectionResult.SUCCESS && apiKeyValid) {
-                    val hasLocationPermission = ContextCompat.checkSelfPermission(
-                        context,
-                        Manifest.permission.ACCESS_FINE_LOCATION
-                    ) == PackageManager.PERMISSION_GRANTED || ContextCompat.checkSelfPermission(
-                        context,
-                        Manifest.permission.ACCESS_COARSE_LOCATION
-                    ) == PackageManager.PERMISSION_GRANTED
+                    if (mapsAvailable == ConnectionResult.SUCCESS && apiKeyValid) {
+                        val hasLocationPermission = ContextCompat.checkSelfPermission(
+                            context, Manifest.permission.ACCESS_FINE_LOCATION
+                        ) == PackageManager.PERMISSION_GRANTED || ContextCompat.checkSelfPermission(
+                            context, Manifest.permission.ACCESS_COARSE_LOCATION
+                        ) == PackageManager.PERMISSION_GRANTED
 
-                    GoogleMap(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .border(1.dp, p.surfaceElevated),
-                        cameraPositionState = cameraState,
-                        properties = MapProperties(
-                            isMyLocationEnabled = hasLocationPermission,
-                            mapType = MapType.NORMAL
-                        ),
-                        uiSettings = MapUiSettings(
-                            myLocationButtonEnabled = true,
-                            zoomControlsEnabled = true
-                        ),
-                        onMapClick = { /* no-op */ }
-                    ) {
-                        if (epicenter != null) {
-                            Marker(
-                                state = MarkerState(position = epicenter),
-                                title = "Epicenter",
-                                snippet = event?._wilayah ?: "",
-                                icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)
-                            )
-                        }
+                        val epicenterIcon = remember { scaledMarkerIcon(context, R.drawable.earthquake, 48) }
+                        val userIcon = remember { scaledMarkerIcon(context, R.drawable.location, 40) }
 
-                        if (userLatLng != null) {
-                            Marker(
-                                state = MarkerState(position = userLatLng),
-                                title = "You",
-                                snippet = "Current location",
-                                icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE)
-                            )
+                        GoogleMap(
+                            modifier = Modifier.fillMaxSize(),
+                            cameraPositionState = cameraState,
+                            properties = MapProperties(
+                                isMyLocationEnabled = hasLocationPermission,
+                                mapType = MapType.NORMAL
+                            ),
+                            uiSettings = MapUiSettings(
+                                myLocationButtonEnabled = true,
+                                zoomControlsEnabled = true
+                            ),
+                            onMapClick = { }
+                        ) {
+                            if (epicenter != null) {
+                                Marker(
+                                    state = MarkerState(position = epicenter),
+                                    title = "Epicenter",
+                                    snippet = event?._wilayah ?: "",
+                                    icon = epicenterIcon
+                                )
+                            }
+                            if (userLatLng != null) {
+                                Marker(
+                                    state = MarkerState(position = userLatLng),
+                                    title = "You",
+                                    snippet = "Current location",
+                                    icon = userIcon
+                                )
+                            }
+                            if (epicenter != null && dangerRadiusKm != null) {
+                                val radiusMeters = dangerRadiusKm * 1000.0
+                                Circle(
+                                    center = epicenter,
+                                    radius = radiusMeters,
+                                    fillColor = Color.Red.copy(alpha = 0.15f),
+                                    strokeColor = Color.Red.copy(alpha = 0.5f),
+                                    strokeWidth = 3f
+                                )
+                            }
+                            if (evacuationRoute != null) {
+                                Polyline(
+                                    points = evacuationRoute!!.coordinates.map { LatLng(it.first, it.second) },
+                                    color = BrightBlue,
+                                    width = 6f
+                                )
+                            }
                         }
-
-                        if (epicenter != null && dangerRadiusKm != null) {
-                            val radiusMeters = dangerRadiusKm * 1000.0
-                            Circle(
-                                center = epicenter,
-                                radius = radiusMeters,
-                                fillColor = Color.Red.copy(alpha = 0.15f),
-                                strokeColor = Color.Red.copy(alpha = 0.5f),
-                                strokeWidth = 3f
-                            )
-                        }
-
-                        if (evacuationRoute != null) {
-                            Polyline(
-                                points = evacuationRoute!!.coordinates.map { LatLng(it.first, it.second) },
-                                color = p.blue,
-                                width = 6f
-                            )
-                        }
+                    } else {
+                        MapUnavailableFallback(epicenter)
                     }
-                } else {
-                    MapUnavailableFallback(epicenter)
-                }
                 }
             }
 
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(12.dp))
+
+            if (evacuationRoute != null) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    ActionButton(
+                        modifier = Modifier.weight(1f),
+                        icon = {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(BrightBlue),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.NearMe,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        },
+                        label = "VIEW ROUTE",
+                        bgColor = PaleCyan,
+                        borderColor = PaleCyanBorder,
+                        labelColor = BrightBlue,
+                        onClick = { showDetails = !showDetails }
+                    )
+                    val exitLat = evacuationRoute!!.coordinates.last().first
+                    val exitLon = evacuationRoute!!.coordinates.last().second
+                    ActionButton(
+                        modifier = Modifier.weight(1f),
+                        icon = {
+                            Icon(
+                                imageVector = Icons.Filled.Map,
+                                contentDescription = null,
+                                tint = DarkGreen,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        },
+                        label = "Maps",
+                        bgColor = PaleGreen,
+                        borderColor = PaleGreenBorder,
+                        labelColor = DarkGreen,
+                        onClick = {
+                            val gmmIntentUri = Uri.parse("google.navigation:q=$exitLat,$exitLon")
+                            val mapIntent = Intent(Intent.ACTION_VIEW, gmmIntentUri)
+                            mapIntent.setPackage("com.google.android.apps.maps")
+                            if (mapIntent.resolveActivity(context.packageManager) != null) {
+                                context.startActivity(mapIntent)
+                            } else {
+                                val webIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/maps/dir/?api=1&destination=$exitLat,$exitLon"))
+                                context.startActivity(webIntent)
+                            }
+                        }
+                    )
+                }
+
+                Spacer(Modifier.height(12.dp))
+            }
 
             Box(
                 modifier = Modifier.padding(horizontal = 16.dp)
@@ -312,26 +398,25 @@ fun MapScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(p.surface)
-                            .clickable {
-                                showDetails = !showDetails
-                            }
-                            .padding(horizontal = 20.dp, vertical = 14.dp),
-                        contentAlignment = Alignment.Center
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(PaleCyan)
+                            .border(1.dp, PaleCyanBorder, RoundedCornerShape(12.dp))
+                            .clickable { showDetails = !showDetails }
+                            .padding(horizontal = 16.dp, vertical = 12.dp)
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
                                 text = "ROUTING DETAILS",
-                                color = p.blue,
+                                color = BrightBlue,
                                 style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.Medium
                             )
                             Spacer(Modifier.weight(1f))
                             Icon(
                                 imageVector = if (showDetails) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
                                 contentDescription = if (showDetails) "Collapse" else "Expand",
-                                tint = p.blue,
-                                modifier = Modifier.size(32.dp)
+                                tint = BrightBlue,
+                                modifier = Modifier.size(24.dp)
                             )
                         }
                     }
@@ -361,33 +446,117 @@ fun MapScreen(
                 }
             }
 
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(12.dp))
+
+            Box(
+                modifier = Modifier.padding(horizontal = 16.dp)
+            ) {
+                HowItWorksCard()
+            }
+
+            Spacer(Modifier.height(16.dp))
         }
     }
 }
 
 @Composable
-private fun EvacuationStatusBanner(isDangerous: Boolean, severity: com.prometheus.model.DangerSeverity?) {
-    val p = LocalPrometheusColors.current
-    val icon: ImageVector = if (isDangerous) Icons.Filled.Warning else Icons.Filled.Shield
+private fun TopStatusBanner(isDangerous: Boolean, severity: com.prometheus.model.DangerSeverity?) {
     val label = when {
-        isDangerous -> "EVACUATION ROUTING — ACTIVE"
-        severity == com.prometheus.model.DangerSeverity.MEDIUM -> "MEDIUM ALERT — MONITOR"
-        else -> "EVACUATION ROUTING — STANDBY"
+        isDangerous -> "EVACUATION ROUTING \u2014 ACTIVE"
+        severity == com.prometheus.model.DangerSeverity.MEDIUM -> "MEDIUM ALERT \u2014 MONITOR"
+        else -> "EVACUATION ROUTING \u2014 STANDBY"
     }
-    Row(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .clip(RoundedCornerShape(50))
+            .background(PaleCyan)
+            .border(1.dp, PaleCyanBorder, RoundedCornerShape(50))
+            .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
-        Icon(imageVector = icon, contentDescription = if (isDangerous) "Warning" else "Safe", modifier = Modifier.size(28.dp), tint = if (isDangerous) p.danger else p.success)
-        Spacer(Modifier.width(10.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .clip(CircleShape)
+                    .background(BrightBlue),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.NearMe,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+            Spacer(Modifier.width(10.dp))
+            Text(
+                text = label,
+                color = BrightBlue,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Medium
+            )
+        }
+    }
+}
+
+@Composable
+private fun ActionButton(
+    modifier: Modifier = Modifier,
+    icon: @Composable () -> Unit,
+    label: String,
+    bgColor: Color,
+    borderColor: Color,
+    labelColor: Color,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(10.dp))
+            .background(bgColor)
+            .border(1.dp, borderColor, RoundedCornerShape(10.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 12.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            icon()
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                color = labelColor
+            )
+        }
+    }
+}
+
+@Composable
+private fun HowItWorksCard() {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .background(CardWhite)
+            .border(1.dp, CardBorder, RoundedCornerShape(10.dp))
+            .padding(16.dp)
+    ) {
         Text(
-            text = label,
-            color = p.textPrimary,
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.Black
+            text = "HOW IT WORKS",
+            style = MaterialTheme.typography.labelMedium,
+            color = BrightBlue,
+            fontWeight = FontWeight.Medium
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            text = "On a dangerous event, the BMKG epicentre is shown on the map with a danger radius. " +
+                    "The blue route line shows the fastest road exit from the danger zone via Google Directions. " +
+                    "Follow official BMKG and BNPB instructions.",
+            style = MaterialTheme.typography.bodySmall,
+            color = BodyTextColor,
+            lineHeight = MaterialTheme.typography.bodySmall.lineHeight
         )
     }
 }
@@ -407,8 +576,10 @@ private fun RoutingDetailsCard(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(p.surface)
-            .padding(20.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .background(CardWhite)
+            .border(1.dp, CardBorder, RoundedCornerShape(10.dp))
+            .padding(16.dp)
     ) {
         val epicenterStr = buildString {
             val loc = event?._wilayah ?: "No event"
@@ -427,7 +598,6 @@ private fun RoutingDetailsCard(
             "Evacuate ${evacDirection.second} (${"%.0f".format(evacDirection.first)}° from epicenter)"
         } else if (isDangerous && routeLoading) "Calculating..." else if (isDangerous) "Pending..." else "No active event"
         val magStr = event?.magnitudeValue?.let { "M ${"%.1f".format(it)}" } ?: "--"
-        val depthStr = event?._kedalaman ?: "--"
 
         RouteInfoRow(label = "RULE", value = ruleNameStr)
         HorizontalDivider(color = p.surfaceElevated)
@@ -440,6 +610,7 @@ private fun RoutingDetailsCard(
         RouteInfoRow(label = "DIRECTION", value = dirStr)
         HorizontalDivider(color = p.surfaceElevated)
         RouteInfoRow(label = "DISTANCE", value = if (evacuationRoute != null) "${"%.1f".format(evacuationRoute.distanceKm)} km" else if (isDangerous && !routeLoading) "Unavailable" else "--")
+
         if (evacuationRoute != null) {
             HorizontalDivider(color = p.surfaceElevated)
             Text(
@@ -453,6 +624,34 @@ private fun RoutingDetailsCard(
             TransportTimeRow(icon = { Icon(Icons.AutoMirrored.Filled.DirectionsBike, contentDescription = "Cycle", modifier = Modifier.size(20.dp)) }, label = "Cycle", minutes = evacuationRoute.cycleMin)
             TransportTimeRow(icon = { Icon(Icons.Filled.Motorcycle, contentDescription = "Motor", modifier = Modifier.size(20.dp)) }, label = "Motor", minutes = evacuationRoute.motorMin)
             TransportTimeRow(icon = { Icon(Icons.Filled.DirectionsCar, contentDescription = "Car", modifier = Modifier.size(20.dp)) }, label = "Car", minutes = evacuationRoute.durationMin)
+
+            if (evacuationRoute.steps.isNotEmpty()) {
+                HorizontalDivider(color = p.surfaceElevated, modifier = Modifier.padding(vertical = 4.dp))
+                Text(
+                    text = "TURN BY TURN",
+                    color = p.textSecondary,
+                    style = MaterialTheme.typography.labelSmall,
+                    modifier = Modifier.padding(bottom = 4.dp)
+                )
+                evacuationRoute.steps.forEachIndexed { index, step ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Text(
+                            text = "${index + 1}.",
+                            color = p.textSecondary,
+                            style = MaterialTheme.typography.labelSmall,
+                            modifier = Modifier.width(24.dp)
+                        )
+                        Text(
+                            text = step,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = p.textPrimary
+                        )
+                    }
+                }
+            }
         }
     }
 }

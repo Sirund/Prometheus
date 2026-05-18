@@ -82,11 +82,12 @@ struct MonitorView: View {
                             }
                             .frame(maxWidth: .infinity)
                             .padding()
-                            .background(Color.prometheusBlue.opacity(0.15))
-                            .overlay(Rectangle().stroke(Color.prometheusBlue.opacity(0.5), lineWidth: 1))
+                            .background(Color.prometheusBlue.opacity(0.2))
+                            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.prometheusBlue, lineWidth: 1))
                             .foregroundColor(.prometheusBlue)
                         }
                         .buttonStyle(.plain)
+                        .cornerRadius(10)
 
                         SectionHeader(title: "LOCAL INJECTION")
                         InjectionStatusCard(
@@ -137,6 +138,15 @@ struct BMKGEventCard: View {
     let potential: String
     let timestamp: String
 
+    private var potentialColor: Color {
+        if potential.lowercased().contains("berpotensi tsunami") || potential.lowercased().contains("waspada tsunami") {
+            return .red
+        } else if potential.lowercased().contains("tidak berpotensi") || potential.lowercased().contains("gempa ini") {
+            return .success
+        }
+        return .gray
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 0) {
@@ -168,7 +178,9 @@ struct BMKGEventCard: View {
                 .frame(maxWidth: .infinity)
             }
             Divider().background(Color.prometheusBlue.opacity(0.3))
-            Text(potential).inter(11).foregroundColor(.gray)
+            Text(potential)
+                .inter(11, weight: .bold)
+                .foregroundColor(potentialColor)
             Divider().background(Color.prometheusBlue.opacity(0.3))
             Text(location).inter(11).foregroundColor(.gray)
             if !timestamp.isEmpty {
@@ -181,8 +193,9 @@ struct BMKGEventCard: View {
             }
         }
         .padding()
-        .background(Color.cardBackground)
-        .overlay(Rectangle().stroke(Color.prometheusBlue.opacity(0.3), lineWidth: 1))
+        .background(Color.surfaceElevated)
+        .overlay(Rectangle().stroke(Color.prometheusBlue.opacity(0.5), lineWidth: 1))
+        .shadow(color: .black.opacity(0.3), radius: 6, x: 0, y: 3)
     }
 }
 
@@ -231,14 +244,15 @@ struct WeatherStatColumn: View {
     let label: String
 
     var body: some View {
-        VStack(spacing: 2) {
-            Text(icon).font(.title3)
+        VStack(spacing: 0) {
+            Text(icon).font(.callout)
             Text(value)
                 .inter(12, weight: .bold)
                 .foregroundColor(.white)
             Text(label)
                 .inter(11)
                 .foregroundColor(.gray)
+                .padding(.top, 2)
         }
         .frame(maxWidth: .infinity)
     }
@@ -246,31 +260,48 @@ struct WeatherStatColumn: View {
 
 struct NowcastAlertCard: View {
     let alert: shared.NowcastAlert
-    @State private var expanded = false
 
     var body: some View {
-        HStack(spacing: 10) {
-            Text(alert.isBadWeather ? "\u{26A0}\u{FE0F}" : "\u{1F6E1}\u{FE0F}")
-                .font(.title3)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(alert.eventType)
-                    .inter(12, weight: .bold)
-                    .foregroundColor(alert.isBadWeather ? .red : .orange)
-                Text(alert.summary)
-                    .inter(11)
-                    .foregroundColor(.gray)
-                    .lineLimit(expanded ? nil : 2)
-                Text(expanded ? "\u{25B2} Tap to collapse" : "\u{25BC} Tap to expand")
-                    .inter(11)
-                    .foregroundColor(.gray)
-                    .padding(.top, 2)
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 12) {
+                Text(alert.isBadWeather ? "\u{26A0}\u{FE0F}" : "\u{1F6E1}\u{FE0F}")
+                    .font(.title)
+                Text(alert.intensity.uppercased())
+                    .inter(22, weight: .bold)
+                    .foregroundColor(alert.isBadWeather ? Color(red: 0.72, green: 0.11, blue: 0.11) : .orange)
             }
+
+            Text("Beresiko \(alert.potential.lowercased().trimmingCharacters(in: .punctuation)).")
+                .inter(14)
+                .foregroundColor(.textSecondary)
+
+            HStack(spacing: 6) {
+                Text("\u{1F552}")
+                    .font(.caption)
+                Text("\(alert.alertDate) \u{2022} \(alert.alertTime) \u{2014} \(alert.estimatedEnd.replacingOccurrences(of: "~ ", with: "")) WIB")
+                    .inter(12)
+                    .foregroundColor(.textSecondary)
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("AFFECTED AREAS - \(alert.provinceName.uppercased())")
+                    .inter(10, weight: .bold)
+                    .foregroundColor(.textSecondary)
+                if !alert.specificLocation.isEmpty && alert.specificLocation != "--" {
+                    Text(alert.specificLocation)
+                        .inter(12)
+                        .foregroundColor(.textPrimary)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(12)
+            .background(Color.surfaceElevated)
+            .cornerRadius(8)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
         .background(Color.cardBackground)
         .overlay(Rectangle().stroke(Color.prometheusBlue.opacity(0.3), lineWidth: 1))
-        .onTapGesture { expanded.toggle() }
     }
 }
 

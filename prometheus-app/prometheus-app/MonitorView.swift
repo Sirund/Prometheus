@@ -80,9 +80,9 @@ struct MonitorView: View {
                             }
                             .frame(maxWidth: .infinity)
                             .padding()
-                            .background(Color.prometheusBlue.opacity(0.15))
+                            .background(Color.prometheusBlue.opacity(0.2))
                             .clipShape(RoundedRectangle(cornerRadius: 12))
-                            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.prometheusBlue.opacity(0.5), lineWidth: 1))
+                            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.prometheusBlue, lineWidth: 1))
                             .foregroundColor(.prometheusBlue)
                         }
                         .buttonStyle(.plain)
@@ -387,11 +387,11 @@ private struct WeatherStatColumn: View {
     let label: String
 
     var body: some View {
-        VStack(spacing: 4) {
+        VStack(spacing: 2) {
             Image(systemName: icon)
-                .font(.title2)
+                .font(.callout)
                 .foregroundColor(.prometheusBlue.opacity(0.7))
-                .frame(height: 36)
+                .frame(height: 28)
             Text(value)
                 .inter(14, weight: .bold)
                 .foregroundColor(.primary)
@@ -400,7 +400,7 @@ private struct WeatherStatColumn: View {
                 .foregroundColor(.secondary)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 4)
+        .padding(.vertical, 2)
     }
 }
 

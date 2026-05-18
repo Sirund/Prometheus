@@ -72,6 +72,8 @@ import com.prometheus.android.ui.vision.CameraActions
 import com.prometheus.android.ui.vision.CameraFrame
 import com.prometheus.model.ChatMessage
 import com.prometheus.model.EarthquakeEvent
+import com.prometheus.model.NowcastAlert
+import com.prometheus.model.UserLocation
 import com.prometheus.prompt.SystemPrompts
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.Dispatchers
@@ -92,7 +94,9 @@ fun AskScreen(
     conversationManager: ConversationManager?,
     onConversationsChange: (List<ConversationData>) -> Unit,
     onActiveIndexChange: (Int) -> Unit,
-    currentEvent: EarthquakeEvent? = null
+    currentEvent: EarthquakeEvent? = null,
+    nowcastAlerts: List<NowcastAlert> = emptyList(),
+    userLocation: UserLocation? = null
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -241,6 +245,26 @@ fun AskScreen(
         }
     }
 
+    fun isCasual(text: String): Boolean {
+        if (text.length > 120) return false
+        val casual = Regex("(?i).*(halo|hai|hi|hey|apa kabar|hello|good morning|pagi|siang|sore|malam|selamat|terima kasih|thank|thanks|bye|dadah|siapa kamu|apa yang bisa kamu|bisa bantu|tanya dong|prometheus).*")
+        return text.matches(casual)
+    }
+
+    fun selectPersona(isCrisis: Boolean, hasImage: Boolean, text: String): String = when {
+        isCrisis && hasImage -> SystemPrompts.HAZARD_SCANNER
+        isCrisis && !hasImage -> SystemPrompts.EMERGENCY_COORDINATOR
+        !isCrisis && isCasual(text) -> SystemPrompts.CASUAL_GATEKEEPER
+        else -> SystemPrompts.MITIGATION_ANALYST
+    }
+
+    fun buildSysPrompt(event: EarthquakeEvent?, alerts: List<NowcastAlert>, location: UserLocation?, hasImage: Boolean, text: String): String {
+        val ctx = SystemPrompts.buildSituationContext(event, alerts, location)
+        val isCrisis = ctx.isNotBlank()
+        val persona = selectPersona(isCrisis, hasImage, text)
+        return if (ctx.isNotBlank()) "$ctx\n\n$persona" else persona
+    }
+
     // ──────────────────────────────────────────────────────────
     // CHAT: image send helper
     // ──────────────────────────────────────────────────────────
@@ -273,9 +297,7 @@ fun AskScreen(
                 onConversationsChange(currentList)
             }
 
-            val bmkgCtx = SystemPrompts.buildBmkgContext(currentEvent)
-            val sysPrompt = if (bmkgCtx.isNotBlank()) "$bmkgCtx\n\n${SystemPrompts.GENERAL_PROMPT}"
-                            else SystemPrompts.GENERAL_PROMPT
+            val sysPrompt = buildSysPrompt(currentEvent, nowcastAlerts, userLocation, savedPath != null, userText)
 
             manager.sendMessage(userText, history, sysPrompt, savedPath) { text ->
                 currentList = currentList.toMutableList()
@@ -513,9 +535,7 @@ fun AskScreen(
                                     localConversations = currentList
                                     onConversationsChange(currentList)
 
-                                    val bmkgCtx = SystemPrompts.buildBmkgContext(currentEvent)
-                                    val sysPrompt = if (bmkgCtx.isNotBlank()) "$bmkgCtx\n\n${SystemPrompts.GENERAL_PROMPT}"
-                                                    else SystemPrompts.GENERAL_PROMPT
+                                    val sysPrompt = buildSysPrompt(currentEvent, nowcastAlerts, userLocation, savedPath != null, text)
                                     var isSpeaking = false
                                     manager.sendMessage(
                                         text = text,
