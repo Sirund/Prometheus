@@ -20,6 +20,37 @@ data class NowcastAlert(
     val summary: String
         get() = description.ifBlank { title }
 
+    val intensity: String
+        get() {
+            val regex = Regex("intensitas\\s+(\\d+)\\s*mm/jam", RegexOption.IGNORE_CASE)
+            return regex.find(description)?.groupValues?.getOrNull(1)?.let { "$it mm/jam" }
+                ?: eventType.replaceFirstChar { it.uppercase() }
+        }
+
+    val alertDate: String
+        get() {
+            val regex = Regex("\\d{1,2}\\s+\\w+\\s+\\d{4}")
+            return regex.find(pubDate)?.value
+                ?: regex.find(description)?.value
+                ?: pubDate.take(16)
+        }
+
+    val alertTime: String
+        get() {
+            val pubRegex = Regex("\\d{2}:\\d{2}:\\d{2}")
+            val pubTime = pubRegex.find(pubDate)?.value?.dropLast(3)
+            if (pubTime != null) return pubTime
+            val descRegex = Regex("pukul\\s+(\\d{2}\\.\\d{2}|\\d{2}:\\d{2})")
+            return descRegex.find(description)?.groupValues?.getOrNull(1)?.replace(".", ":") ?: "--"
+        }
+
+    val estimatedEnd: String
+        get() {
+            val regex = Regex("(?:hingga|sampai|berlangsung\\s+hingga|berlangsung\\s+sampai)\\s*(?:pukul\\s+)?(\\d{2}[.:]\\d{2})", RegexOption.IGNORE_CASE)
+            return regex.find(description)?.groupValues?.getOrNull(1)?.replace(".", ":")?.let { "~ $it" }
+                ?: "--"
+        }
+
     val provinceName: String
         get() = extractProvince(title)
 

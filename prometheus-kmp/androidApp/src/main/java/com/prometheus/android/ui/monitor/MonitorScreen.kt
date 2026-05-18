@@ -413,45 +413,42 @@ private fun RowScope.WeatherStatColumn(
 private fun NowcastAlertCard(alert: NowcastAlert) {
     val p = LocalPrometheusColors.current
     val alertColor = if (alert.isBadWeather) p.danger else p.warning
-    var expanded by remember { mutableStateOf(false) }
-    PrometheusCard(modifier = Modifier.fillMaxWidth().clickable { expanded = !expanded }) {
+    PrometheusCard(modifier = Modifier.fillMaxWidth()) {
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
             Icon(
                 imageVector = if (alert.isBadWeather) Icons.Filled.Warning else Icons.Filled.Shield,
                 contentDescription = if (alert.isBadWeather) "Warning" else "Clear",
+                tint = alertColor,
                 modifier = Modifier.size(40.dp)
             )
             Spacer(Modifier.width(10.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = alert.eventType,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = alertColor,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = alert.summary,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = p.textSecondary,
-                    maxLines = if (expanded) Int.MAX_VALUE else 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
-                        contentDescription = if (expanded) "Collapse" else "Expand",
-                        modifier = Modifier.size(24.dp),
-                        tint = p.textSecondary
-                    )
-                    Spacer(Modifier.width(4.dp))
-                    Text(
-                        text = if (expanded) "Tap to collapse" else "Tap to expand",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = p.textSecondary
-                    )
-                }
+                InfoRow(label = "Intensity", value = alert.intensity)
+                InfoRow(label = "Date", value = alert.alertDate)
+                InfoRow(label = "Time", value = alert.alertTime)
+                InfoRow(label = "Est. completion", value = alert.estimatedEnd)
+                InfoRow(label = "Location", value = alert.provinceName)
             }
         }
+    }
+}
+
+@Composable
+private fun InfoRow(label: String, value: String) {
+    val c = LocalPrometheusColors.current
+    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = c.textSecondary,
+            modifier = Modifier.width(120.dp)
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodySmall,
+            color = c.textPrimary,
+            fontWeight = FontWeight.Medium
+        )
     }
 }
 
