@@ -19,7 +19,7 @@ class ConversationManager {
     suspend fun sendMessage(
         text: String,
         history: List<ChatMessage> = emptyList(),
-        systemPrompt: String = SystemPrompts.SURVIVAL_CHATBOT,
+        systemPrompt: String = SystemPrompts.MITIGATION_ANALYST,
         imagePath: String? = null,
         onToken: (String) -> Unit
     ) = withContext(Dispatchers.IO) {

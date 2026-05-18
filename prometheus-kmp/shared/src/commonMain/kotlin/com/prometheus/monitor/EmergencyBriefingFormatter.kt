@@ -26,7 +26,7 @@ object EmergencyBriefingFormatter {
 
     fun buildEmergencyPrompt(event: EarthquakeEvent): String {
         val summary = formatEventSummary(event)
-        return "${SystemPrompts.EMERGENCY_BRIEFING}\n\n$summary"
+        return "${SystemPrompts.EMERGENCY_COORDINATOR}\n\n$summary"
     }
 
     fun buildBriefingText(event: EarthquakeEvent): String {

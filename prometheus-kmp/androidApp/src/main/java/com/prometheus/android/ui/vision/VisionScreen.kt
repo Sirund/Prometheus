@@ -257,9 +257,9 @@ fun VisionScreen(
                             localConversations = currentList
                             onConversationsChange(currentList)
 
-                            val bmkgCtx = SystemPrompts.buildBmkgContext(currentEvent)
-                            val sysPrompt = if (bmkgCtx.isNotBlank()) "$bmkgCtx\n\n${SystemPrompts.GENERAL_PROMPT}"
-                                            else SystemPrompts.GENERAL_PROMPT
+                            val bmkgCtx = SystemPrompts.buildSituationContext(currentEvent, emptyList(), null)
+                            val sysPrompt = if (bmkgCtx.isNotBlank()) "$bmkgCtx\n\n${SystemPrompts.MITIGATION_ANALYST}"
+                                            else SystemPrompts.MITIGATION_ANALYST
                             var isSpeaking = false
                             manager.sendMessage(
                                 text = text,
