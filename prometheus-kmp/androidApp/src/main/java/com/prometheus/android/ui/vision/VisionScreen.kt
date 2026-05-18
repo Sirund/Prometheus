@@ -186,11 +186,11 @@ fun VisionScreen(
                     .offset(y = (-100).dp)
                     .size(72.dp),
                 onPress = {
-                    if (talkMode == TalkMode.Idle) {
+                    if (talkMode == TalkMode.Idle || talkMode == TalkMode.Result) {
+                        description = null
                         pendingSttResult = null
                         pendingSttError = null
                         talkMode = TalkMode.Recording
-                        description = "Listening..."
                         sttManager.startListening(
                             onResult = { text -> pendingSttResult = text },
                             onError = { error -> pendingSttError = error }
@@ -201,7 +201,6 @@ fun VisionScreen(
                     if (talkMode == TalkMode.Recording) {
                         sttManager.stop()
                         talkMode = TalkMode.Transcribing
-                        description = "Transcribing voice..."
                         scope.launch {
                             // Poll for STT result (max 5s) — STTManager no longer destroys, callbacks fire naturally
                             var text: String? = null
@@ -214,7 +213,6 @@ fun VisionScreen(
                                 delay(100)
                             }
                             if (text == null || text.isEmpty()) {
-                                description = "No speech detected"
                                 talkMode = TalkMode.Idle
                                 return@launch
                             }
@@ -233,7 +231,6 @@ fun VisionScreen(
                             capturedImage = bmp
                             freezeBitmap = bmp
                             talkMode = TalkMode.Sending
-                            description = "Analyzing..."
                             delay(1200)
 
                             // Save image to permanent storage
@@ -284,16 +281,56 @@ fun VisionScreen(
                                 isSpeaking = false
                             }
 
+                            talkMode = TalkMode.Idle
                             capturedImage = null
                             freezeBitmap = null
-                            talkMode = TalkMode.Idle
-                            description = null
                         }
                     }
                 }
             )
 
-            // --- Status box (bottom) — clickable(false) blocks gesture pass-through ---
+            // --- Process info (above mic button, on screen) ---
+            when (talkMode) {
+                TalkMode.Idle -> Text(
+                    text = "Hold to Speak",
+                    color = p.textSecondary,
+                    style = MaterialTheme.typography.labelSmall,
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .offset(y = (-190).dp)
+                )
+                TalkMode.Transcribing -> Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .offset(y = (-190).dp)
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(14.dp),
+                        strokeWidth = 2.dp,
+                        color = p.blue
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text("Transcribing the audio...", color = p.blue, style = MaterialTheme.typography.labelSmall)
+                }
+                TalkMode.Sending -> Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .offset(y = (-190).dp)
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(14.dp),
+                        strokeWidth = 2.dp,
+                        color = p.blue
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text("Analyzing the input...", color = p.blue, style = MaterialTheme.typography.labelSmall)
+                }
+                else -> {}
+            }
+
+            // --- Response box (bottom) — only shows content, not process info ---
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
@@ -307,43 +344,22 @@ fun VisionScreen(
             ) {
                 when (talkMode) {
                     TalkMode.Idle -> Text(
-                        text = description ?: "Hold mic to ask",
+                        text = description ?: "Say something",
+                        color = if (description != null) Color.White else p.textSecondary,
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = if (description != null) 3 else 1
+                    )
+                    TalkMode.Recording -> Text(
+                        text = "...",
                         color = p.textSecondary,
                         style = MaterialTheme.typography.bodySmall
                     )
-                    TalkMode.Recording -> Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.align(Alignment.Center)
-                    ) {
-                        Text("\uD83C\uDF99\uFE0F", style = MaterialTheme.typography.bodyMedium)
-                        Spacer(Modifier.width(8.dp))
-                        Text("Listening...", color = p.blue, fontWeight = FontWeight.Bold)
-                    }
-                    TalkMode.Transcribing -> Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.align(Alignment.Center)
-                    ) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(16.dp),
-                            strokeWidth = 2.dp,
-                            color = p.blue
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Text("Transcribing voice...", color = p.textSecondary)
-                    }
-                    TalkMode.Sending -> Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.align(Alignment.Center)
-                    ) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(16.dp),
-                            strokeWidth = 2.dp,
-                            color = p.blue
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Text("Analyzing...", color = p.textSecondary)
-                    }
-                    TalkMode.Result -> Text(
+                    TalkMode.Transcribing -> Text(
+                        text = pendingSttResult ?: "...",
+                        color = p.blue,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    TalkMode.Sending, TalkMode.Result -> Text(
                         text = description ?: "",
                         color = Color.White,
                         style = MaterialTheme.typography.bodySmall,

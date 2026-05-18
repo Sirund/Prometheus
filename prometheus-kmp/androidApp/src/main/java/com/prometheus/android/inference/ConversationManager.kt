@@ -28,18 +28,18 @@ class ConversationManager {
             return@withContext
         }
         try {
-            val prompt = buildString {
+            val historyPrompt = buildString {
                 for (msg in history.takeLast(6)) {
                     val role = if (msg.isUser) "User" else "Assistant"
                     appendLine("$role: ${msg.text}")
                 }
-                appendLine("User: $text")
-                append("Assistant:")
             }
 
-            Log.d(TAG, "=== PROMPT ===")
-            Log.d(TAG, prompt)
-            Log.d(TAG, "=== END PROMPT ===")
+            Log.d(TAG, "=== HISTORY PROMPT ===")
+            Log.d(TAG, historyPrompt)
+            Log.d(TAG, "=== END HISTORY ===")
+            if (imagePath != null) Log.d(TAG, "IMAGE: $imagePath")
+            Log.d(TAG, "QUERY: $text")
 
             try { conversation?.close() } catch (_: Exception) {}
             val conv = ModelManager.createConversation(systemPrompt)
@@ -50,10 +50,11 @@ class ConversationManager {
             conversation = conv
 
             val contentsList = mutableListOf<Content>()
+            contentsList.add(Content.Text(historyPrompt))
             if (imagePath != null) {
                 contentsList.add(Content.ImageFile(imagePath))
             }
-            contentsList.add(Content.Text(prompt))
+            contentsList.add(Content.Text("User: $text\nAssistant:"))
             val contents = Contents.of(contentsList)
 
             val response = StringBuilder()
