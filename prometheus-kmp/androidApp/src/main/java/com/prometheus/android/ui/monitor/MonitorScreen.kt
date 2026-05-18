@@ -14,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -256,11 +257,11 @@ private fun HeroEventCard(
                 label = "DEPTH",
                 valueColor = p.textPrimary
             )
-            Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+            Column(modifier = Modifier.weight(1f).padding(horizontal = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Image(
                     painter = painterResource(R.drawable.location),
                     contentDescription = "Location",
-                    modifier = Modifier.size(32.dp)
+                    modifier = Modifier.size(32.dp).align(Alignment.CenterHorizontally)
                 )
                 Spacer(Modifier.height(2.dp))
                 Text(
@@ -268,14 +269,16 @@ private fun HeroEventCard(
                     style = MaterialTheme.typography.labelLarge,
                     color = p.textPrimary,
                     fontWeight = FontWeight.Bold,
-                    maxLines = 2
+                    maxLines = 2,
+                    textAlign = TextAlign.Center
                 )
                 if (latLon != "--") {
                     Spacer(Modifier.height(2.dp))
                     Text(
                         text = latLon,
                         style = MaterialTheme.typography.labelSmall,
-                        color = p.textSecondary
+                        color = p.textSecondary,
+                        textAlign = TextAlign.Center
                     )
                 }
             }
@@ -474,7 +477,7 @@ private fun NowcastClearCard() {
             )
             Spacer(Modifier.width(10.dp))
             Text(
-                text = "Cuaca baik \u2014 Tidak ada peringatan",
+                text = "No warning",
                 style = MaterialTheme.typography.bodySmall,
                 color = p.success
             )
