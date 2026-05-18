@@ -25,6 +25,9 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.prometheus.android.R
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.ui.platform.LocalContext
 import com.prometheus.android.ui.shared.EntranceAnimation
 import com.prometheus.android.ui.shared.PrometheusCard
 import com.prometheus.android.ui.shared.SectionHeader
@@ -184,33 +187,45 @@ fun MonitorScreen(
         Spacer(Modifier.height(16.dp))
 
         EntranceAnimation(visible = true, index = 4) {
+            val context = LocalContext.current
             Column {
-                SectionHeader(text = "EMERGENCY NUMBERS")
+                SectionHeader(text = "EMERGENCY")
                 Spacer(Modifier.height(8.dp))
-                PrometheusCard {
-                    Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-                        listOf(
-                            "Ambulans" to "118 and 119",
-                            "Basarnas" to "115",
-                            "Posko Bencana Alam" to "129",
-                            "PLN" to "123"
-                        ).forEach { (name, number) ->
-                            Row(
-                                modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Text(
-                                    text = name,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = p.textPrimary
-                                )
-                                Text(
-                                    text = number,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = p.blue,
-                                    fontWeight = FontWeight.Bold
-                                )
+                PrometheusCard(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            val intent = Intent(Intent.ACTION_DIAL).apply {
+                                data = Uri.parse("tel:112")
                             }
+                            context.startActivity(intent)
+                        }
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Warning,
+                            contentDescription = "Emergency",
+                            tint = p.danger,
+                            modifier = Modifier.size(28.dp)
+                        )
+                        Spacer(Modifier.width(10.dp))
+                        Column {
+                            Text(
+                                text = "Layanan Darurat Terpadu",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = p.textPrimary,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "112",
+                                style = MaterialTheme.typography.titleLarge,
+                                color = p.danger,
+                                fontWeight = FontWeight.Bold
+                            )
                         }
                     }
                 }
